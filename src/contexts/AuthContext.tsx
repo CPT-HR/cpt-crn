@@ -41,7 +41,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // This would typically fetch from a profiles table, but for now we're using hardcoded roles
       // In a real app, you would create a profiles table with user roles and other info
       
-      // For now, we'll assume the user with the email you created is an admin
       const { data: userData } = await supabase.auth.getUser();
       
       if (userData.user) {
@@ -75,17 +74,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Handle auth state changes
   useEffect(() => {
+    let mounted = true;
+    
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        setSession(currentSession);
+        if (!mounted) return;
         
+        // Only update state if component is still mounted
         if (currentSession?.user) {
-          // Using setTimeout to avoid Supabase auth deadlock issues
+          setSession(currentSession);
+          
+          // Use setTimeout to avoid Supabase auth deadlock issues
           setTimeout(() => {
-            getUserProfile(currentSession.user.id);
+            if (mounted) {
+              getUserProfile(currentSession.user.id);
+            }
           }, 0);
         } else {
+          setSession(null);
           setUser(null);
         }
         
@@ -94,17 +101,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
 
     // Check for existing session
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      setSession(currentSession);
-      
-      if (currentSession?.user) {
-        getUserProfile(currentSession.user.id);
+    const initializeAuth = async () => {
+      try {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!mounted) return;
+        
+        setSession(currentSession);
+        
+        if (currentSession?.user) {
+          getUserProfile(currentSession.user.id);
+        }
+        
+        setIsLoading(false);
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+        if (mounted) {
+          setIsLoading(false);
+        }
       }
-      
-      setIsLoading(false);
-    });
+    };
+    
+    initializeAuth();
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -174,11 +195,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    toast({
-      title: "Odjava uspješna",
-    });
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      toast({
+        title: "Odjava uspješna",
+      });
+    } catch (err) {
+      console.error('Error signing out:', err);
+      toast({
+        variant: "destructive",
+        title: "Greška pri odjavi",
+        description: "Došlo je do pogreške prilikom odjave",
+      });
+    }
   };
 
   const saveSignature = (signature: string) => {

@@ -15,14 +15,16 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     // If user is already logged in, redirect to dashboard
-    if (user) {
+    // This check helps prevent redirect loops
+    if (user && !isLoading) {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [user, navigate, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     await login(email, password);
+    // Don't navigate here - let the useEffect handle it once auth state updates
   };
 
   return (

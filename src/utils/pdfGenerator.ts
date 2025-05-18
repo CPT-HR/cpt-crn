@@ -1,6 +1,7 @@
 
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
+import { SignatureMetadata } from '@/components/SignaturePad';
 
 interface Material {
   id: string;
@@ -21,156 +22,220 @@ interface WorkOrder {
   hours: string;
   distance: string;
   technicianSignature: string;
-  customerSignature: string;
   technicianName: string;
+  customerSignature: string;
+  signatureMetadata?: SignatureMetadata;
   date: string;
 }
 
 export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
-  // Create a temporary div to render the work order
-  const element = document.createElement('div');
-  element.className = 'hidden';
-  document.body.appendChild(element);
+  return new Promise((resolve, reject) => {
+    try {
+      // Create new PDF with A4 dimensions
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      // Set font
+      pdf.setFont('helvetica');
 
-  // Format the date
-  const formattedDate = new Date(workOrder.date).toLocaleDateString('hr-HR');
+      // Add header
+      pdf.setFontSize(18);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('RADNI NALOG', 105, 20, { align: 'center' });
+      pdf.setFontSize(12);
+      pdf.text(`Broj: ${workOrder.id}`, 105, 27, { align: 'center' });
+      pdf.text(`Datum: ${new Date(workOrder.date).toLocaleDateString('hr-HR')}`, 105, 32, { align: 'center' });
+      
+      // Reset font
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
 
-  // Generate the HTML structure
-  element.innerHTML = `
-    <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <div>
-          <h1 style="margin: 0; font-size: 24px;">Radni nalog: ${workOrder.id}</h1>
-          <p style="margin: 5px 0;">Datum: ${formattedDate}</p>
-        </div>
-        <div style="text-align: right;">
-          <img src="https://via.placeholder.com/150x60?text=LOGO" alt="Company Logo" style="max-height: 60px;" />
-        </div>
-      </div>
+      // Add customer info
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('PODACI O KLIJENTU:', 20, 45);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Naziv: ${workOrder.customerName}`, 20, 52);
+      pdf.text(`Adresa: ${workOrder.customerAddress}`, 20, 59);
+      pdf.text(`Kontakt: ${workOrder.customerContact}`, 20, 66);
+      pdf.text(`Lokacija objekta: ${workOrder.location}`, 20, 73);
 
-      <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0; font-size: 16px;">Podaci o klijentu</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="width: 30%; padding: 5px 0;"><strong>Naziv:</strong></td>
-            <td style="padding: 5px 0;">${workOrder.customerName}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 0;"><strong>Adresa:</strong></td>
-            <td style="padding: 5px 0;">${workOrder.customerAddress}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 0;"><strong>Kontakt:</strong></td>
-            <td style="padding: 5px 0;">${workOrder.customerContact}</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 0;"><strong>Lokacija objekta:</strong></td>
-            <td style="padding: 5px 0;">${workOrder.location}</td>
-          </tr>
-        </table>
-      </div>
+      // Add service details
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('OPIS KVARA/PROBLEMA:', 20, 85);
+      pdf.setFont('helvetica', 'normal');
+      
+      const descriptionLines = pdf.splitTextToSize(workOrder.description, 170);
+      pdf.text(descriptionLines, 20, 92);
+      
+      let yOffset = 92 + (descriptionLines.length * 6);
 
-      <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0; font-size: 16px;">Opis radova</h2>
-        <div style="margin-bottom: 15px;">
-          <h3 style="margin: 5px 0; font-size: 14px;">Opis kvara/problema:</h3>
-          <p style="margin: 5px 0; white-space: pre-line;">${workOrder.description}</p>
-        </div>
-        <div>
-          <h3 style="margin: 5px 0; font-size: 14px;">Izvršeni radovi:</h3>
-          <p style="margin: 5px 0; white-space: pre-line;">${workOrder.performedWork}</p>
-        </div>
-      </div>
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('IZVRŠENI RADOVI:', 20, yOffset);
+      pdf.setFont('helvetica', 'normal');
+      
+      const workLines = pdf.splitTextToSize(workOrder.performedWork, 170);
+      pdf.text(workLines, 20, yOffset + 7);
+      
+      yOffset += (workLines.length * 6) + 15;
 
-      <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0; font-size: 16px;">Utrošeni materijal</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr style="background-color: #f2f2f2;">
-            <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Naziv</th>
-            <th style="text-align: right; padding: 8px; border-bottom: 1px solid #ddd;">Količina</th>
-            <th style="text-align: left; padding: 8px; border-bottom: 1px solid #ddd;">Jedinica</th>
-          </tr>
-          ${workOrder.materials.map(material => 
-            material.name ? 
-            `<tr>
-              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${material.name}</td>
-              <td style="text-align: right; padding: 8px; border-bottom: 1px solid #ddd;">${material.quantity}</td>
-              <td style="padding: 8px; border-bottom: 1px solid #ddd;">${material.unit}</td>
-            </tr>` : ''
-          ).join('')}
-        </table>
-      </div>
-
-      <div style="border: 1px solid #ccc; padding: 15px; margin-bottom: 20px;">
-        <h2 style="margin-top: 0; font-size: 16px;">Vrijeme i put</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tr>
-            <td style="width: 30%; padding: 5px 0;"><strong>Utrošeno vrijeme:</strong></td>
-            <td style="padding: 5px 0;">${workOrder.hours} sati</td>
-          </tr>
-          <tr>
-            <td style="padding: 5px 0;"><strong>Prijeđena udaljenost:</strong></td>
-            <td style="padding: 5px 0;">${workOrder.distance} km</td>
-          </tr>
-        </table>
-      </div>
-
-      <div style="margin-bottom: 20px; display: flex; justify-content: space-between;">
-        <div style="width: 45%; text-align: center;">
-          <h3 style="margin: 5px 0; font-size: 14px;">Potpis tehničara</h3>
-          <div style="border: 1px solid #ccc; height: 100px; display: flex; align-items: center; justify-content: center;">
-            <img src="${workOrder.technicianSignature}" style="max-height: 80px; max-width: 90%;" />
-          </div>
-          <p style="margin: 5px 0;">${workOrder.technicianName}</p>
-        </div>
-        <div style="width: 45%; text-align: center;">
-          <h3 style="margin: 5px 0; font-size: 14px;">Potpis klijenta</h3>
-          <div style="border: 1px solid #ccc; height: 100px; display: flex; align-items: center; justify-content: center;">
-            <img src="${workOrder.customerSignature}" style="max-height: 80px; max-width: 90%;" />
-          </div>
-          <p style="margin: 5px 0;">${workOrder.customerName}</p>
-        </div>
-      </div>
-    </div>
-  `;
-
-  try {
-    // Convert the HTML to a canvas
-    const canvas = await html2canvas(element, {
-      scale: 2,
-      useCORS: true,
-      logging: false
-    });
-    
-    // Create a PDF from the canvas
-    const imgData = canvas.toDataURL('image/png');
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-    
-    const imgWidth = 210;
-    const pageHeight = 295;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-    
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
-    
-    // Add new pages if the content doesn't fit on one page
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      // Add materials
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('UTROŠENI MATERIJAL:', 20, yOffset);
+      pdf.setFont('helvetica', 'normal');
+      
+      yOffset += 7;
+      
+      // Materials table headers
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Rb.', 20, yOffset);
+      pdf.text('Naziv materijala', 35, yOffset);
+      pdf.text('Količina', 140, yOffset);
+      pdf.text('Jedinica', 165, yOffset);
+      pdf.setFont('helvetica', 'normal');
+      
+      yOffset += 5;
+      pdf.line(20, yOffset, 190, yOffset); // Horizontal line
+      
+      yOffset += 7;
+      
+      // Materials table rows
+      workOrder.materials.forEach((material, index) => {
+        if (material.name) {
+          pdf.text((index + 1).toString() + '.', 20, yOffset);
+          
+          const materialNameLines = pdf.splitTextToSize(material.name, 100);
+          pdf.text(materialNameLines, 35, yOffset);
+          
+          pdf.text(material.quantity, 140, yOffset);
+          pdf.text(material.unit, 165, yOffset);
+          
+          yOffset += Math.max(materialNameLines.length * 6, 7);
+          
+          // Add new page if needed
+          if (yOffset > 270) {
+            pdf.addPage();
+            yOffset = 20;
+          }
+        }
+      });
+      
+      yOffset += 10;
+      
+      // Add time and distance
+      pdf.text(`Utrošeno vrijeme: ${workOrder.hours} sati`, 20, yOffset);
+      yOffset += 7;
+      pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, 20, yOffset);
+      
+      yOffset += 15;
+      
+      // Check if we need a new page for signatures
+      if (yOffset > 220) {
+        pdf.addPage();
+        yOffset = 20;
+      }
+      
+      // Add signatures
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('POTPISI:', 20, yOffset);
+      pdf.setFont('helvetica', 'normal');
+      
+      yOffset += 7;
+      
+      // Technician signature
+      pdf.text('Potpis tehničara:', 20, yOffset);
+      
+      if (workOrder.technicianSignature) {
+        const techImg = new Image();
+        techImg.src = workOrder.technicianSignature;
+        
+        techImg.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = techImg.width;
+          canvas.height = techImg.height;
+          
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(techImg, 0, 0);
+            
+            const imgData = canvas.toDataURL('image/png');
+            pdf.addImage(imgData, 'PNG', 20, yOffset + 2, 40, 20);
+            
+            pdf.text(workOrder.technicianName, 20, yOffset + 30);
+            
+            // Customer signature
+            pdf.text('Potpis klijenta:', 110, yOffset);
+            
+            if (workOrder.customerSignature) {
+              const custImg = new Image();
+              custImg.src = workOrder.customerSignature;
+              
+              custImg.onload = () => {
+                const custCanvas = document.createElement('canvas');
+                custCanvas.width = custImg.width;
+                custCanvas.height = custImg.height;
+                
+                const custCtx = custCanvas.getContext('2d');
+                if (custCtx) {
+                  custCtx.drawImage(custImg, 0, 0);
+                  
+                  const custImgData = custCanvas.toDataURL('image/png');
+                  pdf.addImage(custImgData, 'PNG', 110, yOffset + 2, 40, 20);
+                  
+                  // Add signature metadata
+                  if (workOrder.signatureMetadata) {
+                    pdf.setFontSize(6);
+                    let metaY = yOffset + 25;
+                    
+                    // Add timestamp
+                    pdf.text(`Datum i vrijeme: ${workOrder.signatureMetadata.timestamp}`, 110, metaY);
+                    metaY += 3;
+                    
+                    // Add coordinates if available
+                    if (workOrder.signatureMetadata.coordinates) {
+                      const { latitude, longitude } = workOrder.signatureMetadata.coordinates;
+                      pdf.text(`Koordinate: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, 110, metaY);
+                      metaY += 3;
+                    }
+                    
+                    // Add address if available
+                    if (workOrder.signatureMetadata.address) {
+                      const addressLines = pdf.splitTextToSize(`Adresa: ${workOrder.signatureMetadata.address}`, 80);
+                      pdf.text(addressLines, 110, metaY);
+                    }
+                    
+                    // Reset font size
+                    pdf.setFontSize(10);
+                  }
+                  
+                  // Save the PDF
+                  pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
+                  resolve();
+                }
+              };
+              
+              custImg.onerror = (err) => {
+                console.error('Error loading customer signature image:', err);
+                pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
+                resolve();
+              };
+            } else {
+              pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
+              resolve();
+            }
+          }
+        };
+        
+        techImg.onerror = (err) => {
+          console.error('Error loading technician signature image:', err);
+          pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
+          resolve();
+        };
+      } else {
+        pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
+        resolve();
+      }
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      reject(error);
     }
-    
-    // Save the PDF
-    pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
-  } finally {
-    // Clean up
-    document.body.removeChild(element);
-  }
+  });
 };

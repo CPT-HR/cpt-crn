@@ -1,5 +1,5 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
+  const isMounted = useRef(true);
 
   // Get user's profile data from Supabase
   const getUserProfile = async (userId: string) => {
@@ -43,7 +44,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       const { data: userData } = await supabase.auth.getUser();
       
-      if (userData.user) {
+      if (userData.user && isMounted.current) {
         const email = userData.user.email || '';
         const name = userData.user.user_metadata?.name || email?.split('@')[0] || 'User';
         
@@ -65,6 +66,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           initials: initials
         };
         
+        // Try to retrieve stored signature if exists
+        const storedSignature = localStorage.getItem('userSignature');
+        if (storedSignature) {
+          userProfile.signature = storedSignature;
+        }
+        
         setUser(userProfile);
       }
     } catch (err) {
@@ -74,12 +81,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Handle auth state changes
   useEffect(() => {
-    let mounted = true;
-    
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
-        if (!mounted) return;
+        if (!isMounted.current) return;
+        
+        console.log('Auth state changed:', event);
         
         // Only update state if component is still mounted
         if (currentSession?.user) {
@@ -87,7 +94,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
           // Use setTimeout to avoid Supabase auth deadlock issues
           setTimeout(() => {
-            if (mounted) {
+            if (isMounted.current) {
               getUserProfile(currentSession.user.id);
             }
           }, 0);
@@ -103,20 +110,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Check for existing session
     const initializeAuth = async () => {
       try {
+        console.log('Initializing auth...');
         const { data: { session: currentSession } } = await supabase.auth.getSession();
         
-        if (!mounted) return;
+        if (!isMounted.current) return;
+        
+        console.log('Got session:', currentSession ? 'yes' : 'no');
         
         setSession(currentSession);
         
         if (currentSession?.user) {
           getUserProfile(currentSession.user.id);
+        } else {
+          setIsLoading(false);
         }
-        
-        setIsLoading(false);
       } catch (err) {
         console.error('Error initializing auth:', err);
-        if (mounted) {
+        if (isMounted.current) {
           setIsLoading(false);
         }
       }
@@ -125,7 +135,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     initializeAuth();
 
     return () => {
-      mounted = false;
+      isMounted.current = false;
       subscription.unsubscribe();
     };
   }, []);
@@ -135,6 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setError(null);
     
     try {
+      console.log('Logging in with:', email);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password
@@ -147,6 +158,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         description: "Dobrodošli natrag!",
       });
     } catch (err) {
+      console.error('Login error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Došlo je do pogreške prilikom prijave';
       setError(errorMessage);
       toast({

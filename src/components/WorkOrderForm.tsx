@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -6,10 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import SignaturePad from './SignaturePad';
+import SignaturePad, { SignatureMetadata } from './SignaturePad';
 import { useAuth } from '@/contexts/AuthContext';
 import { generatePDF } from '@/utils/pdfGenerator';
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { Loader2 } from "lucide-react";
 
 interface Material {
   id: string;
@@ -31,6 +32,7 @@ interface WorkOrder {
   distance: string;
   technicianSignature: string;
   customerSignature: string;
+  signatureMetadata?: SignatureMetadata;
   date: string;
 }
 
@@ -38,7 +40,9 @@ let orderCounter = 1;
 
 const WorkOrderForm: React.FC = () => {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [isCustomerSignatureModalOpen, setIsCustomerSignatureModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   
   const [workOrder, setWorkOrder] = useState<WorkOrder>({
     id: '',
@@ -90,11 +94,51 @@ const WorkOrderForm: React.FC = () => {
     });
   };
 
-  const handleCustomerSignatureSave = (signature: string) => {
+  const handleCustomerSignatureSave = (signature: string, metadata: SignatureMetadata) => {
     setWorkOrder({
       ...workOrder,
-      customerSignature: signature
+      customerSignature: signature,
+      signatureMetadata: metadata
     });
+  };
+
+  const saveToSupabase = async (finalWorkOrder: any) => {
+    try {
+      if (!user) throw new Error("Korisnik nije prijavljen");
+      
+      // Convert Point data for PostgreSQL
+      const signatureCoordinates = finalWorkOrder.signatureMetadata?.coordinates 
+        ? `(${finalWorkOrder.signatureMetadata.coordinates.longitude},${finalWorkOrder.signatureMetadata.coordinates.latitude})`
+        : null;
+      
+      const { error } = await supabase.from('work_orders').insert({
+        order_number: finalWorkOrder.id,
+        customer_name: finalWorkOrder.customerName,
+        customer_address: finalWorkOrder.customerAddress,
+        customer_contact: finalWorkOrder.customerContact,
+        location: finalWorkOrder.location,
+        description: finalWorkOrder.description,
+        performed_work: finalWorkOrder.performedWork,
+        materials: finalWorkOrder.materials,
+        hours: parseFloat(finalWorkOrder.hours),
+        distance: parseFloat(finalWorkOrder.distance),
+        technician_signature: finalWorkOrder.technicianSignature,
+        technician_name: finalWorkOrder.technicianName,
+        customer_signature: finalWorkOrder.customerSignature,
+        signature_timestamp: finalWorkOrder.signatureMetadata?.timestamp || new Date().toISOString(),
+        signature_coordinates: signatureCoordinates,
+        signature_address: finalWorkOrder.signatureMetadata?.address,
+        date: finalWorkOrder.date,
+        user_id: user.id,
+      });
+      
+      if (error) throw error;
+      
+      return true;
+    } catch (error) {
+      console.error('Error saving to Supabase:', error);
+      throw error;
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -111,43 +155,57 @@ const WorkOrderForm: React.FC = () => {
       return;
     }
     
-    // Generate work order number
-    const year = new Date().getFullYear().toString().slice(-2);
-    const generatedId = `${user.initials}${orderCounter++}/${year}`;
+    setIsSubmitting(true);
     
-    const finalWorkOrder = {
-      ...workOrder,
-      id: generatedId,
-      technicianSignature: user.signature || '',
-      technicianName: user.name
-    };
-    
-    // In a real app, save to database here
-    
-    // Generate PDF
-    await generatePDF(finalWorkOrder);
-    
-    toast({
-      title: "Radni nalog spremljen",
-      description: `Radni nalog ${generatedId} je uspješno kreiran i spreman za ispis`,
-    });
-    
-    // Reset form (except for the technician signature)
-    setWorkOrder({
-      id: '',
-      customerName: '',
-      customerAddress: '',
-      customerContact: '',
-      location: '',
-      description: '',
-      performedWork: '',
-      materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-      hours: '',
-      distance: '',
-      technicianSignature: user.signature || '',
-      customerSignature: '',
-      date: new Date().toISOString().split('T')[0]
-    });
+    try {
+      // Generate work order number
+      const year = new Date().getFullYear().toString().slice(-2);
+      const generatedId = `${user.initials}${orderCounter++}/${year}`;
+      
+      const finalWorkOrder = {
+        ...workOrder,
+        id: generatedId,
+        technicianSignature: user.signature || '',
+        technicianName: user.name
+      };
+      
+      // Save to Supabase
+      await saveToSupabase(finalWorkOrder);
+      
+      // Generate PDF
+      await generatePDF(finalWorkOrder);
+      
+      toast({
+        title: "Radni nalog spremljen",
+        description: `Radni nalog ${generatedId} je uspješno kreiran i spreman za ispis`,
+      });
+      
+      // Reset form (except for the technician signature)
+      setWorkOrder({
+        id: '',
+        customerName: '',
+        customerAddress: '',
+        customerContact: '',
+        location: '',
+        description: '',
+        performedWork: '',
+        materials: [{ id: '1', name: '', quantity: '', unit: '' }],
+        hours: '',
+        distance: '',
+        technicianSignature: user.signature || '',
+        customerSignature: '',
+        date: new Date().toISOString().split('T')[0]
+      });
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do pogreške prilikom spremanja radnog naloga",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -354,11 +412,28 @@ const WorkOrderForm: React.FC = () => {
                 onClick={() => setIsCustomerSignatureModalOpen(true)}
               >
                 {workOrder.customerSignature ? (
-                  <img 
-                    src={workOrder.customerSignature} 
-                    alt="Potpis klijenta" 
-                    className="max-h-20 mx-auto" 
-                  />
+                  <div className="flex flex-col items-center">
+                    <img 
+                      src={workOrder.customerSignature} 
+                      alt="Potpis klijenta" 
+                      className="max-h-20 mx-auto" 
+                    />
+                    {workOrder.signatureMetadata && (
+                      <div className="text-[10px] text-gray-500 mt-2 text-center max-w-full">
+                        <p>Datum i vrijeme: {workOrder.signatureMetadata.timestamp}</p>
+                        {workOrder.signatureMetadata.coordinates && (
+                          <p>
+                            Koordinate: {workOrder.signatureMetadata.coordinates.latitude.toFixed(6)}, {workOrder.signatureMetadata.coordinates.longitude.toFixed(6)}
+                          </p>
+                        )}
+                        {workOrder.signatureMetadata.address && (
+                          <p className="truncate">
+                            Adresa: {workOrder.signatureMetadata.address}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 ) : (
                   <div className="text-center text-gray-400">
                     Kliknite za dodavanje potpisa klijenta
@@ -370,7 +445,12 @@ const WorkOrderForm: React.FC = () => {
         </Card>
 
         <div className="flex justify-end gap-4">
-          <Button type="submit" disabled={!workOrder.customerSignature || !user?.signature}>
+          <Button 
+            type="submit" 
+            disabled={isSubmitting || !workOrder.customerSignature || !user?.signature}
+            className="relative"
+          >
+            {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Spremi i generiraj PDF
           </Button>
         </div>

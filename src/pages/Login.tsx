@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
+import { Loader2 } from "lucide-react";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -15,14 +16,16 @@ const Login: React.FC = () => {
 
   useEffect(() => {
     // If user is already logged in, redirect to dashboard
-    // This check helps prevent redirect loops
+    // This check helps prevent redirect loops by ensuring auth is not still loading
     if (user && !isLoading) {
+      console.log('User is logged in, redirecting to dashboard');
       navigate('/');
     }
   }, [user, navigate, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log('Login form submitted');
     await login(email, password);
     // Don't navigate here - let the useEffect handle it once auth state updates
   };
@@ -63,7 +66,12 @@ const Login: React.FC = () => {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col">
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button 
+              type="submit" 
+              className="w-full relative" 
+              disabled={isLoading}
+            >
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isLoading ? 'Prijava u tijeku...' : 'Prijavi se'}
             </Button>
             <div className="mt-4 text-center text-sm">

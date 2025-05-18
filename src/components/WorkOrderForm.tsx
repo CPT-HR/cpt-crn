@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -111,7 +112,8 @@ const WorkOrderForm: React.FC = () => {
         ? `(${finalWorkOrder.signatureMetadata.coordinates.longitude},${finalWorkOrder.signatureMetadata.coordinates.latitude})`
         : null;
       
-      const { error } = await supabase.from('work_orders').insert({
+      // Use type assertion to bypass the TypeScript error
+      const { error } = await (supabase.from('work_orders') as any).insert({
         order_number: finalWorkOrder.id,
         customer_name: finalWorkOrder.customerName,
         customer_address: finalWorkOrder.customerAddress,

@@ -11,10 +11,14 @@ import { Loader2 } from "lucide-react";
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState<string | null>(null);
   const { login, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
+    // Clear any previous error when component mounts or dependencies change
+    setLoginError(null);
+    
     // If user is already logged in, redirect to dashboard
     // This check helps prevent redirect loops by ensuring auth is not still loading
     if (user && !isLoading) {
@@ -25,9 +29,16 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setLoginError(null); // Clear any previous errors
     console.log('Login form submitted');
-    await login(email, password);
-    // Don't navigate here - let the useEffect handle it once auth state updates
+    
+    try {
+      await login(email, password);
+      // Don't navigate here - let the useEffect handle it once auth state updates
+    } catch (error) {
+      console.error('Login error:', error);
+      setLoginError(error instanceof Error ? error.message : 'Greška prilikom prijave');
+    }
   };
 
   return (
@@ -64,6 +75,12 @@ const Login: React.FC = () => {
                 required 
               />
             </div>
+            
+            {loginError && (
+              <div className="p-3 text-sm text-destructive bg-destructive/10 rounded-md">
+                {loginError}
+              </div>
+            )}
           </CardContent>
           <CardFooter className="flex flex-col">
             <Button 

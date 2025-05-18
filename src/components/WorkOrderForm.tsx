@@ -112,8 +112,9 @@ const WorkOrderForm: React.FC = () => {
         ? `(${finalWorkOrder.signatureMetadata.coordinates.longitude},${finalWorkOrder.signatureMetadata.coordinates.latitude})`
         : null;
       
-      // Use more complete type assertion to fix TypeScript errors
-      const { error } = await (supabase.from('work_orders') as any).insert({
+      // Complete type assertion to handle both the table name and insert operation
+      const supabaseAny = supabase as any;
+      const { error } = await supabaseAny.from('work_orders').insert({
         order_number: finalWorkOrder.id,
         customer_name: finalWorkOrder.customerName,
         customer_address: finalWorkOrder.customerAddress,

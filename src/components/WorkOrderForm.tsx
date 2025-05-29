@@ -159,11 +159,13 @@ const WorkOrderForm: React.FC = () => {
     }
   };
 
-  // Get relevant address based on logic
+  // Get relevant address based on correct logic - prioritize customer data
   const getRelevantAddress = () => {
+    // If order is for customer and customer has address, use customer address
     if (workOrder.orderForCustomer && workOrder.customerCompanyAddress) {
       return workOrder.customerCompanyAddress;
     }
+    // Otherwise use client address
     return workOrder.clientCompanyAddress;
   };
 

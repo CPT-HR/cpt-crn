@@ -23,7 +23,7 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   register: (email: string, password: string, name: string) => Promise<void>;
-  saveSignature: (signature: string) => void;
+  saveSignature: (signature: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -36,12 +36,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const isMounted = useRef(true);
 
+  // Load user signature from database
+  const loadUserSignature = async (userId: string): Promise<string | undefined> => {
+    try {
+      const supabaseAny = supabase as any;
+      const { data, error } = await supabaseAny
+        .from('user_signatures')
+        .select('signature_data')
+        .eq('user_id', userId)
+        .maybeSingle();
+      
+      if (error) {
+        console.error('Error loading signature:', error);
+        return undefined;
+      }
+      
+      return data?.signature_data;
+    } catch (err) {
+      console.error('Error loading signature:', err);
+      return undefined;
+    }
+  };
+
   // Get user's profile data from Supabase
   const getUserProfile = async (userId: string) => {
     try {
-      // This would typically fetch from a profiles table, but for now we're using hardcoded roles
-      // In a real app, you would create a profiles table with user roles and other info
-      
       const { data: userData } = await supabase.auth.getUser();
       
       if (userData.user && isMounted.current) {
@@ -56,21 +75,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .toUpperCase()
           .substring(0, 2);
         
-        // For now, hardcode the first user as admin
+        // Load signature from database
+        const signature = await loadUserSignature(userId);
+        
         const userProfile: UserData = {
           id: userId,
           email: email,
           name: name,
           role: 'admin', // Default as admin for the first user
           approved: true,
-          initials: initials
+          initials: initials,
+          signature: signature
         };
-        
-        // Try to retrieve stored signature if exists
-        const storedSignature = localStorage.getItem('userSignature');
-        if (storedSignature) {
-          userProfile.signature = storedSignature;
-        }
         
         setUser(userProfile);
       }
@@ -224,19 +240,51 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const saveSignature = (signature: string) => {
-    if (user) {
+  const saveSignature = async (signature: string): Promise<void> => {
+    if (!user) {
+      throw new Error('Korisnik nije prijavljen');
+    }
+    
+    try {
+      const supabaseAny = supabase as any;
+      
+      // Try to update existing signature first
+      const { error: updateError } = await supabaseAny
+        .from('user_signatures')
+        .update({ signature_data: signature })
+        .eq('user_id', user.id);
+      
+      // If update fails (no existing record), insert new one
+      if (updateError) {
+        const { error: insertError } = await supabaseAny
+          .from('user_signatures')
+          .insert({
+            user_id: user.id,
+            signature_data: signature
+          });
+        
+        if (insertError) throw insertError;
+      }
+      
+      // Update local user state
       const updatedUser = { ...user, signature };
       setUser(updatedUser);
       
-      // In a real app, you'd save this to a profiles table in Supabase
-      // For now, just store it in localStorage to persist between sessions
-      localStorage.setItem('userSignature', signature);
+      // Remove from localStorage if it exists (cleanup)
+      localStorage.removeItem('userSignature');
       
       toast({
         title: "Potpis spremljen",
-        description: "Vaš potpis je uspješno ažuriran",
+        description: "Vaš potpis je uspješno ažuriran u bazi podataka",
       });
+    } catch (error) {
+      console.error('Error saving signature:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do pogreške prilikom spremanja potpisa",
+      });
+      throw error;
     }
   };
 

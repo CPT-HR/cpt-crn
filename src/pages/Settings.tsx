@@ -4,13 +4,24 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
 import SignaturePad from '@/components/SignaturePad';
+import { Loader2 } from "lucide-react";
 
 const Settings: React.FC = () => {
   const { user, saveSignature } = useAuth();
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSignatureSave = (signature: string) => {
-    saveSignature(signature);
+  const handleSignatureSave = async (signature: string) => {
+    setIsSaving(true);
+    try {
+      await saveSignature(signature);
+      setIsSignatureModalOpen(false);
+    } catch (error) {
+      // Error is already handled in saveSignature function
+      console.error('Failed to save signature:', error);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -23,7 +34,8 @@ const Settings: React.FC = () => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-muted-foreground">
-            Vaš potpis se automatski dodaje na sve radne naloge koje kreirate.
+            Vaš potpis se automatski dodaje na sve radne naloge koje kreirate. 
+            Potpis je sinkroniziran napříč svim vašim uređajima.
           </p>
           
           <div className="border rounded bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[150px]">
@@ -38,7 +50,11 @@ const Settings: React.FC = () => {
             )}
           </div>
           
-          <Button onClick={() => setIsSignatureModalOpen(true)}>
+          <Button 
+            onClick={() => setIsSignatureModalOpen(true)}
+            disabled={isSaving}
+          >
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {user?.signature ? 'Promijeni potpis' : 'Dodaj potpis'}
           </Button>
         </CardContent>

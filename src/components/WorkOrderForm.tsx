@@ -25,6 +25,9 @@ interface WorkOrder {
   customerName: string;
   customerAddress: string;
   customerContact: string;
+  clientName: string;
+  clientAddress: string;
+  clientContact: string;
   location: string;
   description: string;
   performedWork: string;
@@ -50,6 +53,9 @@ const WorkOrderForm: React.FC = () => {
     customerName: '',
     customerAddress: '',
     customerContact: '',
+    clientName: '',
+    clientAddress: '',
+    clientContact: '',
     location: '',
     description: '',
     performedWork: '',
@@ -119,6 +125,9 @@ const WorkOrderForm: React.FC = () => {
         customer_name: finalWorkOrder.customerName,
         customer_address: finalWorkOrder.customerAddress,
         customer_contact: finalWorkOrder.customerContact,
+        client_name: finalWorkOrder.clientName,
+        client_address: finalWorkOrder.clientAddress,
+        client_contact: finalWorkOrder.clientContact,
         location: finalWorkOrder.location,
         description: finalWorkOrder.description,
         performed_work: finalWorkOrder.performedWork,
@@ -216,12 +225,52 @@ const WorkOrderForm: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Podaci o klijentu</CardTitle>
+            <CardTitle className="text-xl">Podaci o naručitelju</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="customerName">Naziv klijenta</Label>
+                <Label htmlFor="clientName">Naziv naručitelja</Label>
+                <Input 
+                  id="clientName" 
+                  name="clientName" 
+                  value={workOrder.clientName} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientContact">Kontakt broj</Label>
+                <Input 
+                  id="clientContact" 
+                  name="clientContact" 
+                  value={workOrder.clientContact} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="clientAddress">Adresa</Label>
+              <Input 
+                id="clientAddress" 
+                name="clientAddress" 
+                value={workOrder.clientAddress} 
+                onChange={handleChange} 
+                required 
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Podaci o korisniku (lokacija)</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="customerName">Naziv korisnika</Label>
                 <Input 
                   id="customerName" 
                   name="customerName" 

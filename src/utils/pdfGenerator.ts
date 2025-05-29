@@ -15,6 +15,9 @@ interface WorkOrder {
   customerName: string;
   customerAddress: string;
   customerContact: string;
+  clientName: string;
+  clientAddress: string;
+  clientContact: string;
   location: string;
   description: string;
   performedWork: string;
@@ -49,24 +52,32 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFont('helvetica', 'normal');
       pdf.setFontSize(10);
 
-      // Add customer info
+      // Add client info (naručitelj)
       pdf.setFont('helvetica', 'bold');
-      pdf.text('PODACI O KLIJENTU:', 20, 45);
+      pdf.text('PODACI O NARUČITELJU:', 20, 45);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Naziv: ${workOrder.customerName}`, 20, 52);
-      pdf.text(`Adresa: ${workOrder.customerAddress}`, 20, 59);
-      pdf.text(`Kontakt: ${workOrder.customerContact}`, 20, 66);
-      pdf.text(`Lokacija objekta: ${workOrder.location}`, 20, 73);
+      pdf.text(`Naziv: ${workOrder.clientName}`, 20, 52);
+      pdf.text(`Adresa: ${workOrder.clientAddress}`, 20, 59);
+      pdf.text(`Kontakt: ${workOrder.clientContact}`, 20, 66);
+
+      // Add customer info (korisnik/lokacija)
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('PODACI O KORISNIKU (LOKACIJA):', 20, 78);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Naziv: ${workOrder.customerName}`, 20, 85);
+      pdf.text(`Adresa: ${workOrder.customerAddress}`, 20, 92);
+      pdf.text(`Kontakt: ${workOrder.customerContact}`, 20, 99);
+      pdf.text(`Lokacija objekta: ${workOrder.location}`, 20, 106);
 
       // Add service details
       pdf.setFont('helvetica', 'bold');
-      pdf.text('OPIS KVARA/PROBLEMA:', 20, 85);
+      pdf.text('OPIS KVARA/PROBLEMA:', 20, 118);
       pdf.setFont('helvetica', 'normal');
       
       const descriptionLines = pdf.splitTextToSize(workOrder.description, 170);
-      pdf.text(descriptionLines, 20, 92);
+      pdf.text(descriptionLines, 20, 125);
       
-      let yOffset = 92 + (descriptionLines.length * 6);
+      let yOffset = 125 + (descriptionLines.length * 6);
 
       pdf.setFont('helvetica', 'bold');
       pdf.text('IZVRŠENI RADOVI:', 20, yOffset);

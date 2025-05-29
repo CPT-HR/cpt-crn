@@ -28,7 +28,16 @@ const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(() => {
     const savedUser = localStorage.getItem('user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      // Ensure all properties are loaded from localStorage
+      return {
+        ...parsedUser,
+        companyAddress: parsedUser.companyAddress || '',
+        distanceMatrixApiKey: parsedUser.distanceMatrixApiKey || ''
+      };
+    }
+    return null;
   });
   const [isLoading, setIsLoading] = useState(false);
 
@@ -91,6 +100,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedUser = { ...user, companyAddress: address };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
+    console.log('Company address saved:', address);
+    console.log('Updated user:', updatedUser);
   };
 
   const saveDistanceMatrixApiKey = async (apiKey: string) => {
@@ -99,6 +110,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedUser = { ...user, distanceMatrixApiKey: apiKey };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
+    console.log('API key saved:', apiKey);
+    console.log('Updated user:', updatedUser);
   };
 
   const value = {

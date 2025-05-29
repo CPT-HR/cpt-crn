@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +20,11 @@ interface Material {
   unit: string;
 }
 
+interface WorkItem {
+  id: string;
+  text: string;
+}
+
 interface WorkOrder {
   id: string;
   clientCompanyName: string;
@@ -38,10 +42,10 @@ interface WorkOrder {
   customerLastName: string;
   customerMobile: string;
   customerEmail: string;
-  description: string;
-  foundCondition: string;
-  performedWork: string;
-  technicianComment: string;
+  description: WorkItem[];
+  foundCondition: WorkItem[];
+  performedWork: WorkItem[];
+  technicianComment: WorkItem[];
   materials: Material[];
   hours: string;
   distance: string;
@@ -76,10 +80,10 @@ const WorkOrderForm: React.FC = () => {
     customerLastName: '',
     customerMobile: '',
     customerEmail: '',
-    description: '',
-    foundCondition: '',
-    performedWork: '',
-    technicianComment: '',
+    description: [{ id: '1', text: '' }],
+    foundCondition: [{ id: '1', text: '' }],
+    performedWork: [{ id: '1', text: '' }],
+    technicianComment: [{ id: '1', text: '' }],
     materials: [{ id: '1', name: '', quantity: '', unit: '' }],
     hours: '',
     distance: '',
@@ -95,6 +99,35 @@ const WorkOrderForm: React.FC = () => {
 
   const handleCheckboxChange = (checked: boolean) => {
     setWorkOrder({ ...workOrder, orderForCustomer: checked });
+  };
+
+  const handleWorkItemChange = (section: keyof Pick<WorkOrder, 'description' | 'foundCondition' | 'performedWork' | 'technicianComment'>, id: string, value: string) => {
+    setWorkOrder({
+      ...workOrder,
+      [section]: workOrder[section].map(item => 
+        item.id === id ? { ...item, text: value } : item
+      )
+    });
+  };
+
+  const addWorkItem = (section: keyof Pick<WorkOrder, 'description' | 'foundCondition' | 'performedWork' | 'technicianComment'>) => {
+    const newId = (workOrder[section].length + 1).toString();
+    setWorkOrder({
+      ...workOrder,
+      [section]: [
+        ...workOrder[section],
+        { id: newId, text: '' }
+      ]
+    });
+  };
+
+  const removeWorkItem = (section: keyof Pick<WorkOrder, 'description' | 'foundCondition' | 'performedWork' | 'technicianComment'>, id: string) => {
+    if (workOrder[section].length === 1) return;
+    
+    setWorkOrder({
+      ...workOrder,
+      [section]: workOrder[section].filter(item => item.id !== id)
+    });
   };
 
   const handleMaterialChange = (id: string, field: keyof Material, value: string) => {
@@ -143,6 +176,12 @@ const WorkOrderForm: React.FC = () => {
         ? `(${finalWorkOrder.signatureMetadata.coordinates.longitude},${finalWorkOrder.signatureMetadata.coordinates.latitude})`
         : null;
       
+      // Convert work items to strings for database storage
+      const descriptionText = finalWorkOrder.description.map((item: WorkItem) => `• ${item.text}`).filter((text: string) => text.length > 2).join('\n');
+      const foundConditionText = finalWorkOrder.foundCondition.map((item: WorkItem) => `• ${item.text}`).filter((text: string) => text.length > 2).join('\n');
+      const performedWorkText = finalWorkOrder.performedWork.map((item: WorkItem) => `• ${item.text}`).filter((text: string) => text.length > 2).join('\n');
+      const technicianCommentText = finalWorkOrder.technicianComment.map((item: WorkItem) => `• ${item.text}`).filter((text: string) => text.length > 2).join('\n');
+      
       // Complete type assertion to handle both the table name and insert operation
       const supabaseAny = supabase as any;
       const { error } = await supabaseAny.from('work_orders').insert({
@@ -162,8 +201,10 @@ const WorkOrderForm: React.FC = () => {
         customer_last_name: finalWorkOrder.customerLastName,
         customer_mobile: finalWorkOrder.customerMobile,
         customer_email: finalWorkOrder.customerEmail,
-        description: finalWorkOrder.description,
-        performed_work: finalWorkOrder.performedWork,
+        description: descriptionText,
+        found_condition: foundConditionText,
+        performed_work: performedWorkText,
+        technician_comment: technicianCommentText,
         materials: finalWorkOrder.materials,
         hours: parseFloat(finalWorkOrder.hours),
         distance: parseFloat(finalWorkOrder.distance),
@@ -243,10 +284,10 @@ const WorkOrderForm: React.FC = () => {
         customerLastName: '',
         customerMobile: '',
         customerEmail: '',
-        description: '',
-        foundCondition: '',
-        performedWork: '',
-        technicianComment: '',
+        description: [{ id: '1', text: '' }],
+        foundCondition: [{ id: '1', text: '' }],
+        performedWork: [{ id: '1', text: '' }],
+        technicianComment: [{ id: '1', text: '' }],
         materials: [{ id: '1', name: '', quantity: '', unit: '' }],
         hours: '',
         distance: '',
@@ -455,53 +496,138 @@ const WorkOrderForm: React.FC = () => {
           <CardHeader>
             <CardTitle className="text-xl">Podaci o radovima</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="description">Opis kvara/problema</Label>
-              <Textarea 
-                id="description" 
-                name="description" 
-                value={workOrder.description} 
-                onChange={handleChange} 
-                required 
-                className="min-h-[100px] resize-y"
-                placeholder="• Unesite opis kvara ili problema&#10;• Dodajte novi red za svaku stavku&#10;• Koristite natuknice za lakše čitanje"
-              />
+          <CardContent className="space-y-6">
+            {/* Opis kvara/problema */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Opis kvara/problema</Label>
+              {workOrder.description.map((item, index) => (
+                <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-10 space-y-2">
+                    <Input 
+                      value={item.text} 
+                      onChange={(e) => handleWorkItemChange('description', item.id, e.target.value)} 
+                      placeholder="Unesite opis kvara ili problema"
+                      required={index === 0}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => removeWorkItem('description', item.id)}
+                      disabled={workOrder.description.length === 1}
+                      className="w-full"
+                    >
+                      -
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button type="button" onClick={() => addWorkItem('description')} variant="outline" className="w-full">
+                Dodaj red
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="foundCondition">Zatečeno stanje</Label>
-              <Textarea 
-                id="foundCondition" 
-                name="foundCondition" 
-                value={workOrder.foundCondition} 
-                onChange={handleChange} 
-                required 
-                className="min-h-[100px] resize-y"
-                placeholder="• Opišite zatečeno stanje&#10;• Dodajte novi red za svaku stavku&#10;• Koristite natuknice za lakše čitanje"
-              />
+
+            <Separator />
+
+            {/* Zatečeno stanje */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Zatečeno stanje</Label>
+              {workOrder.foundCondition.map((item, index) => (
+                <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-10 space-y-2">
+                    <Input 
+                      value={item.text} 
+                      onChange={(e) => handleWorkItemChange('foundCondition', item.id, e.target.value)} 
+                      placeholder="Opišite zatečeno stanje"
+                      required={index === 0}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => removeWorkItem('foundCondition', item.id)}
+                      disabled={workOrder.foundCondition.length === 1}
+                      className="w-full"
+                    >
+                      -
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button type="button" onClick={() => addWorkItem('foundCondition')} variant="outline" className="w-full">
+                Dodaj red
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="performedWork">Izvršeni radovi</Label>
-              <Textarea 
-                id="performedWork" 
-                name="performedWork" 
-                value={workOrder.performedWork} 
-                onChange={handleChange} 
-                required 
-                className="min-h-[100px] resize-y"
-                placeholder="• Opišite izvršene radove&#10;• Dodajte novi red za svaku stavku&#10;• Koristite natuknice za lakše čitanje"
-              />
+
+            <Separator />
+
+            {/* Izvršeni radovi */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Izvršeni radovi</Label>
+              {workOrder.performedWork.map((item, index) => (
+                <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-10 space-y-2">
+                    <Input 
+                      value={item.text} 
+                      onChange={(e) => handleWorkItemChange('performedWork', item.id, e.target.value)} 
+                      placeholder="Opišite izvršene radove"
+                      required={index === 0}
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => removeWorkItem('performedWork', item.id)}
+                      disabled={workOrder.performedWork.length === 1}
+                      className="w-full"
+                    >
+                      -
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button type="button" onClick={() => addWorkItem('performedWork')} variant="outline" className="w-full">
+                Dodaj red
+              </Button>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="technicianComment">Komentar tehničara</Label>
-              <Textarea 
-                id="technicianComment" 
-                name="technicianComment" 
-                value={workOrder.technicianComment} 
-                onChange={handleChange} 
-                className="min-h-[100px] resize-y"
-                placeholder="• Dodatni komentari ili napomene&#10;• Dodajte novi red za svaku stavku&#10;• Koristite natuknice za lakše čitanje"
-              />
+
+            <Separator />
+
+            {/* Komentar tehničara */}
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Komentar tehničara</Label>
+              {workOrder.technicianComment.map((item, index) => (
+                <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
+                  <div className="col-span-10 space-y-2">
+                    <Input 
+                      value={item.text} 
+                      onChange={(e) => handleWorkItemChange('technicianComment', item.id, e.target.value)} 
+                      placeholder="Dodatni komentari ili napomene"
+                    />
+                  </div>
+                  <div className="col-span-2">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => removeWorkItem('technicianComment', item.id)}
+                      disabled={workOrder.technicianComment.length === 1}
+                      className="w-full"
+                    >
+                      -
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <Button type="button" onClick={() => addWorkItem('technicianComment')} variant="outline" className="w-full">
+                Dodaj red
+              </Button>
             </div>
           </CardContent>
         </Card>

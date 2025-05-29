@@ -1,3 +1,4 @@
+
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { SignatureMetadata } from '@/components/SignaturePad';
@@ -7,6 +8,11 @@ interface Material {
   name: string;
   quantity: string;
   unit: string;
+}
+
+interface WorkItem {
+  id: string;
+  text: string;
 }
 
 interface WorkOrder {
@@ -26,10 +32,10 @@ interface WorkOrder {
   customerLastName: string;
   customerMobile: string;
   customerEmail: string;
-  description: string;
-  foundCondition: string;
-  performedWork: string;
-  technicianComment: string;
+  description: WorkItem[];
+  foundCondition: WorkItem[];
+  performedWork: WorkItem[];
+  technicianComment: WorkItem[];
   materials: Material[];
   hours: string;
   distance: string;
@@ -96,47 +102,39 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         yOffset += 5;
       }
 
-      // Add service details with new fields
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('OPIS KVARA/PROBLEMA:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 7;
-      
-      const descriptionLines = pdf.splitTextToSize(workOrder.description, 170);
-      pdf.text(descriptionLines, 20, yOffset);
-      
-      yOffset += (descriptionLines.length * 6) + 8;
-
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('ZATEČENO STANJE:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 7;
-      
-      const foundConditionLines = pdf.splitTextToSize(workOrder.foundCondition, 170);
-      pdf.text(foundConditionLines, 20, yOffset);
-      
-      yOffset += (foundConditionLines.length * 6) + 8;
-
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('IZVRŠENI RADOVI:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 7;
-      
-      const workLines = pdf.splitTextToSize(workOrder.performedWork, 170);
-      pdf.text(workLines, 20, yOffset);
-      
-      yOffset += (workLines.length * 6) + 8;
-
-      if (workOrder.technicianComment && workOrder.technicianComment.trim()) {
+      // Helper function to add work items section
+      const addWorkItemsSection = (title: string, items: WorkItem[]) => {
         pdf.setFont('helvetica', 'bold');
-        pdf.text('KOMENTAR TEHNIČARA:', 20, yOffset);
+        pdf.text(title, 20, yOffset);
         pdf.setFont('helvetica', 'normal');
         yOffset += 7;
         
-        const commentLines = pdf.splitTextToSize(workOrder.technicianComment, 170);
-        pdf.text(commentLines, 20, yOffset);
+        const filteredItems = items.filter(item => item.text.trim());
+        if (filteredItems.length > 0) {
+          filteredItems.forEach(item => {
+            if (item.text.trim()) {
+              const itemLines = pdf.splitTextToSize(`• ${item.text}`, 170);
+              pdf.text(itemLines, 20, yOffset);
+              yOffset += (itemLines.length * 6);
+            }
+          });
+        } else {
+          pdf.text('• (nije uneseno)', 20, yOffset);
+          yOffset += 6;
+        }
         
-        yOffset += (commentLines.length * 6) + 15;
+        yOffset += 8;
+      };
+
+      // Add service details with new fields
+      addWorkItemsSection('OPIS KVARA/PROBLEMA:', workOrder.description);
+      addWorkItemsSection('ZATEČENO STANJE:', workOrder.foundCondition);
+      addWorkItemsSection('IZVRŠENI RADOVI:', workOrder.performedWork);
+      
+      // Add technician comment only if it has content
+      const technicianComments = workOrder.technicianComment.filter(item => item.text.trim());
+      if (technicianComments.length > 0) {
+        addWorkItemsSection('KOMENTAR TEHNIČARA:', workOrder.technicianComment);
       } else {
         yOffset += 7;
       }

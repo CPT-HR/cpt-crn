@@ -123,12 +123,31 @@ const WorkOrderForm: React.FC = () => {
     return `${hours}h${minutes.toString().padStart(2, '0')}min`;
   };
 
-  // Auto-calculate distance using Google Maps API (placeholder for now)
-  const calculateDistance = async (companyAddress: string, clientAddress: string) => {
-    // This would integrate with Google Maps Distance Matrix API
-    // For now, return empty string as placeholder
-    console.log('Calculate distance between:', companyAddress, 'and', clientAddress);
-    return '';
+  // Calculate distance using Google Maps API
+  const calculateDistance = async (companyAddress: string, targetAddress: string) => {
+    try {
+      // Placeholder for Google Maps Distance Matrix API integration
+      // This would require Google Maps API key and proper implementation
+      console.log('Calculate distance between:', companyAddress, 'and', targetAddress);
+      
+      // For now, return empty string - would be replaced with actual API call
+      // const response = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=${API_KEY}`);
+      // const data = await response.json();
+      // return data.rows[0]?.elements[0]?.distance?.text || '';
+      
+      return '';
+    } catch (error) {
+      console.error('Error calculating distance:', error);
+      return '';
+    }
+  };
+
+  // Get relevant address based on logic
+  const getRelevantAddress = () => {
+    if (workOrder.orderForCustomer && workOrder.customerCompanyAddress) {
+      return workOrder.customerCompanyAddress;
+    }
+    return workOrder.clientCompanyAddress;
   };
 
   useEffect(() => {
@@ -138,15 +157,15 @@ const WorkOrderForm: React.FC = () => {
 
   useEffect(() => {
     if (workOrder.fieldTrip && user?.companyAddress) {
-      const clientAddress = workOrder.orderForCustomer && workOrder.customerCompanyAddress 
-        ? workOrder.customerCompanyAddress 
-        : workOrder.clientCompanyAddress;
+      const targetAddress = getRelevantAddress();
       
-      if (clientAddress) {
-        calculateDistance(user.companyAddress, clientAddress).then(distance => {
+      if (targetAddress) {
+        calculateDistance(user.companyAddress, targetAddress).then(distance => {
           setWorkOrder(prev => ({ ...prev, distance }));
         });
       }
+    } else if (!workOrder.fieldTrip) {
+      setWorkOrder(prev => ({ ...prev, distance: '' }));
     }
   }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress]);
 
@@ -299,6 +318,15 @@ const WorkOrderForm: React.FC = () => {
         variant: "destructive",
         title: "Greška",
         description: "Potreban je potpis korisnika",
+      });
+      return;
+    }
+
+    if (!workOrder.customerSignerName) {
+      toast({
+        variant: "destructive",
+        title: "Greška", 
+        description: "Potrebno je ime i prezime potpisnika",
       });
       return;
     }
@@ -833,6 +861,11 @@ const WorkOrderForm: React.FC = () => {
                   placeholder="Unesite broj kilometara"
                   required={workOrder.fieldTrip}
                 />
+                {!user?.companyAddress && (
+                  <p className="text-sm text-amber-600">
+                    Postavite adresu sjedišta tvrtke u postavkama za automatsko računanje udaljenosti.
+                  </p>
+                )}
               </div>
             )}
           </CardContent>

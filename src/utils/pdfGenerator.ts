@@ -37,13 +37,17 @@ interface WorkOrder {
   performedWork: WorkItem[];
   technicianComment: WorkItem[];
   materials: Material[];
-  hours: string;
+  date: string;
+  arrivalTime: string;
+  completionTime: string;
+  calculatedHours: string;
+  fieldTrip: boolean;
   distance: string;
   technicianSignature: string;
   technicianName: string;
   customerSignature: string;
+  customerSignerName: string;
   signatureMetadata?: SignatureMetadata;
-  date: string;
 }
 
 export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
@@ -61,7 +65,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text('RADNI NALOG', 105, 20, { align: 'center' });
       pdf.setFontSize(12);
       pdf.text(`Broj: ${workOrder.id}`, 105, 27, { align: 'center' });
-      pdf.text(`Datum: ${new Date(workOrder.date).toLocaleDateString('hr-HR')}`, 105, 32, { align: 'center' });
+      pdf.text(`Datum: ${workOrder.date}`, 105, 32, { align: 'center' });
       
       // Reset font
       pdf.setFont('helvetica', 'normal');
@@ -182,10 +186,34 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       
       yOffset += 10;
       
-      // Add time and distance
-      pdf.text(`Utrošeno vrijeme: ${workOrder.hours} sati`, 20, yOffset);
+      // Add time section
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('VRIJEME:', 20, yOffset);
+      pdf.setFont('helvetica', 'normal');
       yOffset += 7;
-      pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, 20, yOffset);
+      
+      pdf.text(`Datum: ${workOrder.date}`, 20, yOffset);
+      yOffset += 7;
+      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, 20, yOffset);
+      yOffset += 7;
+      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, 20, yOffset);
+      yOffset += 7;
+      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, 20, yOffset);
+      yOffset += 10;
+      
+      // Add travel section
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('PUT:', 20, yOffset);
+      pdf.setFont('helvetica', 'normal');
+      yOffset += 7;
+      
+      if (workOrder.fieldTrip) {
+        pdf.text('Izlazak na teren: DA', 20, yOffset);
+        yOffset += 7;
+        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, 20, yOffset);
+      } else {
+        pdf.text('Izlazak na teren: NE', 20, yOffset);
+      }
       
       yOffset += 15;
       
@@ -242,10 +270,13 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
                   const custImgData = custCanvas.toDataURL('image/png');
                   pdf.addImage(custImgData, 'PNG', 110, yOffset + 2, 40, 20);
                   
+                  // Add customer signer name
+                  pdf.text(workOrder.customerSignerName, 110, yOffset + 25);
+                  
                   // Add signature metadata
                   if (workOrder.signatureMetadata) {
                     pdf.setFontSize(6);
-                    let metaY = yOffset + 25;
+                    let metaY = yOffset + 30;
                     
                     // Add timestamp
                     pdf.text(`Datum i vrijeme: ${workOrder.signatureMetadata.timestamp}`, 110, metaY);

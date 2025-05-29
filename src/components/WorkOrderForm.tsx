@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -47,12 +47,16 @@ interface WorkOrder {
   performedWork: WorkItem[];
   technicianComment: WorkItem[];
   materials: Material[];
-  hours: string;
+  date: string;
+  arrivalTime: string;
+  completionTime: string;
+  calculatedHours: string;
+  fieldTrip: boolean;
   distance: string;
   technicianSignature: string;
   customerSignature: string;
+  customerSignerName: string;
   signatureMetadata?: SignatureMetadata;
-  date: string;
 }
 
 let orderCounter = 1;
@@ -85,12 +89,66 @@ const WorkOrderForm: React.FC = () => {
     performedWork: [{ id: '1', text: '' }],
     technicianComment: [{ id: '1', text: '' }],
     materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-    hours: '',
+    date: new Date().toLocaleDateString('hr-HR'),
+    arrivalTime: '',
+    completionTime: '',
+    calculatedHours: '0h00min',
+    fieldTrip: false,
     distance: '',
     technicianSignature: user?.signature || '',
     customerSignature: '',
-    date: new Date().toISOString().split('T')[0]
+    customerSignerName: '',
   });
+
+  // Calculate billable hours based on arrival and completion time
+  const calculateBillableHours = (arrival: string, completion: string) => {
+    if (!arrival || !completion) return '0h00min';
+    
+    const [arrivalHour, arrivalMin] = arrival.split(':').map(Number);
+    const [completionHour, completionMin] = completion.split(':').map(Number);
+    
+    const arrivalMinutes = arrivalHour * 60 + arrivalMin;
+    const completionMinutes = completionHour * 60 + completionMin;
+    
+    if (completionMinutes <= arrivalMinutes) return '0h00min';
+    
+    const diffMinutes = completionMinutes - arrivalMinutes;
+    
+    // Round up to nearest 30 minutes
+    const billableMinutes = Math.ceil(diffMinutes / 30) * 30;
+    
+    const hours = Math.floor(billableMinutes / 60);
+    const minutes = billableMinutes % 60;
+    
+    return `${hours}h${minutes.toString().padStart(2, '0')}min`;
+  };
+
+  // Auto-calculate distance using Google Maps API (placeholder for now)
+  const calculateDistance = async (companyAddress: string, clientAddress: string) => {
+    // This would integrate with Google Maps Distance Matrix API
+    // For now, return empty string as placeholder
+    console.log('Calculate distance between:', companyAddress, 'and', clientAddress);
+    return '';
+  };
+
+  useEffect(() => {
+    const calculated = calculateBillableHours(workOrder.arrivalTime, workOrder.completionTime);
+    setWorkOrder(prev => ({ ...prev, calculatedHours: calculated }));
+  }, [workOrder.arrivalTime, workOrder.completionTime]);
+
+  useEffect(() => {
+    if (workOrder.fieldTrip && user?.companyAddress) {
+      const clientAddress = workOrder.orderForCustomer && workOrder.customerCompanyAddress 
+        ? workOrder.customerCompanyAddress 
+        : workOrder.clientCompanyAddress;
+      
+      if (clientAddress) {
+        calculateDistance(user.companyAddress, clientAddress).then(distance => {
+          setWorkOrder(prev => ({ ...prev, distance }));
+        });
+      }
+    }
+  }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -99,6 +157,10 @@ const WorkOrderForm: React.FC = () => {
 
   const handleCheckboxChange = (checked: boolean) => {
     setWorkOrder({ ...workOrder, orderForCustomer: checked });
+  };
+
+  const handleFieldTripChange = (checked: boolean) => {
+    setWorkOrder({ ...workOrder, fieldTrip: checked, distance: checked ? workOrder.distance : '' });
   };
 
   const handleWorkItemChange = (section: keyof Pick<WorkOrder, 'description' | 'foundCondition' | 'performedWork' | 'technicianComment'>, id: string, value: string) => {
@@ -289,11 +351,15 @@ const WorkOrderForm: React.FC = () => {
         performedWork: [{ id: '1', text: '' }],
         technicianComment: [{ id: '1', text: '' }],
         materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-        hours: '',
+        date: new Date().toLocaleDateString('hr-HR'),
+        arrivalTime: '',
+        completionTime: '',
+        calculatedHours: '0h00min',
+        fieldTrip: false,
         distance: '',
         technicianSignature: user.signature || '',
         customerSignature: '',
-        date: new Date().toISOString().split('T')[0]
+        customerSignerName: '',
       });
     } catch (error) {
       console.error('Error submitting form:', error);
@@ -689,23 +755,72 @@ const WorkOrderForm: React.FC = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-xl">Vrijeme i put</CardTitle>
+            <CardTitle className="text-xl">Vrijeme</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="hours">Utrošeno vrijeme (sati)</Label>
+                <Label htmlFor="date">Datum</Label>
                 <Input 
-                  id="hours" 
-                  name="hours" 
-                  type="number" 
-                  min="0" 
-                  step="0.5" 
-                  value={workOrder.hours} 
+                  id="date" 
+                  name="date" 
+                  type="date"
+                  value={workOrder.date.split('.').reverse().join('-')}
+                  onChange={(e) => setWorkOrder({...workOrder, date: new Date(e.target.value).toLocaleDateString('hr-HR')})}
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="arrivalTime">Vrijeme dolaska</Label>
+                <Input 
+                  id="arrivalTime" 
+                  name="arrivalTime" 
+                  type="time"
+                  value={workOrder.arrivalTime}
                   onChange={handleChange}
                   required 
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="completionTime">Vrijeme završetka radova</Label>
+                <Input 
+                  id="completionTime" 
+                  name="completionTime" 
+                  type="time"
+                  value={workOrder.completionTime}
+                  onChange={handleChange}
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Obračunsko vrijeme</Label>
+                <div className="p-2 bg-gray-50 border rounded">
+                  {workOrder.calculatedHours}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-xl">Put</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="fieldTrip" 
+                checked={workOrder.fieldTrip}
+                onCheckedChange={handleFieldTripChange}
+              />
+              <Label htmlFor="fieldTrip" className="text-sm font-normal">
+                Izlazak na teren
+              </Label>
+            </div>
+            
+            {workOrder.fieldTrip && (
               <div className="space-y-2">
                 <Label htmlFor="distance">Prijeđena udaljenost (km)</Label>
                 <Input 
@@ -715,10 +830,11 @@ const WorkOrderForm: React.FC = () => {
                   min="0" 
                   value={workOrder.distance}
                   onChange={handleChange} 
-                  required 
+                  placeholder="Unesite broj kilometara"
+                  required={workOrder.fieldTrip}
                 />
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -731,11 +847,14 @@ const WorkOrderForm: React.FC = () => {
               <Label>Potpis tehničara</Label>
               <div className="mt-2 p-2 border rounded bg-gray-50">
                 {user?.signature ? (
-                  <img 
-                    src={user.signature} 
-                    alt="Potpis tehničara" 
-                    className="max-h-20 mx-auto"
-                  />
+                  <div className="flex flex-col items-center">
+                    <img 
+                      src={user.signature} 
+                      alt="Potpis tehničara" 
+                      className="max-h-20 mx-auto"
+                    />
+                    <p className="text-sm text-gray-600 mt-2">{user.name}</p>
+                  </div>
                 ) : (
                   <div className="text-center text-gray-400 py-4">
                     Potpis nije postavljen. Postavite potpis u vašim postavkama.
@@ -748,38 +867,51 @@ const WorkOrderForm: React.FC = () => {
             
             <div>
               <Label>Potpis klijenta</Label>
-              <div 
-                className="mt-2 p-2 border rounded bg-gray-50 cursor-pointer min-h-[80px] flex items-center justify-center"
-                onClick={() => setIsCustomerSignatureModalOpen(true)}
-              >
-                {workOrder.customerSignature ? (
-                  <div className="flex flex-col items-center">
-                    <img 
-                      src={workOrder.customerSignature} 
-                      alt="Potpis klijenta" 
-                      className="max-h-20 mx-auto" 
-                    />
-                    {workOrder.signatureMetadata && (
-                      <div className="text-[10px] text-gray-500 mt-2 text-center max-w-full">
-                        <p>Datum i vrijeme: {workOrder.signatureMetadata.timestamp}</p>
-                        {workOrder.signatureMetadata.coordinates && (
-                          <p>
-                            Koordinate: {workOrder.signatureMetadata.coordinates.latitude.toFixed(6)}, {workOrder.signatureMetadata.coordinates.longitude.toFixed(6)}
-                          </p>
-                        )}
-                        {workOrder.signatureMetadata.address && (
-                          <p className="truncate">
-                            Adresa: {workOrder.signatureMetadata.address}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <div className="text-center text-gray-400">
-                    Kliknite za dodavanje potpisa klijenta
-                  </div>
-                )}
+              <div className="space-y-2">
+                <div className="space-y-2">
+                  <Label htmlFor="customerSignerName">Ime i prezime potpisnika</Label>
+                  <Input 
+                    id="customerSignerName" 
+                    name="customerSignerName" 
+                    value={workOrder.customerSignerName}
+                    onChange={handleChange}
+                    placeholder="Unesite ime i prezime potpisnika"
+                    required
+                  />
+                </div>
+                <div 
+                  className="mt-2 p-2 border rounded bg-gray-50 cursor-pointer min-h-[80px] flex items-center justify-center"
+                  onClick={() => setIsCustomerSignatureModalOpen(true)}
+                >
+                  {workOrder.customerSignature ? (
+                    <div className="flex flex-col items-center">
+                      <img 
+                        src={workOrder.customerSignature} 
+                        alt="Potpis klijenta" 
+                        className="max-h-20 mx-auto" 
+                      />
+                      {workOrder.signatureMetadata && (
+                        <div className="text-[10px] text-gray-500 mt-2 text-center max-w-full">
+                          <p>Datum i vrijeme: {workOrder.signatureMetadata.timestamp}</p>
+                          {workOrder.signatureMetadata.coordinates && (
+                            <p>
+                              Koordinate: {workOrder.signatureMetadata.coordinates.latitude.toFixed(6)}, {workOrder.signatureMetadata.coordinates.longitude.toFixed(6)}
+                            </p>
+                          )}
+                          {workOrder.signatureMetadata.address && (
+                            <p className="truncate">
+                              Adresa: {workOrder.signatureMetadata.address}
+                            </p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center text-gray-400">
+                      Kliknite za dodavanje potpisa klijenta
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </CardContent>
@@ -788,7 +920,7 @@ const WorkOrderForm: React.FC = () => {
         <div className="flex justify-end gap-4">
           <Button 
             type="submit" 
-            disabled={isSubmitting || !workOrder.customerSignature || !user?.signature}
+            disabled={isSubmitting || !workOrder.customerSignature || !user?.signature || !workOrder.customerSignerName}
             className="relative"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

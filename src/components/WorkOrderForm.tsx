@@ -123,19 +123,28 @@ const WorkOrderForm: React.FC = () => {
     return `${hours}h${minutes.toString().padStart(2, '0')}min`;
   };
 
-  // Calculate distance using Google Maps API
+  // Calculate distance using distancematrix.ai API
   const calculateDistance = async (companyAddress: string, targetAddress: string) => {
     try {
-      // Placeholder for Google Maps Distance Matrix API integration
-      // This would require Google Maps API key and proper implementation
-      console.log('Calculate distance between:', companyAddress, 'and', targetAddress);
+      console.log('Calculating distance between:', companyAddress, 'and', targetAddress);
       
-      // For now, return empty string - would be replaced with actual API call
-      // const response = await fetch(`https://maps.googleapis.com/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=${API_KEY}`);
-      // const data = await response.json();
-      // return data.rows[0]?.elements[0]?.distance?.text || '';
+      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=YOUR_API_KEY`);
       
-      return '';
+      if (!response.ok) {
+        throw new Error('Failed to fetch distance data');
+      }
+      
+      const data = await response.json();
+      
+      if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
+        const distanceText = data.rows[0].elements[0].distance?.text;
+        // Extract numeric value from text like "15.2 km"
+        const distanceValue = distanceText?.replace(/[^\d.]/g, '') || '';
+        return distanceValue;
+      } else {
+        console.log('Distance calculation failed:', data);
+        return '';
+      }
     } catch (error) {
       console.error('Error calculating distance:', error);
       return '';
@@ -864,6 +873,11 @@ const WorkOrderForm: React.FC = () => {
                 {!user?.companyAddress && (
                   <p className="text-sm text-amber-600">
                     Postavite adresu sjedišta tvrtke u postavkama za automatsko računanje udaljenosti.
+                  </p>
+                )}
+                {user?.companyAddress && (
+                  <p className="text-sm text-green-600">
+                    Udaljenost se automatski računa pomoću distancematrix.ai API-ja.
                   </p>
                 )}
               </div>

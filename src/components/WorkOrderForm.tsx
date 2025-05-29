@@ -140,11 +140,14 @@ const WorkOrderForm: React.FC = () => {
       }
       
       const data = await response.json();
+      console.log('Distance API response:', data);
       
       if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
         const distanceText = data.rows[0].elements[0].distance?.text;
+        console.log('Distance text from API:', distanceText);
         // Extract numeric value from text like "15.2 km"
         const distanceValue = distanceText?.replace(/[^\d.]/g, '') || '';
+        console.log('Extracted distance value:', distanceValue);
         return distanceValue;
       } else {
         console.log('Distance calculation failed:', data);
@@ -170,18 +173,34 @@ const WorkOrderForm: React.FC = () => {
   }, [workOrder.arrivalTime, workOrder.completionTime]);
 
   useEffect(() => {
-    if (workOrder.fieldTrip && user?.companyAddress) {
+    console.log('Distance calculation effect triggered');
+    console.log('Field trip:', workOrder.fieldTrip);
+    console.log('Company address:', user?.companyAddress);
+    console.log('API key available:', !!user?.distanceMatrixApiKey);
+    
+    if (workOrder.fieldTrip && user?.companyAddress && user?.distanceMatrixApiKey) {
       const targetAddress = getRelevantAddress();
+      console.log('Target address:', targetAddress);
       
       if (targetAddress) {
+        console.log('Starting distance calculation...');
         calculateDistance(user.companyAddress, targetAddress).then(distance => {
+          console.log('Distance calculated:', distance);
           setWorkOrder(prev => ({ ...prev, distance }));
         });
+      } else {
+        console.log('No target address available');
       }
     } else if (!workOrder.fieldTrip) {
+      console.log('Field trip disabled, clearing distance');
       setWorkOrder(prev => ({ ...prev, distance: '' }));
+    } else {
+      console.log('Missing requirements for distance calculation:');
+      console.log('- Field trip:', workOrder.fieldTrip);
+      console.log('- Company address:', user?.companyAddress);
+      console.log('- API key:', !!user?.distanceMatrixApiKey);
     }
-  }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress]);
+  }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress, user?.distanceMatrixApiKey]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;

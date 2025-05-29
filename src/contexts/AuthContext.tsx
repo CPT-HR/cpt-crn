@@ -14,6 +14,7 @@ type UserData = {
   approved: boolean;
   signature?: string;
   initials: string;
+  companyAddress?: string;
 };
 
 type AuthContextType = {
@@ -24,6 +25,7 @@ type AuthContextType = {
   logout: () => void;
   register: (email: string, password: string, name: string) => Promise<void>;
   saveSignature: (signature: string) => Promise<void>;
+  saveCompanyAddress: (address: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -58,6 +60,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Load user company address from localStorage (temporary storage)
+  const loadUserCompanyAddress = (userId: string): string | undefined => {
+    try {
+      const savedAddress = localStorage.getItem(`companyAddress_${userId}`);
+      return savedAddress || undefined;
+    } catch (err) {
+      console.error('Error loading company address:', err);
+      return undefined;
+    }
+  };
+
   // Get user's profile data from Supabase
   const getUserProfile = async (userId: string) => {
     try {
@@ -78,6 +91,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Load signature from database
         const signature = await loadUserSignature(userId);
         
+        // Load company address from localStorage
+        const companyAddress = loadUserCompanyAddress(userId);
+        
         const userProfile: UserData = {
           id: userId,
           email: email,
@@ -85,7 +101,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           role: 'admin', // Default as admin for the first user
           approved: true,
           initials: initials,
-          signature: signature
+          signature: signature,
+          companyAddress: companyAddress
         };
         
         setUser(userProfile);
@@ -288,8 +305,36 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const saveCompanyAddress = async (address: string): Promise<void> => {
+    if (!user) {
+      throw new Error('Korisnik nije prijavljen');
+    }
+    
+    try {
+      // Save to localStorage for now (could be extended to database later)
+      localStorage.setItem(`companyAddress_${user.id}`, address);
+      
+      // Update local user state
+      const updatedUser = { ...user, companyAddress: address };
+      setUser(updatedUser);
+      
+      toast({
+        title: "Adresa spremljena",
+        description: "Adresa sjedišta tvrtke je uspješno spremljena",
+      });
+    } catch (error) {
+      console.error('Error saving company address:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do pogreške prilikom spremanja adrese",
+      });
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, logout, register, saveSignature }}>
+    <AuthContext.Provider value={{ user, isLoading, error, login, logout, register, saveSignature, saveCompanyAddress }}>
       {children}
     </AuthContext.Provider>
   );

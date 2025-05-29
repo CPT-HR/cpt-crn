@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,7 +9,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const Settings: React.FC = () => {
-  const { user, saveSignature } = useAuth();
+  const { user, saveSignature, saveCompanyAddress } = useAuth();
   const { toast } = useToast();
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -32,18 +31,9 @@ const Settings: React.FC = () => {
   const handleAddressSave = async () => {
     setIsSavingAddress(true);
     try {
-      // TODO: Implement saveCompanyAddress function in AuthContext
-      console.log('Saving company address:', companyAddress);
-      toast({
-        title: "Adresa spremljena",
-        description: "Adresa sjedišta tvrtke je uspješno spremljena",
-      });
+      await saveCompanyAddress(companyAddress);
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Došlo je do pogreške prilikom spremanja adrese",
-      });
+      console.error('Failed to save company address:', error);
     } finally {
       setIsSavingAddress(false);
     }

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState } from 'react';
 
 export interface UserData {
@@ -5,6 +6,7 @@ export interface UserData {
   email: string;
   name: string;
   initials: string;
+  role?: string;
   signature?: string;
   companyAddress?: string;
   distanceMatrixApiKey?: string;
@@ -12,7 +14,9 @@ export interface UserData {
 
 interface AuthContextProps {
   user: UserData | null;
-  login: (user: UserData) => void;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
   saveSignature: (signature: string) => Promise<void>;
   saveCompanyAddress: (address: string) => Promise<void>;
@@ -26,10 +30,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const savedUser = localStorage.getItem('user');
     return savedUser ? JSON.parse(savedUser) : null;
   });
+  const [isLoading, setIsLoading] = useState(false);
 
-  const login = (user: UserData) => {
-    setUser(user);
-    localStorage.setItem('user', JSON.stringify(user));
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      // Mock login - in real app this would call an API
+      const mockUser: UserData = {
+        id: '1',
+        email: email,
+        name: 'Mock User',
+        initials: 'MU',
+        role: 'admin'
+      };
+      setUser(mockUser);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+    } catch (error) {
+      throw new Error('Login failed');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const register = async (email: string, password: string, name: string) => {
+    setIsLoading(true);
+    try {
+      // Mock registration - in real app this would call an API
+      const mockUser: UserData = {
+        id: Date.now().toString(),
+        email: email,
+        name: name,
+        initials: name.split(' ').map(n => n[0]).join('').toUpperCase(),
+        role: 'technician'
+      };
+      setUser(mockUser);
+      localStorage.setItem('user', JSON.stringify(mockUser));
+    } catch (error) {
+      throw new Error('Registration failed');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const logout = () => {
@@ -63,7 +103,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const value = {
     user,
+    isLoading,
     login,
+    register,
     logout,
     saveSignature,
     saveCompanyAddress,

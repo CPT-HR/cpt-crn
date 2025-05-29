@@ -18,7 +18,6 @@ interface WorkOrder {
   clientName: string;
   clientAddress: string;
   clientContact: string;
-  location: string;
   description: string;
   performedWork: string;
   materials: Material[];
@@ -67,17 +66,16 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text(`Naziv: ${workOrder.customerName}`, 20, 85);
       pdf.text(`Adresa: ${workOrder.customerAddress}`, 20, 92);
       pdf.text(`Kontakt: ${workOrder.customerContact}`, 20, 99);
-      pdf.text(`Lokacija objekta: ${workOrder.location}`, 20, 106);
 
       // Add service details
       pdf.setFont('helvetica', 'bold');
-      pdf.text('OPIS KVARA/PROBLEMA:', 20, 118);
+      pdf.text('OPIS KVARA/PROBLEMA:', 20, 111);
       pdf.setFont('helvetica', 'normal');
       
       const descriptionLines = pdf.splitTextToSize(workOrder.description, 170);
-      pdf.text(descriptionLines, 20, 125);
+      pdf.text(descriptionLines, 20, 118);
       
-      let yOffset = 125 + (descriptionLines.length * 6);
+      let yOffset = 118 + (descriptionLines.length * 6);
 
       pdf.setFont('helvetica', 'bold');
       pdf.text('IZVRŠENI RADOVI:', 20, yOffset);

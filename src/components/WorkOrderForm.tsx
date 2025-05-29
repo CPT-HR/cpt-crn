@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +27,6 @@ interface WorkOrder {
   clientName: string;
   clientAddress: string;
   clientContact: string;
-  location: string;
   description: string;
   performedWork: string;
   materials: Material[];
@@ -56,7 +54,6 @@ const WorkOrderForm: React.FC = () => {
     clientName: '',
     clientAddress: '',
     clientContact: '',
-    location: '',
     description: '',
     performedWork: '',
     materials: [{ id: '1', name: '', quantity: '', unit: '' }],
@@ -128,7 +125,6 @@ const WorkOrderForm: React.FC = () => {
         client_name: finalWorkOrder.clientName,
         client_address: finalWorkOrder.clientAddress,
         client_contact: finalWorkOrder.clientContact,
-        location: finalWorkOrder.location,
         description: finalWorkOrder.description,
         performed_work: finalWorkOrder.performedWork,
         materials: finalWorkOrder.materials,
@@ -201,7 +197,6 @@ const WorkOrderForm: React.FC = () => {
         clientName: '',
         clientAddress: '',
         clientContact: '',
-        location: '',
         description: '',
         performedWork: '',
         materials: [{ id: '1', name: '', quantity: '', unit: '' }],
@@ -311,16 +306,6 @@ const WorkOrderForm: React.FC = () => {
             <CardTitle className="text-xl">Podaci o radovima</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="location">Lokacija objekta</Label>
-              <Input 
-                id="location" 
-                name="location" 
-                value={workOrder.location} 
-                onChange={handleChange} 
-                required 
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="description">Opis kvara/problema</Label>
               <Textarea 

@@ -1,4 +1,3 @@
-
 import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 import { SignatureMetadata } from '@/components/SignaturePad';
@@ -28,7 +27,9 @@ interface WorkOrder {
   customerMobile: string;
   customerEmail: string;
   description: string;
+  foundCondition: string;
   performedWork: string;
+  technicianComment: string;
   materials: Material[];
   hours: string;
   distance: string;
@@ -95,7 +96,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         yOffset += 5;
       }
 
-      // Add service details
+      // Add service details with new fields
       pdf.setFont('helvetica', 'bold');
       pdf.text('OPIS KVARA/PROBLEMA:', 20, yOffset);
       pdf.setFont('helvetica', 'normal');
@@ -107,6 +108,16 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       yOffset += (descriptionLines.length * 6) + 8;
 
       pdf.setFont('helvetica', 'bold');
+      pdf.text('ZATEČENO STANJE:', 20, yOffset);
+      pdf.setFont('helvetica', 'normal');
+      yOffset += 7;
+      
+      const foundConditionLines = pdf.splitTextToSize(workOrder.foundCondition, 170);
+      pdf.text(foundConditionLines, 20, yOffset);
+      
+      yOffset += (foundConditionLines.length * 6) + 8;
+
+      pdf.setFont('helvetica', 'bold');
       pdf.text('IZVRŠENI RADOVI:', 20, yOffset);
       pdf.setFont('helvetica', 'normal');
       yOffset += 7;
@@ -114,7 +125,21 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const workLines = pdf.splitTextToSize(workOrder.performedWork, 170);
       pdf.text(workLines, 20, yOffset);
       
-      yOffset += (workLines.length * 6) + 15;
+      yOffset += (workLines.length * 6) + 8;
+
+      if (workOrder.technicianComment && workOrder.technicianComment.trim()) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('KOMENTAR TEHNIČARA:', 20, yOffset);
+        pdf.setFont('helvetica', 'normal');
+        yOffset += 7;
+        
+        const commentLines = pdf.splitTextToSize(workOrder.technicianComment, 170);
+        pdf.text(commentLines, 20, yOffset);
+        
+        yOffset += (commentLines.length * 6) + 15;
+      } else {
+        yOffset += 7;
+      }
 
       // Add materials
       pdf.setFont('helvetica', 'bold');

@@ -39,7 +39,9 @@ interface WorkOrder {
   customerMobile: string;
   customerEmail: string;
   description: string;
+  foundCondition: string;
   performedWork: string;
+  technicianComment: string;
   materials: Material[];
   hours: string;
   distance: string;
@@ -75,7 +77,9 @@ const WorkOrderForm: React.FC = () => {
     customerMobile: '',
     customerEmail: '',
     description: '',
+    foundCondition: '',
     performedWork: '',
+    technicianComment: '',
     materials: [{ id: '1', name: '', quantity: '', unit: '' }],
     hours: '',
     distance: '',
@@ -240,7 +244,9 @@ const WorkOrderForm: React.FC = () => {
         customerMobile: '',
         customerEmail: '',
         description: '',
+        foundCondition: '',
         performedWork: '',
+        technicianComment: '',
         materials: [{ id: '1', name: '', quantity: '', unit: '' }],
         hours: '',
         distance: '',
@@ -458,7 +464,20 @@ const WorkOrderForm: React.FC = () => {
                 value={workOrder.description} 
                 onChange={handleChange} 
                 required 
-                className="min-h-[100px]"
+                className="min-h-[100px] resize-y"
+                placeholder="• Unesite opis kvara ili problema&#10;• Dodajte novi red za svaku stavku&#10;• Koristite natuknice za lakše čitanje"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="foundCondition">Zatečeno stanje</Label>
+              <Textarea 
+                id="foundCondition" 
+                name="foundCondition" 
+                value={workOrder.foundCondition} 
+                onChange={handleChange} 
+                required 
+                className="min-h-[100px] resize-y"
+                placeholder="• Opišite zatečeno stanje&#10;• Dodajte novi red za svaku stavku&#10;• Koristite natuknice za lakše čitanje"
               />
             </div>
             <div className="space-y-2">
@@ -469,7 +488,19 @@ const WorkOrderForm: React.FC = () => {
                 value={workOrder.performedWork} 
                 onChange={handleChange} 
                 required 
-                className="min-h-[100px]"
+                className="min-h-[100px] resize-y"
+                placeholder="• Opišite izvršene radove&#10;• Dodajte novi red za svaku stavku&#10;• Koristite natuknice za lakše čitanje"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="technicianComment">Komentar tehničara</Label>
+              <Textarea 
+                id="technicianComment" 
+                name="technicianComment" 
+                value={workOrder.technicianComment} 
+                onChange={handleChange} 
+                className="min-h-[100px] resize-y"
+                placeholder="• Dodatni komentari ili napomene&#10;• Dodajte novi red za svaku stavku&#10;• Koristite natuknice za lakše čitanje"
               />
             </div>
           </CardContent>

@@ -126,9 +126,14 @@ const WorkOrderForm: React.FC = () => {
   // Calculate distance using distancematrix.ai API
   const calculateDistance = async (companyAddress: string, targetAddress: string) => {
     try {
+      if (!user?.distanceMatrixApiKey) {
+        console.log('No API key configured for distance calculation');
+        return '';
+      }
+
       console.log('Calculating distance between:', companyAddress, 'and', targetAddress);
       
-      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=YOUR_API_KEY`);
+      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=${user.distanceMatrixApiKey}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch distance data');
@@ -875,7 +880,12 @@ const WorkOrderForm: React.FC = () => {
                     Postavite adresu sjedišta tvrtke u postavkama za automatsko računanje udaljenosti.
                   </p>
                 )}
-                {user?.companyAddress && (
+                {!user?.distanceMatrixApiKey && (
+                  <p className="text-sm text-amber-600">
+                    Postavite DistanceMatrix.ai API ključ u postavkama za automatsko računanje udaljenosti.
+                  </p>
+                )}
+                {user?.companyAddress && user?.distanceMatrixApiKey && (
                   <p className="text-sm text-green-600">
                     Udaljenost se automatski računa pomoću distancematrix.ai API-ja.
                   </p>

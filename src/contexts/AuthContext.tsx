@@ -1,348 +1,81 @@
+import React, { createContext, useContext, useState } from 'react';
 
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { useToast } from "@/components/ui/use-toast";
-import { supabase } from "@/integrations/supabase/client";
-
-type UserRole = 'admin' | 'technician';
-
-type UserData = {
+export interface UserData {
   id: string;
   email: string;
   name: string;
-  role: UserRole;
-  approved: boolean;
-  signature?: string;
   initials: string;
+  signature?: string;
   companyAddress?: string;
-};
+  distanceMatrixApiKey?: string;
+}
 
-type AuthContextType = {
+interface AuthContextProps {
   user: UserData | null;
-  isLoading: boolean;
-  error: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (user: UserData) => void;
   logout: () => void;
-  register: (email: string, password: string, name: string) => Promise<void>;
   saveSignature: (signature: string) => Promise<void>;
   saveCompanyAddress: (address: string) => Promise<void>;
-};
+  saveDistanceMatrixApiKey: (apiKey: string) => Promise<void>;
+}
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserData | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const { toast } = useToast();
-  const isMounted = useRef(true);
+  const [user, setUser] = useState<UserData | null>(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
-  // Load user signature from database
-  const loadUserSignature = async (userId: string): Promise<string | undefined> => {
-    try {
-      const supabaseAny = supabase as any;
-      const { data, error } = await supabaseAny
-        .from('user_signatures')
-        .select('signature_data')
-        .eq('user_id', userId)
-        .maybeSingle();
-      
-      if (error) {
-        console.error('Error loading signature:', error);
-        return undefined;
-      }
-      
-      return data?.signature_data;
-    } catch (err) {
-      console.error('Error loading signature:', err);
-      return undefined;
-    }
+  const login = (user: UserData) => {
+    setUser(user);
+    localStorage.setItem('user', JSON.stringify(user));
   };
 
-  // Load user company address from localStorage (temporary storage)
-  const loadUserCompanyAddress = (userId: string): string | undefined => {
-    try {
-      const savedAddress = localStorage.getItem(`companyAddress_${userId}`);
-      return savedAddress || undefined;
-    } catch (err) {
-      console.error('Error loading company address:', err);
-      return undefined;
-    }
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
   };
 
-  // Get user's profile data from Supabase
-  const getUserProfile = async (userId: string) => {
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      
-      if (userData.user && isMounted.current) {
-        const email = userData.user.email || '';
-        const name = userData.user.user_metadata?.name || email?.split('@')[0] || 'User';
-        
-        // Generate initials from name
-        const initials = name
-          .split(' ')
-          .map(n => n[0])
-          .join('')
-          .toUpperCase()
-          .substring(0, 2);
-        
-        // Load signature from database
-        const signature = await loadUserSignature(userId);
-        
-        // Load company address from localStorage
-        const companyAddress = loadUserCompanyAddress(userId);
-        
-        const userProfile: UserData = {
-          id: userId,
-          email: email,
-          name: name,
-          role: 'admin', // Default as admin for the first user
-          approved: true,
-          initials: initials,
-          signature: signature,
-          companyAddress: companyAddress
-        };
-        
-        setUser(userProfile);
-      }
-    } catch (err) {
-      console.error('Error fetching user profile:', err);
-    }
-  };
-
-  // Handle auth state changes
-  useEffect(() => {
-    // Set up auth state listener first
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, currentSession) => {
-        if (!isMounted.current) return;
-        
-        console.log('Auth state changed:', event);
-        
-        // Only update state if component is still mounted
-        if (currentSession?.user) {
-          setSession(currentSession);
-          
-          // Use setTimeout to avoid Supabase auth deadlock issues
-          setTimeout(() => {
-            if (isMounted.current) {
-              getUserProfile(currentSession.user.id);
-            }
-          }, 0);
-        } else {
-          setSession(null);
-          setUser(null);
-        }
-        
-        setIsLoading(false);
-      }
-    );
-
-    // Check for existing session
-    const initializeAuth = async () => {
-      try {
-        console.log('Initializing auth...');
-        const { data: { session: currentSession } } = await supabase.auth.getSession();
-        
-        if (!isMounted.current) return;
-        
-        console.log('Got session:', currentSession ? 'yes' : 'no');
-        
-        setSession(currentSession);
-        
-        if (currentSession?.user) {
-          getUserProfile(currentSession.user.id);
-        } else {
-          setIsLoading(false);
-        }
-      } catch (err) {
-        console.error('Error initializing auth:', err);
-        if (isMounted.current) {
-          setIsLoading(false);
-        }
-      }
-    };
+  const saveSignature = async (signature: string) => {
+    if (!user) return;
     
-    initializeAuth();
+    const updatedUser = { ...user, signature: signature };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
 
-    return () => {
-      isMounted.current = false;
-      subscription.unsubscribe();
-    };
-  }, []);
+  const saveCompanyAddress = async (address: string) => {
+    if (!user) return;
 
-  const login = async (email: string, password: string) => {
-    setIsLoading(true);
-    setError(null);
+    const updatedUser = { ...user, companyAddress: address };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
+  };
+
+  const saveDistanceMatrixApiKey = async (apiKey: string) => {
+    if (!user) return;
     
-    try {
-      console.log('Logging in with:', email);
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Prijava uspješna",
-        description: "Dobrodošli natrag!",
-      });
-    } catch (err) {
-      console.error('Login error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Došlo je do pogreške prilikom prijave';
-      setError(errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Greška pri prijavi",
-        description: errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+    const updatedUser = { ...user, distanceMatrixApiKey: apiKey };
+    setUser(updatedUser);
+    localStorage.setItem('user', JSON.stringify(updatedUser));
   };
 
-  const register = async (email: string, password: string, name: string) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Register the new user
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-          }
-        }
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Registracija uspješna",
-        description: "Vaš zahtjev je zaprimljen. Administrator će pregledati i odobriti vaš račun.",
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Došlo je do pogreške prilikom registracije';
-      setError(errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Greška pri registraciji",
-        description: errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const value = {
+    user,
+    login,
+    logout,
+    saveSignature,
+    saveCompanyAddress,
+    saveDistanceMatrixApiKey,
   };
 
-  const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-      setUser(null);
-      setSession(null);
-      toast({
-        title: "Odjava uspješna",
-      });
-    } catch (err) {
-      console.error('Error signing out:', err);
-      toast({
-        variant: "destructive",
-        title: "Greška pri odjavi",
-        description: "Došlo je do pogreške prilikom odjave",
-      });
-    }
-  };
-
-  const saveSignature = async (signature: string): Promise<void> => {
-    if (!user) {
-      throw new Error('Korisnik nije prijavljen');
-    }
-    
-    try {
-      const supabaseAny = supabase as any;
-      
-      // Try to update existing signature first
-      const { error: updateError } = await supabaseAny
-        .from('user_signatures')
-        .update({ signature_data: signature })
-        .eq('user_id', user.id);
-      
-      // If update fails (no existing record), insert new one
-      if (updateError) {
-        const { error: insertError } = await supabaseAny
-          .from('user_signatures')
-          .insert({
-            user_id: user.id,
-            signature_data: signature
-          });
-        
-        if (insertError) throw insertError;
-      }
-      
-      // Update local user state
-      const updatedUser = { ...user, signature };
-      setUser(updatedUser);
-      
-      // Remove from localStorage if it exists (cleanup)
-      localStorage.removeItem('userSignature');
-      
-      toast({
-        title: "Potpis spremljen",
-        description: "Vaš potpis je uspješno ažuriran u bazi podataka",
-      });
-    } catch (error) {
-      console.error('Error saving signature:', error);
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Došlo je do pogreške prilikom spremanja potpisa",
-      });
-      throw error;
-    }
-  };
-
-  const saveCompanyAddress = async (address: string): Promise<void> => {
-    if (!user) {
-      throw new Error('Korisnik nije prijavljen');
-    }
-    
-    try {
-      // Save to localStorage for now (could be extended to database later)
-      localStorage.setItem(`companyAddress_${user.id}`, address);
-      
-      // Update local user state
-      const updatedUser = { ...user, companyAddress: address };
-      setUser(updatedUser);
-      
-      toast({
-        title: "Adresa spremljena",
-        description: "Adresa sjedišta tvrtke je uspješno spremljena",
-      });
-    } catch (error) {
-      console.error('Error saving company address:', error);
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Došlo je do pogreške prilikom spremanja adrese",
-      });
-      throw error;
-    }
-  };
-
-  return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, logout, register, saveSignature, saveCompanyAddress }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
-export const useAuth = (): AuthContextType => {
+export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

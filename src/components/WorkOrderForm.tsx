@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
 import SignaturePad, { SignatureMetadata } from './SignaturePad';
 import { useAuth } from '@/contexts/AuthContext';
 import { generatePDF } from '@/utils/pdfGenerator';
@@ -21,12 +23,21 @@ interface Material {
 
 interface WorkOrder {
   id: string;
-  customerName: string;
-  customerAddress: string;
-  customerContact: string;
-  clientName: string;
-  clientAddress: string;
-  clientContact: string;
+  clientCompanyName: string;
+  clientCompanyAddress: string;
+  clientOib: string;
+  clientFirstName: string;
+  clientLastName: string;
+  clientMobile: string;
+  clientEmail: string;
+  orderForCustomer: boolean;
+  customerCompanyName: string;
+  customerCompanyAddress: string;
+  customerOib: string;
+  customerFirstName: string;
+  customerLastName: string;
+  customerMobile: string;
+  customerEmail: string;
   description: string;
   performedWork: string;
   materials: Material[];
@@ -48,12 +59,21 @@ const WorkOrderForm: React.FC = () => {
   
   const [workOrder, setWorkOrder] = useState<WorkOrder>({
     id: '',
-    customerName: '',
-    customerAddress: '',
-    customerContact: '',
-    clientName: '',
-    clientAddress: '',
-    clientContact: '',
+    clientCompanyName: '',
+    clientCompanyAddress: '',
+    clientOib: '',
+    clientFirstName: '',
+    clientLastName: '',
+    clientMobile: '',
+    clientEmail: '',
+    orderForCustomer: false,
+    customerCompanyName: '',
+    customerCompanyAddress: '',
+    customerOib: '',
+    customerFirstName: '',
+    customerLastName: '',
+    customerMobile: '',
+    customerEmail: '',
     description: '',
     performedWork: '',
     materials: [{ id: '1', name: '', quantity: '', unit: '' }],
@@ -67,6 +87,10 @@ const WorkOrderForm: React.FC = () => {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setWorkOrder({ ...workOrder, [name]: value });
+  };
+
+  const handleCheckboxChange = (checked: boolean) => {
+    setWorkOrder({ ...workOrder, orderForCustomer: checked });
   };
 
   const handleMaterialChange = (id: string, field: keyof Material, value: string) => {
@@ -119,12 +143,21 @@ const WorkOrderForm: React.FC = () => {
       const supabaseAny = supabase as any;
       const { error } = await supabaseAny.from('work_orders').insert({
         order_number: finalWorkOrder.id,
-        customer_name: finalWorkOrder.customerName,
-        customer_address: finalWorkOrder.customerAddress,
-        customer_contact: finalWorkOrder.customerContact,
-        client_name: finalWorkOrder.clientName,
-        client_address: finalWorkOrder.clientAddress,
-        client_contact: finalWorkOrder.clientContact,
+        client_company_name: finalWorkOrder.clientCompanyName,
+        client_company_address: finalWorkOrder.clientCompanyAddress,
+        client_oib: finalWorkOrder.clientOib,
+        client_first_name: finalWorkOrder.clientFirstName,
+        client_last_name: finalWorkOrder.clientLastName,
+        client_mobile: finalWorkOrder.clientMobile,
+        client_email: finalWorkOrder.clientEmail,
+        order_for_customer: finalWorkOrder.orderForCustomer,
+        customer_company_name: finalWorkOrder.customerCompanyName,
+        customer_company_address: finalWorkOrder.customerCompanyAddress,
+        customer_oib: finalWorkOrder.customerOib,
+        customer_first_name: finalWorkOrder.customerFirstName,
+        customer_last_name: finalWorkOrder.customerLastName,
+        customer_mobile: finalWorkOrder.customerMobile,
+        customer_email: finalWorkOrder.customerEmail,
         description: finalWorkOrder.description,
         performed_work: finalWorkOrder.performedWork,
         materials: finalWorkOrder.materials,
@@ -191,12 +224,21 @@ const WorkOrderForm: React.FC = () => {
       // Reset form (except for the technician signature)
       setWorkOrder({
         id: '',
-        customerName: '',
-        customerAddress: '',
-        customerContact: '',
-        clientName: '',
-        clientAddress: '',
-        clientContact: '',
+        clientCompanyName: '',
+        clientCompanyAddress: '',
+        clientOib: '',
+        clientFirstName: '',
+        clientLastName: '',
+        clientMobile: '',
+        clientEmail: '',
+        orderForCustomer: false,
+        customerCompanyName: '',
+        customerCompanyAddress: '',
+        customerOib: '',
+        customerFirstName: '',
+        customerLastName: '',
+        customerMobile: '',
+        customerEmail: '',
         description: '',
         performedWork: '',
         materials: [{ id: '1', name: '', quantity: '', unit: '' }],
@@ -228,78 +270,180 @@ const WorkOrderForm: React.FC = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="clientName">Naziv naručitelja</Label>
+                <Label htmlFor="clientCompanyName">Ime tvrtke</Label>
                 <Input 
-                  id="clientName" 
-                  name="clientName" 
-                  value={workOrder.clientName} 
+                  id="clientCompanyName" 
+                  name="clientCompanyName" 
+                  value={workOrder.clientCompanyName} 
                   onChange={handleChange} 
                   required 
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="clientContact">Kontakt broj</Label>
+                <Label htmlFor="clientOib">OIB</Label>
                 <Input 
-                  id="clientContact" 
-                  name="clientContact" 
-                  value={workOrder.clientContact} 
+                  id="clientOib" 
+                  name="clientOib" 
+                  value={workOrder.clientOib} 
                   onChange={handleChange} 
                   required 
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="clientAddress">Adresa</Label>
+              <Label htmlFor="clientCompanyAddress">Adresa tvrtke</Label>
               <Input 
-                id="clientAddress" 
-                name="clientAddress" 
-                value={workOrder.clientAddress} 
+                id="clientCompanyAddress" 
+                name="clientCompanyAddress" 
+                value={workOrder.clientCompanyAddress} 
                 onChange={handleChange} 
                 required 
               />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="clientFirstName">Ime</Label>
+                <Input 
+                  id="clientFirstName" 
+                  name="clientFirstName" 
+                  value={workOrder.clientFirstName} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientLastName">Prezime</Label>
+                <Input 
+                  id="clientLastName" 
+                  name="clientLastName" 
+                  value={workOrder.clientLastName} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="clientMobile">Broj mobitela</Label>
+                <Input 
+                  id="clientMobile" 
+                  name="clientMobile" 
+                  value={workOrder.clientMobile} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientEmail">Email</Label>
+                <Input 
+                  id="clientEmail" 
+                  name="clientEmail" 
+                  type="email" 
+                  value={workOrder.clientEmail} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="orderForCustomer" 
+                checked={workOrder.orderForCustomer}
+                onCheckedChange={handleCheckboxChange}
+              />
+              <Label htmlFor="orderForCustomer" className="text-sm font-normal">
+                Naručitelj naručuje radove za korisnika
+              </Label>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-xl">Podaci o korisniku (lokacija)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="customerName">Naziv korisnika</Label>
-                <Input 
-                  id="customerName" 
-                  name="customerName" 
-                  value={workOrder.customerName} 
-                  onChange={handleChange} 
-                  required 
-                />
+        {workOrder.orderForCustomer && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Podaci o korisniku</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerCompanyName">Ime tvrtke</Label>
+                  <Input 
+                    id="customerCompanyName" 
+                    name="customerCompanyName" 
+                    value={workOrder.customerCompanyName} 
+                    onChange={handleChange} 
+                    required={workOrder.orderForCustomer}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerOib">OIB</Label>
+                  <Input 
+                    id="customerOib" 
+                    name="customerOib" 
+                    value={workOrder.customerOib} 
+                    onChange={handleChange} 
+                    required={workOrder.orderForCustomer}
+                  />
+                </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="customerContact">Kontakt broj</Label>
+                <Label htmlFor="customerCompanyAddress">Adresa tvrtke</Label>
                 <Input 
-                  id="customerContact" 
-                  name="customerContact" 
-                  value={workOrder.customerContact} 
+                  id="customerCompanyAddress" 
+                  name="customerCompanyAddress" 
+                  value={workOrder.customerCompanyAddress} 
                   onChange={handleChange} 
-                  required 
+                  required={workOrder.orderForCustomer}
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="customerAddress">Adresa</Label>
-              <Input 
-                id="customerAddress" 
-                name="customerAddress" 
-                value={workOrder.customerAddress} 
-                onChange={handleChange} 
-                required 
-              />
-            </div>
-          </CardContent>
-        </Card>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerFirstName">Ime</Label>
+                  <Input 
+                    id="customerFirstName" 
+                    name="customerFirstName" 
+                    value={workOrder.customerFirstName} 
+                    onChange={handleChange} 
+                    required={workOrder.orderForCustomer}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerLastName">Prezime</Label>
+                  <Input 
+                    id="customerLastName" 
+                    name="customerLastName" 
+                    value={workOrder.customerLastName} 
+                    onChange={handleChange} 
+                    required={workOrder.orderForCustomer}
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerMobile">Broj mobitela</Label>
+                  <Input 
+                    id="customerMobile" 
+                    name="customerMobile" 
+                    value={workOrder.customerMobile} 
+                    onChange={handleChange} 
+                    required={workOrder.orderForCustomer}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerEmail">Email</Label>
+                  <Input 
+                    id="customerEmail" 
+                    name="customerEmail" 
+                    type="email" 
+                    value={workOrder.customerEmail} 
+                    onChange={handleChange} 
+                    required={workOrder.orderForCustomer}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Card>
           <CardHeader>

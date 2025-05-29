@@ -12,12 +12,21 @@ interface Material {
 
 interface WorkOrder {
   id: string;
-  customerName: string;
-  customerAddress: string;
-  customerContact: string;
-  clientName: string;
-  clientAddress: string;
-  clientContact: string;
+  clientCompanyName: string;
+  clientCompanyAddress: string;
+  clientOib: string;
+  clientFirstName: string;
+  clientLastName: string;
+  clientMobile: string;
+  clientEmail: string;
+  orderForCustomer: boolean;
+  customerCompanyName: string;
+  customerCompanyAddress: string;
+  customerOib: string;
+  customerFirstName: string;
+  customerLastName: string;
+  customerMobile: string;
+  customerEmail: string;
   description: string;
   performedWork: string;
   materials: Material[];
@@ -55,34 +64,55 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFont('helvetica', 'bold');
       pdf.text('PODACI O NARUČITELJU:', 20, 45);
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Naziv: ${workOrder.clientName}`, 20, 52);
-      pdf.text(`Adresa: ${workOrder.clientAddress}`, 20, 59);
-      pdf.text(`Kontakt: ${workOrder.clientContact}`, 20, 66);
+      pdf.text(`Ime tvrtke: ${workOrder.clientCompanyName}`, 20, 52);
+      pdf.text(`Adresa tvrtke: ${workOrder.clientCompanyAddress}`, 20, 59);
+      pdf.text(`OIB: ${workOrder.clientOib}`, 20, 66);
+      pdf.text(`Ime i prezime: ${workOrder.clientFirstName} ${workOrder.clientLastName}`, 20, 73);
+      pdf.text(`Mobitel: ${workOrder.clientMobile}`, 20, 80);
+      pdf.text(`Email: ${workOrder.clientEmail}`, 20, 87);
 
-      // Add customer info (korisnik/lokacija)
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('PODACI O KORISNIKU (LOKACIJA):', 20, 78);
-      pdf.setFont('helvetica', 'normal');
-      pdf.text(`Naziv: ${workOrder.customerName}`, 20, 85);
-      pdf.text(`Adresa: ${workOrder.customerAddress}`, 20, 92);
-      pdf.text(`Kontakt: ${workOrder.customerContact}`, 20, 99);
+      let yOffset = 95;
+
+      // Add customer info if it's different
+      if (workOrder.orderForCustomer) {
+        pdf.setFont('helvetica', 'bold');
+        pdf.text('PODACI O KORISNIKU:', 20, yOffset);
+        pdf.setFont('helvetica', 'normal');
+        yOffset += 7;
+        pdf.text(`Ime tvrtke: ${workOrder.customerCompanyName}`, 20, yOffset);
+        yOffset += 7;
+        pdf.text(`Adresa tvrtke: ${workOrder.customerCompanyAddress}`, 20, yOffset);
+        yOffset += 7;
+        pdf.text(`OIB: ${workOrder.customerOib}`, 20, yOffset);
+        yOffset += 7;
+        pdf.text(`Ime i prezime: ${workOrder.customerFirstName} ${workOrder.customerLastName}`, 20, yOffset);
+        yOffset += 7;
+        pdf.text(`Mobitel: ${workOrder.customerMobile}`, 20, yOffset);
+        yOffset += 7;
+        pdf.text(`Email: ${workOrder.customerEmail}`, 20, yOffset);
+        yOffset += 12;
+      } else {
+        yOffset += 5;
+      }
 
       // Add service details
       pdf.setFont('helvetica', 'bold');
-      pdf.text('OPIS KVARA/PROBLEMA:', 20, 111);
+      pdf.text('OPIS KVARA/PROBLEMA:', 20, yOffset);
       pdf.setFont('helvetica', 'normal');
+      yOffset += 7;
       
       const descriptionLines = pdf.splitTextToSize(workOrder.description, 170);
-      pdf.text(descriptionLines, 20, 118);
+      pdf.text(descriptionLines, 20, yOffset);
       
-      let yOffset = 118 + (descriptionLines.length * 6);
+      yOffset += (descriptionLines.length * 6) + 8;
 
       pdf.setFont('helvetica', 'bold');
       pdf.text('IZVRŠENI RADOVI:', 20, yOffset);
       pdf.setFont('helvetica', 'normal');
+      yOffset += 7;
       
       const workLines = pdf.splitTextToSize(workOrder.performedWork, 170);
-      pdf.text(workLines, 20, yOffset + 7);
+      pdf.text(workLines, 20, yOffset);
       
       yOffset += (workLines.length * 6) + 15;
 

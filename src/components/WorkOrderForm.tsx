@@ -78,6 +78,7 @@ const WorkOrderForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companyLocations, setCompanyLocations] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
+  const [useMockData, setUseMockData] = useState(false);
   
   const [workOrder, setWorkOrder] = useState<WorkOrder>({
     id: '',
@@ -115,6 +116,53 @@ const WorkOrderForm: React.FC = () => {
     customerSignature: '',
     customerSignerName: '',
   });
+
+  // Mock data for work order
+  const mockWorkOrderData = {
+    clientCompanyName: 'Informatika d.o.o.',
+    clientStreetAddress: 'Ilica 42',
+    clientCity: 'Zagreb',
+    clientCountry: 'Hrvatska',
+    clientOib: '12345678901',
+    clientFirstName: 'Marija',
+    clientLastName: 'Horvat',
+    clientMobile: '+385 91 123 4567',
+    clientEmail: 'marija.horvat@informatika.hr',
+    orderForCustomer: true,
+    customerCompanyName: 'Trgovina Sunce d.o.o.',
+    customerStreetAddress: 'Maksimirska 15',
+    customerCity: 'Zagreb',
+    customerCountry: 'Hrvatska',
+    customerOib: '98765432109',
+    customerFirstName: 'Ivo',
+    customerLastName: 'Perić',
+    customerMobile: '+385 92 987 6543',
+    customerEmail: 'ivo.peric@sunce.hr',
+    description: [
+      { id: '1', text: 'Računalo se ne pali' },
+      { id: '2', text: 'Moguć problem s napajanjem' }
+    ],
+    foundCondition: [
+      { id: '1', text: 'Oštećeno napajanje' },
+      { id: '2', text: 'Prašina u kućištu' }
+    ],
+    performedWork: [
+      { id: '1', text: 'Zamjena napajanja' },
+      { id: '2', text: 'Čišćenje računala' }
+    ],
+    technicianComment: [
+      { id: '1', text: 'Preporučuje se redovito održavanje' }
+    ],
+    materials: [
+      { id: '1', name: 'Napajanje 500W', quantity: '1', unit: 'kom' },
+      { id: '2', name: 'Kompresijski sprej', quantity: '1', unit: 'kom' }
+    ],
+    arrivalTime: '09:00',
+    completionTime: '11:30',
+    fieldTrip: true,
+    distance: '15',
+    customerSignerName: 'Ivo Perić'
+  };
 
   // Load company locations and global settings
   useEffect(() => {
@@ -551,9 +599,77 @@ const WorkOrderForm: React.FC = () => {
     }
   };
 
+  const handleMockDataChange = (checked: boolean) => {
+    setUseMockData(checked);
+    if (checked) {
+      setWorkOrder(prev => ({
+        ...prev,
+        ...mockWorkOrderData,
+        date: prev.date,
+        technicianSignature: prev.technicianSignature,
+        customerSignature: prev.customerSignature,
+        signatureMetadata: prev.signatureMetadata
+      }));
+    } else {
+      // Reset to empty form (keep only basic data)
+      setWorkOrder({
+        id: '',
+        clientCompanyName: '',
+        clientStreetAddress: '',
+        clientCity: 'Zagreb',
+        clientCountry: 'Hrvatska',
+        clientOib: '',
+        clientFirstName: '',
+        clientLastName: '',
+        clientMobile: '',
+        clientEmail: '',
+        orderForCustomer: false,
+        customerCompanyName: '',
+        customerStreetAddress: '',
+        customerCity: 'Zagreb',
+        customerCountry: 'Hrvatska',
+        customerOib: '',
+        customerFirstName: '',
+        customerLastName: '',
+        customerMobile: '',
+        customerEmail: '',
+        description: [{ id: '1', text: '' }],
+        foundCondition: [{ id: '1', text: '' }],
+        performedWork: [{ id: '1', text: '' }],
+        technicianComment: [{ id: '1', text: '' }],
+        materials: [{ id: '1', name: '', quantity: '', unit: '' }],
+        date: new Date().toLocaleDateString('hr-HR'),
+        arrivalTime: '',
+        completionTime: '',
+        calculatedHours: '0h00min',
+        fieldTrip: false,
+        distance: '',
+        technicianSignature: user?.signature || '',
+        customerSignature: '',
+        customerSignerName: '',
+      });
+    }
+  };
+
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
+        {/* Mock data checkbox - TEMPORARY FEATURE */}
+        <Card className="border-dashed border-amber-400 bg-amber-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="useMockData" 
+                checked={useMockData}
+                onCheckedChange={handleMockDataChange}
+              />
+              <Label htmlFor="useMockData" className="text-sm font-normal text-amber-800">
+                Koristi mock podatke (privremena funkcionalnost za testiranje)
+              </Label>
+            </div>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="text-xl">Podaci o naručitelju</CardTitle>

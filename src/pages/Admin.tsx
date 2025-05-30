@@ -89,6 +89,7 @@ const Admin: React.FC = () => {
   const [isLoadingTechnicians, setIsLoadingTechnicians] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [mockDataGenerated, setMockDataGenerated] = useState(false);
   
   // New location form
   const [newLocation, setNewLocation] = useState({
@@ -667,644 +668,659 @@ const Admin: React.FC = () => {
     return vehicle ? vehicle.name : 'Nepoznato';
   };
   
-  return (
-    <div className="container max-w-6xl py-6 space-y-6">
-      <h1 className="text-3xl font-bold">Administracija</h1>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Zahtjevi za registraciju</span>
-            {pendingUsers.length > 0 && (
-              <Badge variant="destructive">{pendingUsers.length}</Badge>
-            )}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {pendingUsers.length === 0 ? (
-            <p className="text-muted-foreground text-center py-4">
-              Nema novih zahtjeva za registraciju
-            </p>
-          ) : (
-            <div className="space-y-4">
-              {pendingUsers.map(pendingUser => (
-                <div 
-                  key={pendingUser.id} 
-                  className="flex items-center justify-between border-b pb-4 last:border-0"
-                >
-                  <div>
-                    <h3 className="font-medium">{pendingUser.name}</h3>
-                    <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Zahtjev poslan: {new Date(pendingUser.date).toLocaleDateString('hr-HR')}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => rejectUser(pendingUser.id)}
-                    >
-                      Odbij
-                    </Button>
-                    <Button 
-                      size="sm"
-                      onClick={() => approveUser(pendingUser.id)}
-                    >
-                      Odobri
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+  const generateMockData = async () => {
+    try {
+      // Generate mock technicians (including admin as technician)
+      const mockTechnicians = [
+        {
+          first_name: "Marko",
+          last_name: "Kovačić", 
+          email: "marko.kovacic@tvrtka.hr",
+          phone: "+385 91 123 4567",
+          user_role: "technician",
+          active: true
+        },
+        {
+          first_name: "Ana",
+          last_name: "Novak",
+          email: "ana.novak@tvrtka.hr", 
+          phone: "+385 92 234 5678",
+          user_role: "technician",
+          active: true
+        },
+        {
+          first_name: "Petar",
+          last_name: "Babić",
+          email: "petar.babic@tvrtka.hr",
+          phone: "+385 93 345 6789", 
+          user_role: "admin",
+          active: true
+        }
+      ];
 
-      {/* Technicians Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            Upravljanje tehničarima
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {isLoadingTechnicians ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
+      // Generate mock vehicles
+      const mockVehicles = [
+        {
+          name: "Servisno vozilo 1",
+          license_plate: "ZG-1234-AB",
+          model: "Volkswagen Caddy",
+          year: 2020
+        },
+        {
+          name: "Servisno vozilo 2", 
+          license_plate: "ZG-5678-CD",
+          model: "Ford Transit",
+          year: 2019
+        },
+        {
+          name: "Terensko vozilo",
+          license_plate: "ZG-9012-EF", 
+          model: "Toyota Hilux",
+          year: 2021
+        }
+      ];
+
+      // Insert technicians
+      const { error: techError } = await supabase
+        .from('technicians')
+        .insert(mockTechnicians);
+
+      if (techError) throw techError;
+
+      // Insert vehicles
+      const { error: vehicleError } = await supabase
+        .from('vehicles')
+        .insert(mockVehicles);
+
+      if (vehicleError) throw vehicleError;
+
+      // Refresh data
+      await Promise.all([fetchTechnicians(), fetchVehicles()]);
+      setMockDataGenerated(true);
+
+      toast({
+        title: "Mock podaci stvoreni",
+        description: "Uspješno dodani mock tehničari i vozila",
+      });
+    } catch (error) {
+      console.error('Error generating mock data:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do greške prilikom stvaranja mock podataka",
+      });
+    }
+  };
+
+  return (
+    <div className="container py-6">
+      <h1 className="text-3xl font-bold mb-6">Administracija</h1>
+      
+      {/* Mock data generation - TEMPORARY FEATURE */}
+      {!mockDataGenerated && (
+        <Card className="mb-6 border-dashed border-amber-400 bg-amber-50">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="font-medium text-amber-800">Generiraj mock podatke</h3>
+                <p className="text-sm text-amber-700">Privremena funkcionalnost za dodavanje test podataka</p>
+              </div>
+              <Button onClick={generateMockData} variant="outline" className="border-amber-400">
+                Generiraj mock podatke
+              </Button>
             </div>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Ime i prezime</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Telefon</TableHead>
-                      <TableHead>Lokacija</TableHead>
-                      <TableHead>Uloga</TableHead>
-                      <TableHead>Vozilo</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Akcije</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {technicians.map((technician) => (
-                      <TableRow key={technician.id}>
-                        <TableCell>{technician.first_name} {technician.last_name}</TableCell>
-                        <TableCell>{technician.email}</TableCell>
-                        <TableCell>{technician.phone || 'Nije uneseno'}</TableCell>
-                        <TableCell>{getLocationName(technician.location_id)}</TableCell>
-                        <TableCell>
-                          <Badge variant={technician.user_role === 'admin' ? 'default' : 'secondary'}>
-                            {userRoles.find(role => role.value === technician.user_role)?.label}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{getVehicleName(technician.vehicle_id)}</TableCell>
-                        <TableCell>
-                          <Badge variant={technician.active ? 'default' : 'destructive'}>
-                            {technician.active ? 'Aktivan' : 'Neaktivan'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Sheet>
-                              <SheetTrigger asChild>
+          </CardContent>
+        </Card>
+      )}
+
+      <Tabs defaultValue="locations" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="locations">Lokacije tvrtke</TabsTrigger>
+          <TabsTrigger value="technicians">Tehničari</TabsTrigger>
+          <TabsTrigger value="vehicles">Vozila</TabsTrigger>
+          <TabsTrigger value="settings">Globalne postavke</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="locations">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Zahtjevi za registraciju</span>
+                {pendingUsers.length > 0 && (
+                  <Badge variant="destructive">{pendingUsers.length}</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {pendingUsers.length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">
+                  Nema novih zahtjeva za registraciju
+                </p>
+              ) : (
+                <div className="space-y-4">
+                  {pendingUsers.map(pendingUser => (
+                    <div 
+                      key={pendingUser.id} 
+                      className="flex items-center justify-between border-b pb-4 last:border-0"
+                    >
+                      <div>
+                        <h3 className="font-medium">{pendingUser.name}</h3>
+                        <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Zahtjev poslan: {new Date(pendingUser.date).toLocaleDateString('hr-HR')}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm"
+                          onClick={() => rejectUser(pendingUser.id)}
+                        >
+                          Odbij
+                        </Button>
+                        <Button 
+                          size="sm"
+                          onClick={() => approveUser(pendingUser.id)}
+                        >
+                          Odobri
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="technicians">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Upravljanje tehničarima
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isLoadingTechnicians ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (
+                <>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Ime i prezime</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Telefon</TableHead>
+                          <TableHead>Lokacija</TableHead>
+                          <TableHead>Uloga</TableHead>
+                          <TableHead>Vozilo</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Akcije</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {technicians.map((technician) => (
+                          <TableRow key={technician.id}>
+                            <TableCell>{technician.first_name} {technician.last_name}</TableCell>
+                            <TableCell>{technician.email}</TableCell>
+                            <TableCell>{technician.phone || 'Nije uneseno'}</TableCell>
+                            <TableCell>{getLocationName(technician.location_id)}</TableCell>
+                            <TableCell>
+                              <Badge variant={technician.user_role === 'admin' ? 'default' : 'secondary'}>
+                                {userRoles.find(role => role.value === technician.user_role)?.label}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{getVehicleName(technician.vehicle_id)}</TableCell>
+                            <TableCell>
+                              <Badge variant={technician.active ? 'default' : 'destructive'}>
+                                {technician.active ? 'Aktivan' : 'Neaktivan'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex gap-2">
+                                <Sheet>
+                                  <SheetTrigger asChild>
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setEditingTechnician(technician)}
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </SheetTrigger>
+                                  <SheetContent>
+                                    <SheetHeader>
+                                      <SheetTitle>Uredi tehničara</SheetTitle>
+                                      <SheetDescription>
+                                        Uredite podatke tehničara
+                                      </SheetDescription>
+                                    </SheetHeader>
+                                    {editingTechnician && (
+                                      <div className="grid gap-4 py-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                          <div className="space-y-2">
+                                            <Label htmlFor="editFirstName">Ime</Label>
+                                            <Input
+                                              id="editFirstName"
+                                              value={editingTechnician.first_name}
+                                              onChange={(e) => setEditingTechnician({
+                                                ...editingTechnician,
+                                                first_name: e.target.value
+                                              })}
+                                            />
+                                          </div>
+                                          <div className="space-y-2">
+                                            <Label htmlFor="editLastName">Prezime</Label>
+                                            <Input
+                                              id="editLastName"
+                                              value={editingTechnician.last_name}
+                                              onChange={(e) => setEditingTechnician({
+                                                ...editingTechnician,
+                                                last_name: e.target.value
+                                              })}
+                                            />
+                                          </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="editEmail">Email</Label>
+                                          <Input
+                                            id="editEmail"
+                                            type="email"
+                                            value={editingTechnician.email}
+                                            onChange={(e) => setEditingTechnician({
+                                              ...editingTechnician,
+                                              email: e.target.value
+                                            })}
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="editPhone">Telefon</Label>
+                                          <Input
+                                            id="editPhone"
+                                            value={editingTechnician.phone || ''}
+                                            onChange={(e) => setEditingTechnician({
+                                              ...editingTechnician,
+                                              phone: e.target.value
+                                            })}
+                                          />
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="editLocation">Lokacija</Label>
+                                          <Select
+                                            value={editingTechnician.location_id || 'none'}
+                                            onValueChange={(value) => setEditingTechnician({
+                                              ...editingTechnician,
+                                              location_id: value === 'none' ? null : value
+                                            })}
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Odaberite lokaciju" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="none">Bez lokacije</SelectItem>
+                                              {locations.map((location) => (
+                                                <SelectItem key={location.id} value={location.id}>
+                                                  {location.name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="editRole">Uloga</Label>
+                                          <Select
+                                            value={editingTechnician.user_role}
+                                            onValueChange={(value: 'admin' | 'technician' | 'lead') => setEditingTechnician({
+                                              ...editingTechnician,
+                                              user_role: value
+                                            })}
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              {userRoles.map((role) => (
+                                                <SelectItem key={role.value} value={role.value}>
+                                                  {role.label}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="editVehicle">Vozilo</Label>
+                                          <Select
+                                            value={editingTechnician.vehicle_id || 'none'}
+                                            onValueChange={(value) => setEditingTechnician({
+                                              ...editingTechnician,
+                                              vehicle_id: value === 'none' ? null : value
+                                            })}
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue placeholder="Odaberite vozilo" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="none">Bez vozila</SelectItem>
+                                              {vehicles.map((vehicle) => (
+                                                <SelectItem key={vehicle.id} value={vehicle.id}>
+                                                  {vehicle.name}
+                                                </SelectItem>
+                                              ))}
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                          <Label htmlFor="editActive">Status</Label>
+                                          <Select
+                                            value={editingTechnician.active ? 'active' : 'inactive'}
+                                            onValueChange={(value) => setEditingTechnician({
+                                              ...editingTechnician,
+                                              active: value === 'active'
+                                            })}
+                                          >
+                                            <SelectTrigger>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="active">Aktivan</SelectItem>
+                                              <SelectItem value="inactive">Neaktivan</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </div>
+                                        <Button 
+                                          onClick={updateTechnician}
+                                          disabled={isEditingTechnician}
+                                          className="w-full"
+                                        >
+                                          {isEditingTechnician && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                          Spremi promjene
+                                        </Button>
+                                      </div>
+                                    )}
+                                  </SheetContent>
+                                </Sheet>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => setEditingTechnician(technician)}
+                                  onClick={() => deleteTechnician(technician.id)}
                                 >
-                                  <Edit className="h-4 w-4" />
+                                  <Trash2 className="h-4 w-4" />
                                 </Button>
-                              </SheetTrigger>
-                              <SheetContent>
-                                <SheetHeader>
-                                  <SheetTitle>Uredi tehničara</SheetTitle>
-                                  <SheetDescription>
-                                    Uredite podatke tehničara
-                                  </SheetDescription>
-                                </SheetHeader>
-                                {editingTechnician && (
-                                  <div className="grid gap-4 py-4">
-                                    <div className="grid grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <Label htmlFor="editFirstName">Ime</Label>
-                                        <Input
-                                          id="editFirstName"
-                                          value={editingTechnician.first_name}
-                                          onChange={(e) => setEditingTechnician({
-                                            ...editingTechnician,
-                                            first_name: e.target.value
-                                          })}
-                                        />
-                                      </div>
-                                      <div className="space-y-2">
-                                        <Label htmlFor="editLastName">Prezime</Label>
-                                        <Input
-                                          id="editLastName"
-                                          value={editingTechnician.last_name}
-                                          onChange={(e) => setEditingTechnician({
-                                            ...editingTechnician,
-                                            last_name: e.target.value
-                                          })}
-                                        />
-                                      </div>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="editEmail">Email</Label>
-                                      <Input
-                                        id="editEmail"
-                                        type="email"
-                                        value={editingTechnician.email}
-                                        onChange={(e) => setEditingTechnician({
-                                          ...editingTechnician,
-                                          email: e.target.value
-                                        })}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="editPhone">Telefon</Label>
-                                      <Input
-                                        id="editPhone"
-                                        value={editingTechnician.phone || ''}
-                                        onChange={(e) => setEditingTechnician({
-                                          ...editingTechnician,
-                                          phone: e.target.value
-                                        })}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="editLocation">Lokacija</Label>
-                                      <Select
-                                        value={editingTechnician.location_id || 'none'}
-                                        onValueChange={(value) => setEditingTechnician({
-                                          ...editingTechnician,
-                                          location_id: value === 'none' ? null : value
-                                        })}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Odaberite lokaciju" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="none">Bez lokacije</SelectItem>
-                                          {locations.map((location) => (
-                                            <SelectItem key={location.id} value={location.id}>
-                                              {location.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="editRole">Uloga</Label>
-                                      <Select
-                                        value={editingTechnician.user_role}
-                                        onValueChange={(value: 'admin' | 'technician' | 'lead') => setEditingTechnician({
-                                          ...editingTechnician,
-                                          user_role: value
-                                        })}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          {userRoles.map((role) => (
-                                            <SelectItem key={role.value} value={role.value}>
-                                              {role.label}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="editVehicle">Vozilo</Label>
-                                      <Select
-                                        value={editingTechnician.vehicle_id || 'none'}
-                                        onValueChange={(value) => setEditingTechnician({
-                                          ...editingTechnician,
-                                          vehicle_id: value === 'none' ? null : value
-                                        })}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue placeholder="Odaberite vozilo" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="none">Bez vozila</SelectItem>
-                                          {vehicles.map((vehicle) => (
-                                            <SelectItem key={vehicle.id} value={vehicle.id}>
-                                              {vehicle.name}
-                                            </SelectItem>
-                                          ))}
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                      <Label htmlFor="editActive">Status</Label>
-                                      <Select
-                                        value={editingTechnician.active ? 'active' : 'inactive'}
-                                        onValueChange={(value) => setEditingTechnician({
-                                          ...editingTechnician,
-                                          active: value === 'active'
-                                        })}
-                                      >
-                                        <SelectTrigger>
-                                          <SelectValue />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                          <SelectItem value="active">Aktivan</SelectItem>
-                                          <SelectItem value="inactive">Neaktivan</SelectItem>
-                                        </SelectContent>
-                                      </Select>
-                                    </div>
-                                    <Button 
-                                      onClick={updateTechnician}
-                                      disabled={isEditingTechnician}
-                                      className="w-full"
-                                    >
-                                      {isEditingTechnician && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                      Spremi promjene
-                                    </Button>
-                                  </div>
-                                )}
-                              </SheetContent>
-                            </Sheet>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => deleteTechnician(technician.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                    
+                    {technicians.length === 0 && (
+                      <p className="text-muted-foreground text-center py-4">
+                        Nema dodanih tehničara
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-4">Dodaj novog tehničara</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="techFirstName">Ime</Label>
+                        <Input
+                          id="techFirstName"
+                          value={newTechnician.first_name}
+                          onChange={(e) => setNewTechnician({ ...newTechnician, first_name: e.target.value })}
+                          placeholder="Ime"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="techLastName">Prezime</Label>
+                        <Input
+                          id="techLastName"
+                          value={newTechnician.last_name}
+                          onChange={(e) => setNewTechnician({ ...newTechnician, last_name: e.target.value })}
+                          placeholder="Prezime"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="techEmail">Email</Label>
+                        <Input
+                          id="techEmail"
+                          type="email"
+                          value={newTechnician.email}
+                          onChange={(e) => setNewTechnician({ ...newTechnician, email: e.target.value })}
+                          placeholder="email@example.com"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="techPhone">Telefon</Label>
+                        <Input
+                          id="techPhone"
+                          value={newTechnician.phone}
+                          onChange={(e) => setNewTechnician({ ...newTechnician, phone: e.target.value })}
+                          placeholder="+385 99 123 4567"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="techLocation">Lokacija</Label>
+                        <Select 
+                          value={newTechnician.location_id || 'none'} 
+                          onValueChange={(value) => setNewTechnician({ ...newTechnician, location_id: value === 'none' ? '' : value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Odaberite lokaciju" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Bez lokacije</SelectItem>
+                            {locations.map((location) => (
+                              <SelectItem key={location.id} value={location.id}>
+                                {location.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="techRole">Uloga</Label>
+                        <Select 
+                          value={newTechnician.user_role} 
+                          onValueChange={(value: 'admin' | 'technician' | 'lead') => setNewTechnician({ ...newTechnician, user_role: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {userRoles.map((role) => (
+                              <SelectItem key={role.value} value={role.value}>
+                                {role.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="techVehicle">Vozilo</Label>
+                        <Select 
+                          value={newTechnician.vehicle_id || 'none'} 
+                          onValueChange={(value) => setNewTechnician({ ...newTechnician, vehicle_id: value === 'none' ? '' : value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Odaberite vozilo" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Bez vozila</SelectItem>
+                            {vehicles.map((vehicle) => (
+                              <SelectItem key={vehicle.id} value={vehicle.id}>
+                                {vehicle.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <Button 
+                      onClick={addTechnician}
+                      disabled={isAddingTechnician}
+                      className="mt-4"
+                    >
+                      {isAddingTechnician && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Plus className="mr-2 h-4 w-4" />
+                      Dodaj tehničara
+                    </Button>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="vehicles">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Car className="h-5 w-5" />
+                Upravljanje vozilima
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {isLoadingVehicles ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    {vehicles.map((vehicle) => (
+                      <div key={vehicle.id} className="flex items-center justify-between border-b pb-4 last:border-0">
+                        <div>
+                          <h3 className="font-medium">{vehicle.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {vehicle.model && `${vehicle.model} `}
+                            {vehicle.year && `(${vehicle.year}) `}
+                            {vehicle.license_plate && `• ${vehicle.license_plate}`}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteVehicle(vehicle.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     ))}
-                  </TableBody>
-                </Table>
-                
-                {technicians.length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    Nema dodanih tehničara
-                  </p>
-                )}
-              </div>
-              
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-4">Dodaj novog tehničara</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="techFirstName">Ime</Label>
-                    <Input
-                      id="techFirstName"
-                      value={newTechnician.first_name}
-                      onChange={(e) => setNewTechnician({ ...newTechnician, first_name: e.target.value })}
-                      placeholder="Ime"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="techLastName">Prezime</Label>
-                    <Input
-                      id="techLastName"
-                      value={newTechnician.last_name}
-                      onChange={(e) => setNewTechnician({ ...newTechnician, last_name: e.target.value })}
-                      placeholder="Prezime"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="techEmail">Email</Label>
-                    <Input
-                      id="techEmail"
-                      type="email"
-                      value={newTechnician.email}
-                      onChange={(e) => setNewTechnician({ ...newTechnician, email: e.target.value })}
-                      placeholder="email@example.com"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="techPhone">Telefon</Label>
-                    <Input
-                      id="techPhone"
-                      value={newTechnician.phone}
-                      onChange={(e) => setNewTechnician({ ...newTechnician, phone: e.target.value })}
-                      placeholder="+385 99 123 4567"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="techLocation">Lokacija</Label>
-                    <Select 
-                      value={newTechnician.location_id || 'none'} 
-                      onValueChange={(value) => setNewTechnician({ ...newTechnician, location_id: value === 'none' ? '' : value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Odaberite lokaciju" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Bez lokacije</SelectItem>
-                        {locations.map((location) => (
-                          <SelectItem key={location.id} value={location.id}>
-                            {location.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="techRole">Uloga</Label>
-                    <Select 
-                      value={newTechnician.user_role} 
-                      onValueChange={(value: 'admin' | 'technician' | 'lead') => setNewTechnician({ ...newTechnician, user_role: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {userRoles.map((role) => (
-                          <SelectItem key={role.value} value={role.value}>
-                            {role.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label htmlFor="techVehicle">Vozilo</Label>
-                    <Select 
-                      value={newTechnician.vehicle_id || 'none'} 
-                      onValueChange={(value) => setNewTechnician({ ...newTechnician, vehicle_id: value === 'none' ? '' : value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Odaberite vozilo" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Bez vozila</SelectItem>
-                        {vehicles.map((vehicle) => (
-                          <SelectItem key={vehicle.id} value={vehicle.id}>
-                            {vehicle.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button 
-                  onClick={addTechnician}
-                  disabled={isAddingTechnician}
-                  className="mt-4"
-                >
-                  {isAddingTechnician && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Plus className="mr-2 h-4 w-4" />
-                  Dodaj tehničara
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Vehicles Management */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Car className="h-5 w-5" />
-            Upravljanje vozilima
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {isLoadingVehicles ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4">
-                {vehicles.map((vehicle) => (
-                  <div key={vehicle.id} className="flex items-center justify-between border-b pb-4 last:border-0">
-                    <div>
-                      <h3 className="font-medium">{vehicle.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {vehicle.model && `${vehicle.model} `}
-                        {vehicle.year && `(${vehicle.year}) `}
-                        {vehicle.license_plate && `• ${vehicle.license_plate}`}
+                    
+                    {vehicles.length === 0 && (
+                      <p className="text-muted-foreground text-center py-4">
+                        Nema dodanih vozila
                       </p>
+                    )}
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-4">Dodaj novo vozilo</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="vehicleName">Naziv vozila</Label>
+                        <Input
+                          id="vehicleName"
+                          value={newVehicle.name}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, name: e.target.value })}
+                          placeholder="Kombi 1, Auto 2..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="licensePlate">Registarska oznaka</Label>
+                        <Input
+                          id="licensePlate"
+                          value={newVehicle.license_plate}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, license_plate: e.target.value })}
+                          placeholder="ZG-1234-AB"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vehicleModel">Model</Label>
+                        <Input
+                          id="vehicleModel"
+                          value={newVehicle.model}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
+                          placeholder="Volkswagen Crafter"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="vehicleYear">Godina</Label>
+                        <Input
+                          id="vehicleYear"
+                          type="number"
+                          value={newVehicle.year}
+                          onChange={(e) => setNewVehicle({ ...newVehicle, year: parseInt(e.target.value) || new Date().getFullYear() })}
+                          placeholder="2023"
+                        />
+                      </div>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteVehicle(vehicle.id)}
+                    <Button 
+                      onClick={addVehicle}
+                      disabled={isAddingVehicle}
+                      className="mt-4"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      {isAddingVehicle && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Plus className="mr-2 h-4 w-4" />
+                      Dodaj vozilo
                     </Button>
                   </div>
-                ))}
-                
-                {vehicles.length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    Nema dodanih vozila
-                  </p>
-                )}
-              </div>
-              
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-4">Dodaj novo vozilo</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleName">Naziv vozila</Label>
-                    <Input
-                      id="vehicleName"
-                      value={newVehicle.name}
-                      onChange={(e) => setNewVehicle({ ...newVehicle, name: e.target.value })}
-                      placeholder="Kombi 1, Auto 2..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="licensePlate">Registarska oznaka</Label>
-                    <Input
-                      id="licensePlate"
-                      value={newVehicle.license_plate}
-                      onChange={(e) => setNewVehicle({ ...newVehicle, license_plate: e.target.value })}
-                      placeholder="ZG-1234-AB"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleModel">Model</Label>
-                    <Input
-                      id="vehicleModel"
-                      value={newVehicle.model}
-                      onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
-                      placeholder="Volkswagen Crafter"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="vehicleYear">Godina</Label>
-                    <Input
-                      id="vehicleYear"
-                      type="number"
-                      value={newVehicle.year}
-                      onChange={(e) => setNewVehicle({ ...newVehicle, year: parseInt(e.target.value) || new Date().getFullYear() })}
-                      placeholder="2023"
-                    />
-                  </div>
-                </div>
-                <Button 
-                  onClick={addVehicle}
-                  disabled={isAddingVehicle}
-                  className="mt-4"
-                >
-                  {isAddingVehicle && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Plus className="mr-2 h-4 w-4" />
-                  Dodaj vozilo
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lokacije tvrtke</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {isLoadingLocations ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4">
-                {locations.map((location) => (
-                  <div key={location.id} className="flex items-center justify-between border-b pb-4 last:border-0">
-                    <div>
-                      <h3 className="font-medium">{location.name}</h3>
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Globalne postavke</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {isLoadingSettings ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (
+                <>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="distanceApiKey">Distance Matrix API ključ</Label>
+                      <Input
+                        id="distanceApiKey"
+                        type="password"
+                        value={globalSettings?.distance_matrix_api_key || ''}
+                        onChange={(e) => setGlobalSettings(prev => prev ? {
+                          ...prev,
+                          distance_matrix_api_key: e.target.value
+                        } : { id: '', distance_matrix_api_key: e.target.value })}
+                        placeholder="Unesite Distance Matrix API ključ"
+                      />
                       <p className="text-sm text-muted-foreground">
-                        {location.street_address}, {location.city}, {location.country}
+                        API ključ za automatsko računanje udaljenosti. Možete dobiti besplatan API ključ na distancematrix.ai
                       </p>
                     </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => deleteLocation(location.id)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
                   </div>
-                ))}
-                
-                {locations.length === 0 && (
-                  <p className="text-muted-foreground text-center py-4">
-                    Nema dodanih lokacija tvrtke
-                  </p>
-                )}
-              </div>
-              
-              <div className="border-t pt-4">
-                <h4 className="font-medium mb-4">Dodaj novu lokaciju</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="locationName">Naziv lokacije</Label>
-                    <Input
-                      id="locationName"
-                      value={newLocation.name}
-                      onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-                      placeholder="Glavni ured, Skladište..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="streetAddress">Ulica i broj</Label>
-                    <Input
-                      id="streetAddress"
-                      value={newLocation.street_address}
-                      onChange={(e) => setNewLocation({ ...newLocation, street_address: e.target.value })}
-                      placeholder="Ilica 1"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="city">Grad</Label>
-                    <Input
-                      id="city"
-                      value={newLocation.city}
-                      onChange={(e) => setNewLocation({ ...newLocation, city: e.target.value })}
-                      placeholder="Zagreb"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="country">Država</Label>
-                    <Select 
-                      value={newLocation.country} 
-                      onValueChange={(value) => setNewLocation({ ...newLocation, country: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {countries.map((country) => (
-                          <SelectItem key={country} value={country}>
-                            {country}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <Button 
-                  onClick={addLocation}
-                  disabled={isAddingLocation}
-                  className="mt-4"
-                >
-                  {isAddingLocation && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Plus className="mr-2 h-4 w-4" />
-                  Dodaj lokaciju
-                </Button>
-              </div>
-            </>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Globalne postavke</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {isLoadingSettings ? (
-            <div className="flex justify-center py-4">
-              <Loader2 className="h-6 w-6 animate-spin" />
-            </div>
-          ) : (
-            <>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="distanceApiKey">Distance Matrix API ključ</Label>
-                  <Input
-                    id="distanceApiKey"
-                    type="password"
-                    value={globalSettings?.distance_matrix_api_key || ''}
-                    onChange={(e) => setGlobalSettings(prev => prev ? {
-                      ...prev,
-                      distance_matrix_api_key: e.target.value
-                    } : { id: '', distance_matrix_api_key: e.target.value })}
-                    placeholder="Unesite Distance Matrix API ključ"
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    API ključ za automatsko računanje udaljenosti. Možete dobiti besplatan API ključ na distancematrix.ai
-                  </p>
-                </div>
-              </div>
-              
-              <Button 
-                onClick={saveGlobalSettings}
-                disabled={isSavingSettings}
-              >
-                {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Spremi postavke
-              </Button>
-            </>
-          )}
-        </CardContent>
-      </Card>
+                  
+                  <Button 
+                    onClick={saveGlobalSettings}
+                    disabled={isSavingSettings}
+                  >
+                    {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Spremi postavke
+                  </Button>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

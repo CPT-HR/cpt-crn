@@ -7,11 +7,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Edit, Car, Users } from "lucide-react";
+import MockDataGenerator from '@/components/MockDataGenerator';
 
 // Mock pending users
 const PENDING_USERS = [
@@ -267,6 +269,36 @@ const Admin: React.FC = () => {
     
     fetchGlobalSettings();
   }, []);
+  
+  // Helper function to refresh technicians data
+  const refreshTechnicians = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('technicians')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      setTechnicians(data || []);
+    } catch (error) {
+      console.error('Error refreshing technicians:', error);
+    }
+  };
+
+  // Helper function to refresh vehicles data
+  const refreshVehicles = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('vehicles')
+        .select('*')
+        .order('created_at', { ascending: true });
+      
+      if (error) throw error;
+      setVehicles(data || []);
+    } catch (error) {
+      console.error('Error refreshing vehicles:', error);
+    }
+  };
   
   const approveUser = (id: string) => {
     setPendingUsers(pendingUsers.filter(user => user.id !== id));
@@ -677,7 +709,7 @@ const Admin: React.FC = () => {
           last_name: "Kovačić", 
           email: "marko.kovacic@tvrtka.hr",
           phone: "+385 91 123 4567",
-          user_role: "technician",
+          user_role: "technician" as const,
           active: true
         },
         {
@@ -685,7 +717,7 @@ const Admin: React.FC = () => {
           last_name: "Novak",
           email: "ana.novak@tvrtka.hr", 
           phone: "+385 92 234 5678",
-          user_role: "technician",
+          user_role: "technician" as const,
           active: true
         },
         {
@@ -693,7 +725,7 @@ const Admin: React.FC = () => {
           last_name: "Babić",
           email: "petar.babic@tvrtka.hr",
           phone: "+385 93 345 6789", 
-          user_role: "admin",
+          user_role: "admin" as const,
           active: true
         }
       ];
@@ -735,7 +767,7 @@ const Admin: React.FC = () => {
       if (vehicleError) throw vehicleError;
 
       // Refresh data
-      await Promise.all([fetchTechnicians(), fetchVehicles()]);
+      await Promise.all([refreshTechnicians(), refreshVehicles()]);
       setMockDataGenerated(true);
 
       toast({
@@ -772,6 +804,13 @@ const Admin: React.FC = () => {
           </CardContent>
         </Card>
       )}
+
+      {/* Mock Data Generator Component */}
+      <MockDataGenerator 
+        onDataGenerated={async () => {
+          await Promise.all([refreshTechnicians(), refreshVehicles()]);
+        }}
+      />
 
       <Tabs defaultValue="locations" className="space-y-6">
         <TabsList>

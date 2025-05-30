@@ -4,7 +4,11 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-const MockDataGenerator: React.FC = () => {
+interface MockDataGeneratorProps {
+  onDataGenerated?: () => void;
+}
+
+const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }) => {
   const { toast } = useToast();
 
   const generateMockTechnicians = async () => {
@@ -15,7 +19,7 @@ const MockDataGenerator: React.FC = () => {
           last_name: "Kovačić", 
           email: "marko.kovacic@tvrtka.hr",
           phone: "+385 91 123 4567",
-          user_role: "technician",
+          user_role: "technician" as const,
           active: true
         },
         {
@@ -23,7 +27,7 @@ const MockDataGenerator: React.FC = () => {
           last_name: "Novak",
           email: "ana.novak@tvrtka.hr", 
           phone: "+385 92 234 5678",
-          user_role: "technician",
+          user_role: "technician" as const,
           active: true
         },
         {
@@ -31,7 +35,7 @@ const MockDataGenerator: React.FC = () => {
           last_name: "Babić",
           email: "petar.babic@tvrtka.hr",
           phone: "+385 93 345 6789", 
-          user_role: "admin",
+          user_role: "admin" as const,
           active: true
         }
       ];
@@ -46,6 +50,10 @@ const MockDataGenerator: React.FC = () => {
         title: "Mock tehničari stvoreni",
         description: "Uspješno dodana 3 mock tehničara u bazu",
       });
+
+      if (onDataGenerated) {
+        onDataGenerated();
+      }
     } catch (error) {
       console.error('Error creating mock technicians:', error);
       toast({
@@ -89,6 +97,10 @@ const MockDataGenerator: React.FC = () => {
         title: "Mock vozila stvorena",
         description: "Uspješno dodana 3 mock vozila u bazu",
       });
+
+      if (onDataGenerated) {
+        onDataGenerated();
+      }
     } catch (error) {
       console.error('Error creating mock vehicles:', error);
       toast({

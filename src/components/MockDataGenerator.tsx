@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -13,7 +12,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
 
   const generateMockEmployees = async () => {
     try {
-      console.log('Attempting to create mock employees...');
+      console.log('Attempting to create mock employees via Edge Function...');
 
       const mockEmployees = [
         {
@@ -39,66 +38,44 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
         }
       ];
 
-      console.log('Creating mock employees with proper auth workflow...');
+      console.log('Creating mock employees using Edge Function with proper auth workflow...');
 
-      // WORKFLOW: Za svaki mock zaposlenika, prvo kreiraj auth usera, zatim employee_profile
-      for (const employee of mockEmployees) {
-        try {
-          // STEP 1: Kreiraj auth usera
-          const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!";
-          
-          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-            email: employee.email,
-            password: tempPassword,
-            email_confirm: true,
-            user_metadata: {
-              first_name: employee.first_name,
-              last_name: employee.last_name,
-              role: employee.user_role
-            }
-          });
-          
-          if (authError || !authData.user) {
-            console.error(`Failed to create auth user for ${employee.email}:`, authError);
-            continue; // Preskoči ovog zaposlenika ako auth kreiranje ne uspije
-          }
-          
-          // STEP 2: Kreiraj employee_profile s auth user ID-em
-          const employeeProfileData = {
-            id: authData.user.id, // KLJUČNO: koristi id iz auth.users
-            first_name: employee.first_name,
-            last_name: employee.last_name,
-            email: employee.email,
-            phone: employee.phone,
-            user_role: employee.user_role,
-            active: true
-          };
-          
-          const { error: profileError } = await supabase
-            .from('employee_profiles')
-            .insert([employeeProfileData as any]) // as any jer mock podaci mogu imati fleksibilniju strukturu
-            .select();
-          
-          if (profileError) {
-            console.error(`Failed to create employee profile for ${employee.email}:`, profileError);
-            // Pokušaj obrisati auth usera ako employee_profile kreiranje ne uspije
-            try {
-              await supabase.auth.admin.deleteUser(authData.user.id);
-            } catch (cleanupError) {
-              console.error('Failed to cleanup auth user:', cleanupError);
-            }
-          } else {
-            console.log(`Successfully created employee: ${employee.email}`);
-          }
-          
-        } catch (error) {
-          console.error(`Error processing employee ${employee.email}:`, error);
+      // WORKFLOW: Koristi Edge Function koja ima service_role pristup
+      // Edge Function će za svakog zaposlenika prvo kreirati auth usera, zatim employee_profile
+      const { data, error } = await supabase.functions.invoke('create-employee', {
+        body: {
+          employees: mockEmployees
         }
+      });
+
+      if (error) {
+        console.error('Edge Function error:', error);
+        throw new Error(`Greška u Edge Function: ${error.message}`);
       }
+
+      if (!data.success) {
+        console.error('Edge Function returned error:', data.error);
+        throw new Error(`Greška pri kreiranju mock zaposlenika: ${data.error}`);
+      }
+
+      // Provjeri rezultate za svaki zaposlenik
+      const successCount = data.results.filter((r: any) => r.success).length;
+      const failCount = data.results.filter((r: any) => !r.success).length;
+      
+      console.log(`Mock employees creation completed: ${successCount} success, ${failCount} failed`);
+      
+      // Prikaži detaljne rezultate u konzoli
+      data.results.forEach((result: any) => {
+        if (result.success) {
+          console.log(`✓ Successfully created: ${result.email}`);
+        } else {
+          console.log(`✗ Failed to create: ${result.email} - ${result.error}`);
+        }
+      });
 
       toast({
         title: "Mock zaposlenici stvoreni",
-        description: "Uspješno dodani mock zaposlenici u bazu (oni koji su uspješno kreirani)",
+        description: `Uspješno dodano ${successCount} mock zaposlenika u bazu${failCount > 0 ? ` (${failCount} neuspješno)` : ''}`,
       });
 
       if (onDataGenerated) {

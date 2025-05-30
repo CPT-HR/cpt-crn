@@ -503,69 +503,38 @@ const Admin: React.FC = () => {
     
     setIsAddingEmployee(true);
     try {
-      console.log('Adding new employee - step 1: creating auth user...');
+      console.log('Adding new employee via Edge Function...');
       
-      // WORKFLOW STEP 1: Prvo kreiraj korisnika u auth.users tablici
-      // Generiramo automatsku lozinku jer je to admin operacija
-      const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!";
-      
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: newEmployee.email,
-        password: tempPassword,
-        email_confirm: true, // Automatski potvrdi email
-        user_metadata: {
-          first_name: newEmployee.first_name,
-          last_name: newEmployee.last_name,
-          role: newEmployee.user_role
+      // WORKFLOW: Koristi Edge Function za kreiranje auth usera i employee_profile
+      // Edge Function ima service_role pristup potreban za admin.createUser operacije
+      const { data, error } = await supabase.functions.invoke('create-employee', {
+        body: {
+          employees: [newEmployee] // Slanje kao array jer funkcija može handlati više zaposlenika
         }
       });
-      
-      if (authError) {
-        console.error('Error creating auth user:', authError);
-        throw new Error(`Greška pri kreiranju korisničkog računa: ${authError.message}`);
-      }
-      
-      if (!authData.user) {
-        throw new Error('Korisnik nije kreiran uspješno');
-      }
-      
-      console.log('Auth user created successfully:', authData.user.id);
-      
-      // WORKFLOW STEP 2: Sada insertraj zaposlenika u employee_profiles s id-em iz auth.users
-      const employeeData = {
-        id: authData.user.id, // KLJUČNO: koristi id iz auth.users
-        first_name: newEmployee.first_name,
-        last_name: newEmployee.last_name,
-        email: newEmployee.email,
-        phone: newEmployee.phone || null,
-        location_id: newEmployee.location_id || null,
-        user_role: newEmployee.user_role,
-        vehicle_id: newEmployee.vehicle_id || null,
-        active: true
-      };
-      
-      console.log('Inserting employee with auth user ID:', employeeData);
-      
-      const { data, error } = await supabase
-        .from('employee_profiles')
-        .insert([employeeData])
-        .select()
-        .single();
-      
+
       if (error) {
-        console.error('Error adding employee to profiles:', error);
-        // Ako employee_profiles insert ne uspije, pokušaj obrisati auth usera
-        try {
-          await supabase.auth.admin.deleteUser(authData.user.id);
-        } catch (cleanupError) {
-          console.error('Failed to cleanup auth user:', cleanupError);
-        }
-        throw error;
+        console.error('Edge Function error:', error);
+        throw new Error(`Greška u Edge Function: ${error.message}`);
+      }
+
+      if (!data.success) {
+        console.error('Edge Function returned error:', data.error);
+        throw new Error(`Greška pri kreiranju zaposlenika: ${data.error}`);
+      }
+
+      // Provjeri rezultate - Edge Function vraća array rezultata
+      const result = data.results[0];
+      if (!result.success) {
+        throw new Error(`Greška pri kreiranju zaposlenika: ${result.error}`);
       }
       
-      console.log('Employee added successfully:', data);
-      const newEmp = { ...data, email: data.email || null } as Employee;
-      setEmployees([...employees, newEmp]);
+      console.log('Employee added successfully via Edge Function:', result);
+      
+      // Refresh employees list
+      await refreshEmployees();
+      
+      // Reset form
       setNewEmployee({
         first_name: '',
         last_name: '',

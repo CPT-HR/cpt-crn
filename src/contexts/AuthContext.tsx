@@ -34,6 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchUserData = async (authUser: User) => {
     try {
+      console.log('Fetching user data for:', authUser.email);
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -44,6 +45,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.error('Error fetching user data:', error);
         return null;
       }
+
+      console.log('User data fetched:', data);
 
       return {
         id: data.id,
@@ -69,6 +72,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
+        setIsLoading(true);
+        
         if (session?.user) {
           const userData = await fetchUserData(session.user);
           setUser(userData);

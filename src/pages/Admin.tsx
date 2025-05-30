@@ -81,7 +81,7 @@ const userRoles = [
 
 const Admin: React.FC = () => {
   const { user } = useAuth();
-  const [pendingUsers, setPendingUsers] = useState(PENDING_USERS);
+  const [pendingUsers, setPendingUsers] = useState([]);
   const [locations, setLocations] = useState<CompanyLocation[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -505,11 +505,9 @@ const Admin: React.FC = () => {
     try {
       console.log('Adding new employee via Edge Function...');
       
-      // WORKFLOW: Koristi Edge Function za kreiranje auth usera i employee_profile
-      // Edge Function ima service_role pristup potreban za admin.createUser operacije
       const response = await supabase.functions.invoke('create-employee', {
         body: {
-          employees: [newEmployee] // Slanje kao array jer funkcija može handlati više zaposlenika
+          employees: [newEmployee]
         }
       });
 
@@ -518,7 +516,6 @@ const Admin: React.FC = () => {
         throw new Error(`Greška u Edge Function: ${response.error.message}`);
       }
 
-      // Parsiraj data ako je string
       let data = response.data;
       if (typeof data === 'string') {
         data = JSON.parse(data);
@@ -529,9 +526,11 @@ const Admin: React.FC = () => {
         throw new Error(`Greška pri kreiranju zaposlenika: ${data.error}`);
       }
 
-      // Provjeri rezultate - Edge Function vraća array rezultata
       const result = data.results[0];
       if (!result.success) {
+        if (result.isDuplicate || result.error === 'Korisnik već postoji') {
+          throw new Error('Korisnik već postoji – nije moguće dodati zaposlenika s istim emailom.');
+        }
         throw new Error(`Greška pri kreiranju zaposlenika: ${result.error}`);
       }
       
@@ -560,7 +559,7 @@ const Admin: React.FC = () => {
       toast({
         variant: "destructive",
         title: "Greška",
-        description: `Nije moguće dodati zaposlenika: ${error instanceof Error ? error.message : 'Nepoznata greška'}`,
+        description: `${error instanceof Error ? error.message : 'Nepoznata greška'}`,
       });
     } finally {
       setIsAddingEmployee(false);

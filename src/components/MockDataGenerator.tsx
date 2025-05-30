@@ -40,8 +40,6 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
 
       console.log('Creating mock employees using Edge Function with proper auth workflow...');
 
-      // WORKFLOW: Koristi Edge Function koja ima service_role pristup
-      // Edge Function će za svakog zaposlenika prvo kreirati auth usera, zatim employee_profile
       const response = await supabase.functions.invoke('create-employee', {
         body: {
           employees: mockEmployees
@@ -53,7 +51,6 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
         throw new Error(`Greška u Edge Function: ${response.error.message}`);
       }
 
-      // Parsiraj data ako je string
       let data = response.data;
       if (typeof data === 'string') {
         data = JSON.parse(data);
@@ -64,24 +61,35 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
         throw new Error(`Greška pri kreiranju mock zaposlenika: ${data.error}`);
       }
 
-      // Provjeri rezultate za svaki zaposlenik
+      // Count successful, failed, and duplicate entries
       const successCount = data.results.filter((r: any) => r.success).length;
-      const failCount = data.results.filter((r: any) => !r.success).length;
+      const duplicateCount = data.results.filter((r: any) => !r.success && r.isDuplicate).length;
+      const failCount = data.results.filter((r: any) => !r.success && !r.isDuplicate).length;
       
-      console.log(`Mock employees creation completed: ${successCount} success, ${failCount} failed`);
+      console.log(`Mock employees creation completed: ${successCount} success, ${duplicateCount} duplicates, ${failCount} failed`);
       
-      // Prikaži detaljne rezultate u konzoli
+      // Show detailed results in console
       data.results.forEach((result: any) => {
         if (result.success) {
           console.log(`✓ Successfully created: ${result.email}`);
+        } else if (result.isDuplicate) {
+          console.log(`⚠ Already exists: ${result.email}`);
         } else {
           console.log(`✗ Failed to create: ${result.email} - ${result.error}`);
         }
       });
 
+      let description = `Uspješno dodano ${successCount} mock zaposlenika`;
+      if (duplicateCount > 0) {
+        description += `, ${duplicateCount} već postoji`;
+      }
+      if (failCount > 0) {
+        description += `, ${failCount} neuspješno`;
+      }
+
       toast({
         title: "Mock zaposlenici stvoreni",
-        description: `Uspješno dodano ${successCount} mock zaposlenika u bazu${failCount > 0 ? ` (${failCount} neuspješno)` : ''}`,
+        description: description,
       });
 
       if (onDataGenerated) {

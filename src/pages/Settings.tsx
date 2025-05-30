@@ -8,7 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const Settings: React.FC = () => {
-  const { user, saveSignature } = useAuth();
+  const { technician, saveSignature } = useAuth();
   const { toast } = useToast();
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,9 +40,9 @@ const Settings: React.FC = () => {
           </p>
           
           <div className="border rounded bg-gray-50 p-4 flex flex-col items-center justify-center min-h-[150px]">
-            {user?.signature ? (
+            {technician?.signature ? (
               <img 
-                src={user.signature} 
+                src={technician.signature} 
                 alt="Vaš potpis" 
                 className="max-h-32" 
               />
@@ -56,7 +56,7 @@ const Settings: React.FC = () => {
             disabled={isSaving}
           >
             {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {user?.signature ? 'Promijeni potpis' : 'Dodaj potpis'}
+            {technician?.signature ? 'Promijeni potpis' : 'Dodaj potpis'}
           </Button>
         </CardContent>
       </Card>

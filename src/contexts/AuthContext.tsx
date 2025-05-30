@@ -67,6 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         if (session?.user) {
           const userData = await fetchUserData(session.user);
@@ -80,6 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('Checking existing session:', session?.user?.email);
       if (session?.user) {
         const userData = await fetchUserData(session.user);
         setUser(userData);
@@ -93,13 +95,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Attempting login for:', email);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Login error:', error);
+        throw error;
+      }
+      
+      console.log('Login successful:', data.user?.email);
     } catch (error) {
+      console.error('Login failed:', error);
       throw new Error('Prijava neuspješna');
     } finally {
       setIsLoading(false);
@@ -109,6 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
     try {
+      console.log('Attempting registration for:', email);
+      
       // First, create the auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
@@ -120,7 +131,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
       });
       
-      if (authError) throw authError;
+      if (authError) {
+        console.error('Auth registration error:', authError);
+        throw authError;
+      }
+
+      console.log('Auth user created:', authData.user?.email);
 
       if (authData.user) {
         // Check if this is the first user (should be admin)
@@ -129,22 +145,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .select('*', { count: 'exact', head: true });
 
         const role = count === 0 ? 'admin' : 'technician';
+        
+        console.log('Creating user record with role:', role);
 
         // Create user record in our users table
-        const { error: userError } = await supabase
+        const { data: userData, error: userError } = await supabase
           .from('users')
           .insert({
             auth_user_id: authData.user.id,
             name: name,
             email: email,
             role: role
-          });
+          })
+          .select()
+          .single();
 
         if (userError) {
           console.error('Error creating user record:', userError);
+          throw userError;
         }
+        
+        console.log('User record created:', userData);
       }
     } catch (error) {
+      console.error('Registration failed:', error);
       throw error;
     } finally {
       setIsLoading(false);
@@ -152,6 +176,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
+    console.log('Logging out user');
     await supabase.auth.signOut();
   };
 

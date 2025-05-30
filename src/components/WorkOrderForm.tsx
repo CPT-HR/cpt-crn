@@ -157,14 +157,41 @@ const WorkOrderForm: React.FC = () => {
     }
   };
 
-  // Get relevant address based on logic: svi podaci se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
+  // ISPRAVLJENA LOGIKA: svi podaci se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
   const getRelevantAddress = () => {
     if (workOrder.orderForCustomer) {
-      // Ako je nalog za korisnika, uzmi adresu korisnika ako postoji, inače naručitelja
+      // Ako je označeno "nalog za korisnika", uvijek uzmi adresu korisnika ako postoji
       return workOrder.customerCompanyAddress || workOrder.clientCompanyAddress;
     }
-    // Ako nije nalog za korisnika, uzmi adresu naručitelja
+    // Ako nije označeno "nalog za korisnika", uzmi adresu naručitelja
     return workOrder.clientCompanyAddress;
+  };
+
+  // ISPRAVLJENA LOGIKA: funkcija za dobivanje finalnih podataka korisnika
+  const getFinalCustomerData = () => {
+    if (workOrder.orderForCustomer) {
+      // SVI PODACI se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
+      return {
+        company_name: workOrder.customerCompanyName || workOrder.clientCompanyName,
+        company_address: workOrder.customerCompanyAddress || workOrder.clientCompanyAddress,
+        oib: workOrder.customerOib || workOrder.clientOib,
+        first_name: workOrder.customerFirstName || workOrder.clientFirstName,
+        last_name: workOrder.customerLastName || workOrder.clientLastName,
+        mobile: workOrder.customerMobile || workOrder.clientMobile,
+        email: workOrder.customerEmail || workOrder.clientEmail,
+      };
+    } else {
+      // Ako nije nalog za korisnika, koristi podatke naručitelja
+      return {
+        company_name: workOrder.clientCompanyName,
+        company_address: workOrder.clientCompanyAddress,
+        oib: workOrder.clientOib,
+        first_name: workOrder.clientFirstName,
+        last_name: workOrder.clientLastName,
+        mobile: workOrder.clientMobile,
+        email: workOrder.clientEmail,
+      };
+    }
   };
 
   useEffect(() => {
@@ -286,24 +313,8 @@ const WorkOrderForm: React.FC = () => {
       const performedWorkText = finalWorkOrder.performedWork.map((item: WorkItem) => `• ${item.text}`).filter((text: string) => text.length > 2).join('\n');
       const technicianCommentText = finalWorkOrder.technicianComment.map((item: WorkItem) => `• ${item.text}`).filter((text: string) => text.length > 2).join('\n');
       
-      // Get final customer data based on correct logic: svi podaci se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
-      const finalCustomerData = workOrder.orderForCustomer ? {
-        company_name: workOrder.customerCompanyName || workOrder.clientCompanyName,
-        company_address: workOrder.customerCompanyAddress || workOrder.clientCompanyAddress,
-        oib: workOrder.customerOib || workOrder.clientOib,
-        first_name: workOrder.customerFirstName || workOrder.clientFirstName,
-        last_name: workOrder.customerLastName || workOrder.clientLastName,
-        mobile: workOrder.customerMobile || workOrder.clientMobile,
-        email: workOrder.customerEmail || workOrder.clientEmail,
-      } : {
-        company_name: workOrder.clientCompanyName,
-        company_address: workOrder.clientCompanyAddress,
-        oib: workOrder.clientOib,
-        first_name: workOrder.clientFirstName,
-        last_name: workOrder.clientLastName,
-        mobile: workOrder.clientMobile,
-        email: workOrder.clientEmail,
-      };
+      // ISPRAVLJENA LOGIKA: koristi novu funkciju za finalne podatke korisnika
+      const finalCustomerData = getFinalCustomerData();
       
       // Complete type assertion to handle both the table name and insert operation
       const supabaseAny = supabase as any;
@@ -380,11 +391,16 @@ const WorkOrderForm: React.FC = () => {
       const year = new Date().getFullYear().toString().slice(-2);
       const generatedId = `${user.initials}${orderCounter++}/${year}`;
       
+      // ISPRAVLJENA LOGIKA: koristi novu funkciju za finalne podatke
+      const finalCustomerData = getFinalCustomerData();
+      
       const finalWorkOrder = {
         ...workOrder,
         id: generatedId,
         technicianSignature: user.signature || '',
-        technicianName: user.name
+        technicianName: user.name,
+        // Dodaj finalne podatke korisnika u workOrder objekt za PDF generaciju
+        finalCustomerData
       };
       
       // Save to Supabase

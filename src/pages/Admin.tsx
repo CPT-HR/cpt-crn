@@ -1,39 +1,34 @@
+
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { useAuth } from '@/contexts/AuthContext';
-import { Navigate } from 'react-router-dom';
-import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Trash2, Edit, Car, Users, MapPin } from "lucide-react";
-import MockDataGenerator from '@/components/MockDataGenerator';
+import { useToast } from "@/components/ui/use-toast";
+import { Loader2, Plus, Edit, Trash2 } from "lucide-react";
 
-// Mock pending users
-const PENDING_USERS = [
-  {
-    id: '3',
-    email: 'pending@example.com',
-    name: 'Pending User',
-    role: 'technician',
-    approved: false,
-    date: '2023-05-10',
-  },
-  {
-    id: '4',
-    email: 'another@example.com',
-    name: 'Another Pending',
-    role: 'technician',
-    approved: false,
-    date: '2023-05-12',
-  }
-];
+interface Employee {
+  id: string;
+  first_name: string;
+  last_name: string;
+  phone?: string;
+  user_role: 'admin' | 'technician' | 'lead';
+  active: boolean;
+  created_at: string;
+}
+
+interface Vehicle {
+  id: string;
+  name: string;
+  license_plate?: string;
+  model?: string;
+  year?: number;
+}
 
 interface CompanyLocation {
   id: string;
@@ -43,1360 +38,725 @@ interface CompanyLocation {
   country: string;
 }
 
-interface Vehicle {
-  id: string;
-  name: string;
-  license_plate: string | null;
-  model: string | null;
-  year: number | null;
-}
-
-interface Technician {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string | null;
-  location_id: string | null;
-  user_role: 'admin' | 'technician' | 'lead';
-  vehicle_id: string | null;
-  active: boolean;
-}
-
-interface GlobalSettings {
-  id: string;
-  distance_matrix_api_key: string | null;
-}
-
-const countries = [
-  'Hrvatska', 'Srbija', 'Slovenija', 'Bosna i Hercegovina', 'Crna Gora', 
-  'Makedonija', 'Austrija', 'Njemačka', 'Italija', 'Mađarska'
-];
-
-const userRoles = [
-  { value: 'admin', label: 'Administrator' },
-  { value: 'technician', label: 'Tehničar' },
-  { value: 'lead', label: 'Voditelj' }
-];
-
 const Admin: React.FC = () => {
   const { user } = useAuth();
-  const [pendingUsers, setPendingUsers] = useState(PENDING_USERS);
-  const [locations, setLocations] = useState<CompanyLocation[]>([]);
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState<'employees' | 'vehicles' | 'locations'>('employees');
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [technicians, setTechnicians] = useState<Technician[]>([]);
-  const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
-  const [isLoadingLocations, setIsLoadingLocations] = useState(true);
-  const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
-  const [isLoadingTechnicians, setIsLoadingTechnicians] = useState(true);
-  const [isLoadingSettings, setIsLoadingSettings] = useState(true);
-  const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [mockDataGenerated, setMockDataGenerated] = useState(false);
-  
-  // New location form
-  const [newLocation, setNewLocation] = useState({
+  const [locations, setLocations] = useState<CompanyLocation[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Employee form state
+  const [employeeForm, setEmployeeForm] = useState({
+    first_name: '',
+    last_name: '',
+    phone: '',
+    user_role: 'technician' as 'admin' | 'technician' | 'lead'
+  });
+
+  // Vehicle form state
+  const [vehicleForm, setVehicleForm] = useState({
+    name: '',
+    license_plate: '',
+    model: '',
+    year: ''
+  });
+
+  // Location form state
+  const [locationForm, setLocationForm] = useState({
     name: '',
     street_address: '',
     city: 'Zagreb',
     country: 'Hrvatska'
   });
-  const [isAddingLocation, setIsAddingLocation] = useState(false);
-  
-  // New vehicle form
-  const [newVehicle, setNewVehicle] = useState({
-    name: '',
-    license_plate: '',
-    model: '',
-    year: new Date().getFullYear()
-  });
-  const [isAddingVehicle, setIsAddingVehicle] = useState(false);
-  
-  // New technician form
-  const [newTechnician, setNewTechnician] = useState({
-    first_name: '',
-    last_name: '',
-    email: '',
-    phone: '',
-    location_id: '',
-    user_role: 'technician' as 'admin' | 'technician' | 'lead',
-    vehicle_id: ''
-  });
-  const [isAddingTechnician, setIsAddingTechnician] = useState(false);
-  const [editingTechnician, setEditingTechnician] = useState<Technician | null>(null);
-  const [isEditingTechnician, setIsEditingTechnician] = useState(false);
-  
-  // Redirect non-admin users
-  if (!user || user.role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
-  
-  // Debug current user
+
+  const [editingEmployee, setEditingEmployee] = useState<string | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<string | null>(null);
+  const [editingLocation, setEditingLocation] = useState<string | null>(null);
+
+  // Load data
   useEffect(() => {
-    const debugUser = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      console.log('Current user data:', currentUser);
-      console.log('User metadata:', currentUser?.user_metadata);
-      console.log('User role from context:', user?.role);
-    };
-    debugUser();
-  }, [user]);
-  
-  // Load company locations
-  useEffect(() => {
-    const fetchLocations = async () => {
-      try {
-        console.log('Fetching company locations...');
-        const { data, error } = await supabase
-          .from('company_locations')
-          .select('*')
-          .order('created_at', { ascending: true });
-        
-        if (error) {
-          console.error('Error fetching locations:', error);
-          throw error;
-        }
-        
-        console.log('Locations fetched successfully:', data);
-        setLocations(data || []);
-      } catch (error) {
-        console.error('Error fetching locations:', error);
-        toast({
-          variant: "destructive",
-          title: "Greška",
-          description: "Nije moguće učitati lokacije tvrtke",
-        });
-      } finally {
-        setIsLoadingLocations(false);
-      }
-    };
-    
-    fetchLocations();
+    loadData();
   }, []);
-  
-  // Load vehicles
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        console.log('Fetching vehicles...');
-        const { data, error } = await supabase
-          .from('vehicles')
-          .select('*')
-          .order('created_at', { ascending: true });
-        
-        if (error) {
-          console.error('Error fetching vehicles:', error);
-          throw error;
-        }
-        
-        console.log('Vehicles fetched successfully:', data);
-        setVehicles(data || []);
-      } catch (error) {
-        console.error('Error fetching vehicles:', error);
-        toast({
-          variant: "destructive",
-          title: "Greška",
-          description: "Nije moguće učitati vozila",
-        });
-      } finally {
-        setIsLoadingVehicles(false);
-      }
-    };
-    
-    fetchVehicles();
-  }, []);
-  
-  // Load technicians
-  useEffect(() => {
-    const fetchTechnicians = async () => {
-      try {
-        console.log('Fetching technicians...');
-        const { data, error } = await supabase
-          .from('technicians')
-          .select('*')
-          .order('created_at', { ascending: true });
-        
-        if (error) {
-          console.error('Error fetching technicians:', error);
-          throw error;
-        }
-        
-        console.log('Technicians fetched successfully:', data);
-        setTechnicians(data || []);
-      } catch (error) {
-        console.error('Error fetching technicians:', error);
-        toast({
-          variant: "destructive",
-          title: "Greška",
-          description: "Nije moguće učitati tehničare",
-        });
-      } finally {
-        setIsLoadingTechnicians(false);
-      }
-    };
-    
-    fetchTechnicians();
-  }, []);
-  
-  // Load global settings
-  useEffect(() => {
-    const fetchGlobalSettings = async () => {
-      try {
-        console.log('Fetching global settings...');
-        const { data, error } = await supabase
-          .from('global_settings')
-          .select('*')
-          .limit(1)
-          .maybeSingle();
-        
-        if (error) {
-          console.error('Error fetching global settings:', error);
-          throw error;
-        }
-        
-        console.log('Global settings fetched:', data);
-        setGlobalSettings(data);
-      } catch (error) {
-        console.error('Error fetching global settings:', error);
-        toast({
-          variant: "destructive",
-          title: "Greška",
-          description: "Nije moguće učitati globalne postavke",
-        });
-      } finally {
-        setIsLoadingSettings(false);
-      }
-    };
-    
-    fetchGlobalSettings();
-  }, []);
-  
-  // Helper function to refresh technicians data
-  const refreshTechnicians = async () => {
+
+  const loadData = async () => {
+    setIsLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('technicians')
-        .select('*')
-        .order('created_at', { ascending: true });
-      
-      if (error) throw error;
-      setTechnicians(data || []);
+      const [employeesRes, vehiclesRes, locationsRes] = await Promise.all([
+        supabase.from('employee_profiles').select('*').order('created_at', { ascending: false }),
+        supabase.from('vehicles').select('*').order('created_at', { ascending: false }),
+        supabase.from('company_locations').select('*').order('created_at', { ascending: false })
+      ]);
+
+      if (employeesRes.error) throw employeesRes.error;
+      if (vehiclesRes.error) throw vehiclesRes.error;
+      if (locationsRes.error) throw locationsRes.error;
+
+      setEmployees(employeesRes.data || []);
+      setVehicles(vehiclesRes.data || []);
+      setLocations(locationsRes.data || []);
     } catch (error) {
-      console.error('Error refreshing technicians:', error);
+      console.error('Error loading data:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do greške prilikom učitavanja podataka",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Helper function to refresh vehicles data
-  const refreshVehicles = async () => {
+  // Employee operations
+  const handleEmployeeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      const { data, error } = await supabase
-        .from('vehicles')
-        .select('*')
-        .order('created_at', { ascending: true });
+      if (editingEmployee) {
+        const { error } = await supabase
+          .from('employee_profiles')
+          .update(employeeForm)
+          .eq('id', editingEmployee);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Zaposlenik ažuriran",
+          description: "Podaci zaposlenika su uspješno ažurirani",
+        });
+      } else {
+        // Note: New employees should be created through auth registration
+        toast({
+          variant: "destructive",
+          title: "Informacija",
+          description: "Novi zaposlenici se kreiraju kroz registraciju",
+        });
+        return;
+      }
+      
+      setEmployeeForm({ first_name: '', last_name: '', phone: '', user_role: 'technician' });
+      setEditingEmployee(null);
+      loadData();
+    } catch (error) {
+      console.error('Error saving employee:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do greške prilikom spremanja",
+      });
+    }
+  };
+
+  const handleEditEmployee = (employee: Employee) => {
+    setEmployeeForm({
+      first_name: employee.first_name,
+      last_name: employee.last_name,
+      phone: employee.phone || '',
+      user_role: employee.user_role
+    });
+    setEditingEmployee(employee.id);
+  };
+
+  const handleToggleEmployeeStatus = async (id: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('employee_profiles')
+        .update({ active: !currentStatus })
+        .eq('id', id);
       
       if (error) throw error;
-      setVehicles(data || []);
+      
+      toast({
+        title: "Status ažuriran",
+        description: `Zaposlenik je ${!currentStatus ? 'aktiviran' : 'deaktiviran'}`,
+      });
+      
+      loadData();
     } catch (error) {
-      console.error('Error refreshing vehicles:', error);
-    }
-  };
-  
-  const approveUser = (id: string) => {
-    setPendingUsers(pendingUsers.filter(user => user.id !== id));
-    toast({
-      title: "Korisnik odobren",
-      description: "Korisnikov račun je uspješno odobren",
-    });
-  };
-  
-  const rejectUser = (id: string) => {
-    setPendingUsers(pendingUsers.filter(user => user.id !== id));
-    toast({
-      title: "Korisnik odbijen",
-      description: "Zahtjev za registraciju je odbijen",
-    });
-  };
-  
-  const addLocation = async () => {
-    if (!newLocation.name.trim() || !newLocation.street_address.trim()) {
+      console.error('Error updating employee status:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Naziv i adresa su obavezni",
+        description: "Došlo je do greške prilikom ažuriranja statusa",
       });
-      return;
     }
-    
-    setIsAddingLocation(true);
+  };
+
+  // Vehicle operations
+  const handleVehicleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      console.log('Adding new location:', newLocation);
-      
-      const { data, error } = await supabase
-        .from('company_locations')
-        .insert([newLocation])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error adding location:', error);
-        throw error;
-      }
-      
-      console.log('Location added successfully:', data);
-      setLocations([...locations, data]);
-      setNewLocation({
-        name: '',
-        street_address: '',
-        city: 'Zagreb',
-        country: 'Hrvatska'
-      });
-      
-      toast({
-        title: "Lokacija dodana",
-        description: "Nova lokacija tvrtke je uspješno dodana",
-      });
-    } catch (error) {
-      console.error('Error adding location:', error);
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Nije moguće dodati lokaciju",
-      });
-    } finally {
-      setIsAddingLocation(false);
-    }
-  };
-  
-  const deleteLocation = async (id: string) => {
-    try {
-      console.log('Deleting location:', id);
-      const { error } = await supabase
-        .from('company_locations')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        console.error('Error deleting location:', error);
-        throw error;
-      }
-      
-      console.log('Location deleted successfully');
-      setLocations(locations.filter(loc => loc.id !== id));
-      toast({
-        title: "Lokacija obrisana",
-        description: "Lokacija tvrtke je uspješno obrisana",
-      });
-    } catch (error) {
-      console.error('Error deleting location:', error);
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Nije moguće obrisati lokaciju",
-      });
-    }
-  };
-  
-  const addVehicle = async () => {
-    if (!newVehicle.name.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Naziv vozila je obavezan",
-      });
-      return;
-    }
-    
-    setIsAddingVehicle(true);
-    try {
-      console.log('Adding new vehicle:', newVehicle);
-      
       const vehicleData = {
-        ...newVehicle,
-        license_plate: newVehicle.license_plate || null,
-        model: newVehicle.model || null,
-        year: newVehicle.year || null
+        ...vehicleForm,
+        year: vehicleForm.year ? parseInt(vehicleForm.year) : null
       };
-      
-      const { data, error } = await supabase
-        .from('vehicles')
-        .insert([vehicleData])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error adding vehicle:', error);
-        throw error;
+
+      if (editingVehicle) {
+        const { error } = await supabase
+          .from('vehicles')
+          .update(vehicleData)
+          .eq('id', editingVehicle);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Vozilo ažurirano",
+          description: "Podaci vozila su uspješno ažurirani",
+        });
+      } else {
+        const { error } = await supabase
+          .from('vehicles')
+          .insert([vehicleData]);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Vozilo dodano",
+          description: "Novo vozilo je uspješno dodano",
+        });
       }
       
-      console.log('Vehicle added successfully:', data);
-      setVehicles([...vehicles, data]);
-      setNewVehicle({
-        name: '',
-        license_plate: '',
-        model: '',
-        year: new Date().getFullYear()
-      });
-      
-      toast({
-        title: "Vozilo dodano",
-        description: "Novo vozilo je uspješno dodano",
-      });
+      setVehicleForm({ name: '', license_plate: '', model: '', year: '' });
+      setEditingVehicle(null);
+      loadData();
     } catch (error) {
-      console.error('Error adding vehicle:', error);
+      console.error('Error saving vehicle:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Nije moguće dodati vozilo",
+        description: "Došlo je do greške prilikom spremanja",
       });
-    } finally {
-      setIsAddingVehicle(false);
     }
   };
-  
-  const deleteVehicle = async (id: string) => {
+
+  const handleEditVehicle = (vehicle: Vehicle) => {
+    setVehicleForm({
+      name: vehicle.name,
+      license_plate: vehicle.license_plate || '',
+      model: vehicle.model || '',
+      year: vehicle.year?.toString() || ''
+    });
+    setEditingVehicle(vehicle.id);
+  };
+
+  const handleDeleteVehicle = async (id: string) => {
+    if (!confirm('Jeste li sigurni da želite obrisati ovo vozilo?')) return;
+    
     try {
-      console.log('Deleting vehicle:', id);
       const { error } = await supabase
         .from('vehicles')
         .delete()
         .eq('id', id);
       
-      if (error) {
-        console.error('Error deleting vehicle:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('Vehicle deleted successfully');
-      setVehicles(vehicles.filter(vehicle => vehicle.id !== id));
       toast({
         title: "Vozilo obrisano",
         description: "Vozilo je uspješno obrisano",
       });
+      
+      loadData();
     } catch (error) {
       console.error('Error deleting vehicle:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Nije moguće obrisati vozilo",
+        description: "Došlo je do greške prilikom brisanja",
       });
     }
   };
-  
-  const addTechnician = async () => {
-    if (!newTechnician.first_name.trim() || !newTechnician.last_name.trim() || !newTechnician.email.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Ime, prezime i email su obavezni",
-      });
-      return;
-    }
-    
-    setIsAddingTechnician(true);
+
+  // Location operations
+  const handleLocationSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     try {
-      console.log('Adding new technician:', newTechnician);
-      
-      const technicianData = {
-        ...newTechnician,
-        phone: newTechnician.phone || null,
-        location_id: newTechnician.location_id || null,
-        vehicle_id: newTechnician.vehicle_id || null
-      };
-      
-      const { data, error } = await supabase
-        .from('technicians')
-        .insert([technicianData])
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error adding technician:', error);
-        throw error;
+      if (editingLocation) {
+        const { error } = await supabase
+          .from('company_locations')
+          .update(locationForm)
+          .eq('id', editingLocation);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Lokacija ažurirana",
+          description: "Podaci lokacije su uspješno ažurirani",
+        });
+      } else {
+        const { error } = await supabase
+          .from('company_locations')
+          .insert([locationForm]);
+        
+        if (error) throw error;
+        
+        toast({
+          title: "Lokacija dodana",
+          description: "Nova lokacija je uspješno dodana",
+        });
       }
       
-      console.log('Technician added successfully:', data);
-      setTechnicians([...technicians, data]);
-      setNewTechnician({
-        first_name: '',
-        last_name: '',
-        email: '',
-        phone: '',
-        location_id: '',
-        user_role: 'technician',
-        vehicle_id: ''
-      });
-      
-      toast({
-        title: "Tehničar dodan",
-        description: "Novi tehničar je uspješno dodan",
-      });
+      setLocationForm({ name: '', street_address: '', city: 'Zagreb', country: 'Hrvatska' });
+      setEditingLocation(null);
+      loadData();
     } catch (error) {
-      console.error('Error adding technician:', error);
+      console.error('Error saving location:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Nije moguće dodati tehničara",
+        description: "Došlo je do greške prilikom spremanja",
       });
-    } finally {
-      setIsAddingTechnician(false);
     }
   };
-  
-  const updateTechnician = async () => {
-    if (!editingTechnician) return;
+
+  const handleEditLocation = (location: CompanyLocation) => {
+    setLocationForm({
+      name: location.name,
+      street_address: location.street_address,
+      city: location.city,
+      country: location.country
+    });
+    setEditingLocation(location.id);
+  };
+
+  const handleDeleteLocation = async (id: string) => {
+    if (!confirm('Jeste li sigurni da želite obrisati ovu lokaciju?')) return;
     
-    setIsEditingTechnician(true);
     try {
-      console.log('Updating technician:', editingTechnician);
-      
-      const { data, error } = await supabase
-        .from('technicians')
-        .update({
-          first_name: editingTechnician.first_name,
-          last_name: editingTechnician.last_name,
-          email: editingTechnician.email,
-          phone: editingTechnician.phone,
-          location_id: editingTechnician.location_id,
-          user_role: editingTechnician.user_role,
-          vehicle_id: editingTechnician.vehicle_id,
-          active: editingTechnician.active
-        })
-        .eq('id', editingTechnician.id)
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Error updating technician:', error);
-        throw error;
-      }
-      
-      console.log('Technician updated successfully:', data);
-      setTechnicians(technicians.map(tech => tech.id === editingTechnician.id ? data : tech));
-      setEditingTechnician(null);
-      
-      toast({
-        title: "Tehničar ažuriran",
-        description: "Podaci tehničara su uspješno ažurirani",
-      });
-    } catch (error) {
-      console.error('Error updating technician:', error);
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Nije moguće ažurirati tehničara",
-      });
-    } finally {
-      setIsEditingTechnician(false);
-    }
-  };
-  
-  const deleteTechnician = async (id: string) => {
-    try {
-      console.log('Deleting technician:', id);
       const { error } = await supabase
-        .from('technicians')
+        .from('company_locations')
         .delete()
         .eq('id', id);
       
-      if (error) {
-        console.error('Error deleting technician:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('Technician deleted successfully');
-      setTechnicians(technicians.filter(tech => tech.id !== id));
       toast({
-        title: "Tehničar obrisan",
-        description: "Tehničar je uspješno obrisan",
+        title: "Lokacija obrisana",
+        description: "Lokacija je uspješno obrisana",
       });
+      
+      loadData();
     } catch (error) {
-      console.error('Error deleting technician:', error);
+      console.error('Error deleting location:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Nije moguće obrisati tehničara",
-      });
-    }
-  };
-  
-  const saveGlobalSettings = async () => {
-    if (!globalSettings) return;
-    
-    setIsSavingSettings(true);
-    try {
-      console.log('Saving global settings:', globalSettings);
-      
-      if (globalSettings.id) {
-        // Update postojeći zapis
-        const { error } = await supabase
-          .from('global_settings')
-          .update({
-            distance_matrix_api_key: globalSettings.distance_matrix_api_key
-          })
-          .eq('id', globalSettings.id);
-        
-        if (error) {
-          console.error('Error updating global settings:', error);
-          throw error;
-        }
-      } else {
-        // Insert novi zapis
-        const { data, error } = await supabase
-          .from('global_settings')
-          .insert([{
-            distance_matrix_api_key: globalSettings.distance_matrix_api_key
-          }])
-          .select()
-          .single();
-        
-        if (error) {
-          console.error('Error inserting global settings:', error);
-          throw error;
-        }
-        
-        console.log('New global settings inserted:', data);
-        setGlobalSettings(data);
-      }
-      
-      console.log('Global settings saved successfully');
-      toast({
-        title: "Postavke spremljene",
-        description: "Globalne postavke su uspješno spremljene",
-      });
-    } catch (error) {
-      console.error('Error saving global settings:', error);
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Nije moguće spremiti postavke",
-      });
-    } finally {
-      setIsSavingSettings(false);
-    }
-  };
-  
-  const getLocationName = (locationId: string | null) => {
-    if (!locationId || locationId === 'none') return 'Nije dodijeljeno';
-    const location = locations.find(loc => loc.id === locationId);
-    return location ? location.name : 'Nepoznato';
-  };
-  
-  const getVehicleName = (vehicleId: string | null) => {
-    if (!vehicleId || vehicleId === 'none') return 'Nije dodijeljeno';
-    const vehicle = vehicles.find(veh => veh.id === vehicleId);
-    return vehicle ? vehicle.name : 'Nepoznato';
-  };
-  
-  const generateMockData = async () => {
-    try {
-      // Generate mock technicians (including admin as technician)
-      const mockTechnicians = [
-        {
-          first_name: "Marko",
-          last_name: "Kovačić", 
-          email: "marko.kovacic@tvrtka.hr",
-          phone: "+385 91 123 4567",
-          user_role: "technician" as const,
-          active: true
-        },
-        {
-          first_name: "Ana",
-          last_name: "Novak",
-          email: "ana.novak@tvrtka.hr", 
-          phone: "+385 92 234 5678",
-          user_role: "technician" as const,
-          active: true
-        },
-        {
-          first_name: "Petar",
-          last_name: "Babić",
-          email: "petar.babic@tvrtka.hr",
-          phone: "+385 93 345 6789", 
-          user_role: "admin" as const,
-          active: true
-        }
-      ];
-
-      // Generate mock vehicles
-      const mockVehicles = [
-        {
-          name: "Servisno vozilo 1",
-          license_plate: "ZG-1234-AB",
-          model: "Volkswagen Caddy",
-          year: 2020
-        },
-        {
-          name: "Servisno vozilo 2", 
-          license_plate: "ZG-5678-CD",
-          model: "Ford Transit",
-          year: 2019
-        },
-        {
-          name: "Terensko vozilo",
-          license_plate: "ZG-9012-EF", 
-          model: "Toyota Hilux",
-          year: 2021
-        }
-      ];
-
-      // Insert technicians
-      const { error: techError } = await supabase
-        .from('technicians')
-        .insert(mockTechnicians);
-
-      if (techError) throw techError;
-
-      // Insert vehicles
-      const { error: vehicleError } = await supabase
-        .from('vehicles')
-        .insert(mockVehicles);
-
-      if (vehicleError) throw vehicleError;
-
-      // Refresh data
-      await Promise.all([refreshTechnicians(), refreshVehicles()]);
-      setMockDataGenerated(true);
-
-      toast({
-        title: "Mock podaci stvoreni",
-        description: "Uspješno dodani mock tehničari i vozila",
-      });
-    } catch (error) {
-      console.error('Error generating mock data:', error);
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Došlo je do greške prilikom stvaranja mock podataka",
+        description: "Došlo je do greške prilikom brisanja",
       });
     }
   };
 
-  return (
-    <div className="container py-6">
-      <h1 className="text-3xl font-bold mb-6">Administracija</h1>
-      
-      {/* Mock data generation - TEMPORARY FEATURE */}
-      {!mockDataGenerated && (
-        <Card className="mb-6 border-dashed border-amber-400 bg-amber-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-amber-800">Generiraj mock podatke</h3>
-                <p className="text-sm text-amber-700">Privremena funkcionalnost za dodavanje test podataka</p>
-              </div>
-              <Button onClick={generateMockData} variant="outline" className="border-amber-400">
-                Generiraj mock podatke
-              </Button>
-            </div>
+  if (!user || user.role !== 'admin') {
+    return (
+      <div className="container py-6">
+        <Card>
+          <CardContent className="p-6 text-center">
+            <p>Nemate dozvolu za pristup ovoj stranici.</p>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="container py-6">
+        <div className="flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container py-6 space-y-6">
+      <h1 className="text-3xl font-bold">Administracija</h1>
+      
+      {/* Tabs */}
+      <div className="flex space-x-4 border-b">
+        <button
+          onClick={() => setActiveTab('employees')}
+          className={`pb-2 px-1 font-medium ${
+            activeTab === 'employees' 
+              ? 'border-b-2 border-brand text-brand' 
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Zaposlenici
+        </button>
+        <button
+          onClick={() => setActiveTab('vehicles')}
+          className={`pb-2 px-1 font-medium ${
+            activeTab === 'vehicles' 
+              ? 'border-b-2 border-brand text-brand' 
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Vozila
+        </button>
+        <button
+          onClick={() => setActiveTab('locations')}
+          className={`pb-2 px-1 font-medium ${
+            activeTab === 'locations' 
+              ? 'border-b-2 border-brand text-brand' 
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Lokacije
+        </button>
+      </div>
+
+      {/* Employees Tab */}
+      {activeTab === 'employees' && (
+        <div className="space-y-6">
+          {editingEmployee && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Uredi zaposlenika</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleEmployeeSubmit} className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="first_name">Ime</Label>
+                      <Input
+                        id="first_name"
+                        value={employeeForm.first_name}
+                        onChange={(e) => setEmployeeForm(prev => ({ ...prev, first_name: e.target.value }))}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="last_name">Prezime</Label>
+                      <Input
+                        id="last_name"
+                        value={employeeForm.last_name}
+                        onChange={(e) => setEmployeeForm(prev => ({ ...prev, last_name: e.target.value }))}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Telefon</Label>
+                      <Input
+                        id="phone"
+                        value={employeeForm.phone}
+                        onChange={(e) => setEmployeeForm(prev => ({ ...prev, phone: e.target.value }))}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="user_role">Uloga</Label>
+                      <Select value={employeeForm.user_role} onValueChange={(value: 'admin' | 'technician' | 'lead') => setEmployeeForm(prev => ({ ...prev, user_role: value }))}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="admin">Administrator</SelectItem>
+                          <SelectItem value="technician">Tehničar</SelectItem>
+                          <SelectItem value="lead">Voditelj</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button type="submit">Spremi</Button>
+                    <Button type="button" variant="outline" onClick={() => {
+                      setEditingEmployee(null);
+                      setEmployeeForm({ first_name: '', last_name: '', phone: '', user_role: 'technician' });
+                    }}>
+                      Odustani
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista zaposlenika</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Ime i prezime</TableHead>
+                    <TableHead>Telefon</TableHead>
+                    <TableHead>Uloga</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Akcije</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {employees.map((employee) => (
+                    <TableRow key={employee.id}>
+                      <TableCell>{employee.first_name} {employee.last_name}</TableCell>
+                      <TableCell>{employee.phone || '-'}</TableCell>
+                      <TableCell>
+                        <Badge variant={employee.user_role === 'admin' ? 'default' : 'secondary'}>
+                          {employee.user_role === 'admin' ? 'Administrator' : 
+                           employee.user_role === 'lead' ? 'Voditelj' : 'Tehničar'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={employee.active ? 'default' : 'destructive'}>
+                          {employee.active ? 'Aktivan' : 'Neaktivan'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditEmployee(employee)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant={employee.active ? "destructive" : "default"}
+                            onClick={() => handleToggleEmployeeStatus(employee.id, employee.active)}
+                          >
+                            {employee.active ? 'Deaktiviraj' : 'Aktiviraj'}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
       )}
 
-      {/* Mock Data Generator Component */}
-      <MockDataGenerator 
-        onDataGenerated={async () => {
-          await Promise.all([refreshTechnicians(), refreshVehicles()]);
-        }}
-      />
-
-      <Tabs defaultValue="locations" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="locations">Lokacije tvrtke</TabsTrigger>
-          <TabsTrigger value="technicians">Tehničari</TabsTrigger>
-          <TabsTrigger value="vehicles">Vozila</TabsTrigger>
-          <TabsTrigger value="settings">Globalne postavke</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="locations">
+      {/* Vehicles Tab */}
+      {activeTab === 'vehicles' && (
+        <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
-                Upravljanje lokacijama tvrtke
-              </CardTitle>
+              <CardTitle>{editingVehicle ? 'Uredi vozilo' : 'Dodaj novo vozilo'}</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoadingLocations ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+            <CardContent>
+              <form onSubmit={handleVehicleSubmit} className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="vehicle_name">Naziv vozila</Label>
+                    <Input
+                      id="vehicle_name"
+                      value={vehicleForm.name}
+                      onChange={(e) => setVehicleForm(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="license_plate">Registarska oznaka</Label>
+                    <Input
+                      id="license_plate"
+                      value={vehicleForm.license_plate}
+                      onChange={(e) => setVehicleForm(prev => ({ ...prev, license_plate: e.target.value }))}
+                    />
+                  </div>
                 </div>
-              ) : (
-                <>
-                  <div className="space-y-4">
-                    {locations.map((location) => (
-                      <div key={location.id} className="flex items-center justify-between border-b pb-4 last:border-0">
-                        <div>
-                          <h3 className="font-medium">{location.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {location.street_address}, {location.city}, {location.country}
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteLocation(location.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    
-                    {locations.length === 0 && (
-                      <p className="text-muted-foreground text-center py-4">
-                        Nema dodanih lokacija tvrtke
-                      </p>
-                    )}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="model">Model</Label>
+                    <Input
+                      id="model"
+                      value={vehicleForm.model}
+                      onChange={(e) => setVehicleForm(prev => ({ ...prev, model: e.target.value }))}
+                    />
                   </div>
-                  
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-4">Dodaj novu lokaciju</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="locationName">Naziv lokacije</Label>
-                        <Input
-                          id="locationName"
-                          value={newLocation.name}
-                          onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
-                          placeholder="Sjedište, Skladište..."
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="streetAddress">Adresa</Label>
-                        <Input
-                          id="streetAddress"
-                          value={newLocation.street_address}
-                          onChange={(e) => setNewLocation({ ...newLocation, street_address: e.target.value })}
-                          placeholder="Ilica 1"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="city">Grad</Label>
-                        <Input
-                          id="city"
-                          value={newLocation.city}
-                          onChange={(e) => setNewLocation({ ...newLocation, city: e.target.value })}
-                          placeholder="Zagreb"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="country">Država</Label>
-                        <Select value={newLocation.country} onValueChange={(value) => setNewLocation({ ...newLocation, country: value })}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {countries.map((country) => (
-                              <SelectItem key={country} value={country}>
-                                {country}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={addLocation}
-                      disabled={isAddingLocation}
-                      className="mt-4"
-                    >
-                      {isAddingLocation && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Plus className="mr-2 h-4 w-4" />
-                      Dodaj lokaciju
-                    </Button>
+                  <div className="space-y-2">
+                    <Label htmlFor="year">Godina</Label>
+                    <Input
+                      id="year"
+                      type="number"
+                      value={vehicleForm.year}
+                      onChange={(e) => setVehicleForm(prev => ({ ...prev, year: e.target.value }))}
+                    />
                   </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="technicians">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Upravljanje tehničarima
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoadingTechnicians ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
-              ) : (
-                <>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Ime i prezime</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Telefon</TableHead>
-                          <TableHead>Lokacija</TableHead>
-                          <TableHead>Uloga</TableHead>
-                          <TableHead>Vozilo</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Akcije</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {technicians.map((technician) => (
-                          <TableRow key={technician.id}>
-                            <TableCell>{technician.first_name} {technician.last_name}</TableCell>
-                            <TableCell>{technician.email}</TableCell>
-                            <TableCell>{technician.phone || 'Nije uneseno'}</TableCell>
-                            <TableCell>{getLocationName(technician.location_id)}</TableCell>
-                            <TableCell>
-                              <Badge variant={technician.user_role === 'admin' ? 'default' : 'secondary'}>
-                                {userRoles.find(role => role.value === technician.user_role)?.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>{getVehicleName(technician.vehicle_id)}</TableCell>
-                            <TableCell>
-                              <Badge variant={technician.active ? 'default' : 'destructive'}>
-                                {technician.active ? 'Aktivan' : 'Neaktivan'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-2">
-                                <Sheet>
-                                  <SheetTrigger asChild>
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() => setEditingTechnician(technician)}
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  </SheetTrigger>
-                                  <SheetContent>
-                                    <SheetHeader>
-                                      <SheetTitle>Uredi tehničara</SheetTitle>
-                                      <SheetDescription>
-                                        Uredite podatke tehničara
-                                      </SheetDescription>
-                                    </SheetHeader>
-                                    {editingTechnician && (
-                                      <div className="grid gap-4 py-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                          <div className="space-y-2">
-                                            <Label htmlFor="editFirstName">Ime</Label>
-                                            <Input
-                                              id="editFirstName"
-                                              value={editingTechnician.first_name}
-                                              onChange={(e) => setEditingTechnician({
-                                                ...editingTechnician,
-                                                first_name: e.target.value
-                                              })}
-                                            />
-                                          </div>
-                                          <div className="space-y-2">
-                                            <Label htmlFor="editLastName">Prezime</Label>
-                                            <Input
-                                              id="editLastName"
-                                              value={editingTechnician.last_name}
-                                              onChange={(e) => setEditingTechnician({
-                                                ...editingTechnician,
-                                                last_name: e.target.value
-                                              })}
-                                            />
-                                          </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label htmlFor="editEmail">Email</Label>
-                                          <Input
-                                            id="editEmail"
-                                            type="email"
-                                            value={editingTechnician.email}
-                                            onChange={(e) => setEditingTechnician({
-                                              ...editingTechnician,
-                                              email: e.target.value
-                                            })}
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label htmlFor="editPhone">Telefon</Label>
-                                          <Input
-                                            id="editPhone"
-                                            value={editingTechnician.phone || ''}
-                                            onChange={(e) => setEditingTechnician({
-                                              ...editingTechnician,
-                                              phone: e.target.value
-                                            })}
-                                          />
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label htmlFor="editLocation">Lokacija</Label>
-                                          <Select
-                                            value={editingTechnician.location_id || 'none'}
-                                            onValueChange={(value) => setEditingTechnician({
-                                              ...editingTechnician,
-                                              location_id: value === 'none' ? null : value
-                                            })}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Odaberite lokaciju" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="none">Bez lokacije</SelectItem>
-                                              {locations.map((location) => (
-                                                <SelectItem key={location.id} value={location.id}>
-                                                  {location.name}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label htmlFor="editRole">Uloga</Label>
-                                          <Select
-                                            value={editingTechnician.user_role}
-                                            onValueChange={(value: 'admin' | 'technician' | 'lead') => setEditingTechnician({
-                                              ...editingTechnician,
-                                              user_role: value
-                                            })}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {userRoles.map((role) => (
-                                                <SelectItem key={role.value} value={role.value}>
-                                                  {role.label}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label htmlFor="editVehicle">Vozilo</Label>
-                                          <Select
-                                            value={editingTechnician.vehicle_id || 'none'}
-                                            onValueChange={(value) => setEditingTechnician({
-                                              ...editingTechnician,
-                                              vehicle_id: value === 'none' ? null : value
-                                            })}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue placeholder="Odaberite vozilo" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="none">Bez vozila</SelectItem>
-                                              {vehicles.map((vehicle) => (
-                                                <SelectItem key={vehicle.id} value={vehicle.id}>
-                                                  {vehicle.name}
-                                                </SelectItem>
-                                              ))}
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                          <Label htmlFor="editActive">Status</Label>
-                                          <Select
-                                            value={editingTechnician.active ? 'active' : 'inactive'}
-                                            onValueChange={(value) => setEditingTechnician({
-                                              ...editingTechnician,
-                                              active: value === 'active'
-                                            })}
-                                          >
-                                            <SelectTrigger>
-                                              <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="active">Aktivan</SelectItem>
-                                              <SelectItem value="inactive">Neaktivan</SelectItem>
-                                            </SelectContent>
-                                          </Select>
-                                        </div>
-                                        <Button 
-                                          onClick={updateTechnician}
-                                          disabled={isEditingTechnician}
-                                          className="w-full"
-                                        >
-                                          {isEditingTechnician && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                          Spremi promjene
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </SheetContent>
-                                </Sheet>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => deleteTechnician(technician.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                    
-                    {technicians.length === 0 && (
-                      <p className="text-muted-foreground text-center py-4">
-                        Nema dodanih tehničara
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-4">Dodaj novog tehničara</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="techFirstName">Ime</Label>
-                        <Input
-                          id="techFirstName"
-                          value={newTechnician.first_name}
-                          onChange={(e) => setNewTechnician({ ...newTechnician, first_name: e.target.value })}
-                          placeholder="Ime"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="techLastName">Prezime</Label>
-                        <Input
-                          id="techLastName"
-                          value={newTechnician.last_name}
-                          onChange={(e) => setNewTechnician({ ...newTechnician, last_name: e.target.value })}
-                          placeholder="Prezime"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="techEmail">Email</Label>
-                        <Input
-                          id="techEmail"
-                          type="email"
-                          value={newTechnician.email}
-                          onChange={(e) => setNewTechnician({ ...newTechnician, email: e.target.value })}
-                          placeholder="email@example.com"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="techPhone">Telefon</Label>
-                        <Input
-                          id="techPhone"
-                          value={newTechnician.phone}
-                          onChange={(e) => setNewTechnician({ ...newTechnician, phone: e.target.value })}
-                          placeholder="+385 99 123 4567"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="techLocation">Lokacija</Label>
-                        <Select 
-                          value={newTechnician.location_id || 'none'} 
-                          onValueChange={(value) => setNewTechnician({ ...newTechnician, location_id: value === 'none' ? '' : value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Odaberite lokaciju" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Bez lokacije</SelectItem>
-                            {locations.map((location) => (
-                              <SelectItem key={location.id} value={location.id}>
-                                {location.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="techRole">Uloga</Label>
-                        <Select 
-                          value={newTechnician.user_role} 
-                          onValueChange={(value: 'admin' | 'technician' | 'lead') => setNewTechnician({ ...newTechnician, user_role: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {userRoles.map((role) => (
-                              <SelectItem key={role.value} value={role.value}>
-                                {role.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="techVehicle">Vozilo</Label>
-                        <Select 
-                          value={newTechnician.vehicle_id || 'none'} 
-                          onValueChange={(value) => setNewTechnician({ ...newTechnician, vehicle_id: value === 'none' ? '' : value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Odaberite vozilo" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Bez vozila</SelectItem>
-                            {vehicles.map((vehicle) => (
-                              <SelectItem key={vehicle.id} value={vehicle.id}>
-                                {vehicle.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={addTechnician}
-                      disabled={isAddingTechnician}
-                      className="mt-4"
-                    >
-                      {isAddingTechnician && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Plus className="mr-2 h-4 w-4" />
-                      Dodaj tehničara
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="vehicles">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Car className="h-5 w-5" />
-                Upravljanje vozilima
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {isLoadingVehicles ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-4">
-                    {vehicles.map((vehicle) => (
-                      <div key={vehicle.id} className="flex items-center justify-between border-b pb-4 last:border-0">
-                        <div>
-                          <h3 className="font-medium">{vehicle.name}</h3>
-                          <p className="text-sm text-muted-foreground">
-                            {vehicle.model && `${vehicle.model} `}
-                            {vehicle.year && `(${vehicle.year}) `}
-                            {vehicle.license_plate && `• ${vehicle.license_plate}`}
-                          </p>
-                        </div>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => deleteVehicle(vehicle.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    
-                    {vehicles.length === 0 && (
-                      <p className="text-muted-foreground text-center py-4">
-                        Nema dodanih vozila
-                      </p>
-                    )}
-                  </div>
-                  
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-4">Dodaj novo vozilo</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="vehicleName">Naziv vozila</Label>
-                        <Input
-                          id="vehicleName"
-                          value={newVehicle.name}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, name: e.target.value })}
-                          placeholder="Kombi 1, Auto 2..."
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="licensePlate">Registarska oznaka</Label>
-                        <Input
-                          id="licensePlate"
-                          value={newVehicle.license_plate}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, license_plate: e.target.value })}
-                          placeholder="ZG-1234-AB"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="vehicleModel">Model</Label>
-                        <Input
-                          id="vehicleModel"
-                          value={newVehicle.model}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, model: e.target.value })}
-                          placeholder="Volkswagen Crafter"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="vehicleYear">Godina</Label>
-                        <Input
-                          id="vehicleYear"
-                          type="number"
-                          value={newVehicle.year}
-                          onChange={(e) => setNewVehicle({ ...newVehicle, year: parseInt(e.target.value) || new Date().getFullYear() })}
-                          placeholder="2023"
-                        />
-                      </div>
-                    </div>
-                    <Button 
-                      onClick={addVehicle}
-                      disabled={isAddingVehicle}
-                      className="mt-4"
-                    >
-                      {isAddingVehicle && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      <Plus className="mr-2 h-4 w-4" />
-                      Dodaj vozilo
-                    </Button>
-                  </div>
-                </>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Globalne postavke</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isLoadingSettings ? (
-                <div className="flex justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="distanceApiKey">Distance Matrix API ključ</Label>
-                      <Input
-                        id="distanceApiKey"
-                        type="password"
-                        value={globalSettings?.distance_matrix_api_key || ''}
-                        onChange={(e) => setGlobalSettings(prev => prev ? {
-                          ...prev,
-                          distance_matrix_api_key: e.target.value
-                        } : { id: '', distance_matrix_api_key: e.target.value })}
-                        placeholder="Unesite Distance Matrix API ključ"
-                      />
-                      <p className="text-sm text-muted-foreground">
-                        API ključ za automatsko računanje udaljenosti. Možete dobiti besplatan API ključ na distancematrix.ai
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    onClick={saveGlobalSettings}
-                    disabled={isSavingSettings}
-                  >
-                    {isSavingSettings && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Spremi postavke
+                <div className="flex gap-2">
+                  <Button type="submit">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {editingVehicle ? 'Ažuriraj' : 'Dodaj'} vozilo
                   </Button>
-                </>
-              )}
+                  {editingVehicle && (
+                    <Button type="button" variant="outline" onClick={() => {
+                      setEditingVehicle(null);
+                      setVehicleForm({ name: '', license_plate: '', model: '', year: '' });
+                    }}>
+                      Odustani
+                    </Button>
+                  )}
+                </div>
+              </form>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista vozila</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Naziv</TableHead>
+                    <TableHead>Registracija</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Godina</TableHead>
+                    <TableHead>Akcije</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {vehicles.map((vehicle) => (
+                    <TableRow key={vehicle.id}>
+                      <TableCell>{vehicle.name}</TableCell>
+                      <TableCell>{vehicle.license_plate || '-'}</TableCell>
+                      <TableCell>{vehicle.model || '-'}</TableCell>
+                      <TableCell>{vehicle.year || '-'}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditVehicle(vehicle)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteVehicle(vehicle.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Locations Tab */}
+      {activeTab === 'locations' && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>{editingLocation ? 'Uredi lokaciju' : 'Dodaj novu lokaciju'}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleLocationSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="location_name">Naziv lokacije</Label>
+                  <Input
+                    id="location_name"
+                    value={locationForm.name}
+                    onChange={(e) => setLocationForm(prev => ({ ...prev, name: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="street_address">Adresa</Label>
+                  <Input
+                    id="street_address"
+                    value={locationForm.street_address}
+                    onChange={(e) => setLocationForm(prev => ({ ...prev, street_address: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="city">Grad</Label>
+                    <Input
+                      id="city"
+                      value={locationForm.city}
+                      onChange={(e) => setLocationForm(prev => ({ ...prev, city: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="country">Zemlja</Label>
+                    <Input
+                      id="country"
+                      value={locationForm.country}
+                      onChange={(e) => setLocationForm(prev => ({ ...prev, country: e.target.value }))}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button type="submit">
+                    <Plus className="h-4 w-4 mr-2" />
+                    {editingLocation ? 'Ažuriraj' : 'Dodaj'} lokaciju
+                  </Button>
+                  {editingLocation && (
+                    <Button type="button" variant="outline" onClick={() => {
+                      setEditingLocation(null);
+                      setLocationForm({ name: '', street_address: '', city: 'Zagreb', country: 'Hrvatska' });
+                    }}>
+                      Odustani
+                    </Button>
+                  )}
+                </div>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista lokacija</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Naziv</TableHead>
+                    <TableHead>Adresa</TableHead>
+                    <TableHead>Grad</TableHead>
+                    <TableHead>Zemlja</TableHead>
+                    <TableHead>Akcije</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {locations.map((location) => (
+                    <TableRow key={location.id}>
+                      <TableCell>{location.name}</TableCell>
+                      <TableCell>{location.street_address}</TableCell>
+                      <TableCell>{location.city}</TableCell>
+                      <TableCell>{location.country}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleEditLocation(location)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteLocation(location.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };

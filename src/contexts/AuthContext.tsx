@@ -1,9 +1,10 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-type UserRole = 'admin' | 'technician';
+type UserRole = 'admin' | 'technician' | 'lead';
 
 type UserData = {
   id: string;
@@ -15,6 +16,9 @@ type UserData = {
   initials: string;
   companyAddress?: string;
   distanceMatrixApiKey?: string;
+  phone?: string;
+  firstName: string;
+  lastName: string;
 };
 
 type AuthContextType = {
@@ -41,8 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load user signature from database
   const loadUserSignature = async (userId: string): Promise<string | undefined> => {
     try {
-      const supabaseAny = supabase as any;
-      const { data, error } = await supabaseAny
+      const { data, error } = await supabase
         .from('user_signatures')
         .select('signature_data')
         .eq('user_id', userId)
@@ -89,13 +92,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       if (userData.user && isMounted.current) {
         const email = userData.user.email || '';
-        const name = userData.user.user_metadata?.name || email?.split('@')[0] || 'User';
+        
+        // Load employee profile from database
+        const { data: employeeProfile, error: profileError } = await supabase
+          .from('employee_profiles')
+          .select('*')
+          .eq('id', userId)
+          .maybeSingle();
+        
+        if (profileError) {
+          console.error('Error loading employee profile:', profileError);
+        }
+        
+        const firstName = employeeProfile?.first_name || userData.user.user_metadata?.first_name || email?.split('@')[0] || 'User';
+        const lastName = employeeProfile?.last_name || userData.user.user_metadata?.last_name || '';
+        const name = `${firstName} ${lastName}`.trim();
         
         // Generate initials from name
-        const initials = name
-          .split(' ')
-          .map(n => n[0])
-          .join('')
+        const initials = `${firstName[0] || ''}${lastName[0] || ''}`
           .toUpperCase()
           .substring(0, 2);
         
@@ -112,12 +126,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           id: userId,
           email: email,
           name: name,
-          role: 'admin', // Default as admin for the first user
-          approved: true,
+          firstName: firstName,
+          lastName: lastName,
+          role: (employeeProfile?.user_role as UserRole) || 'technician',
+          approved: employeeProfile?.active || true,
           initials: initials,
           signature: signature,
           companyAddress: companyAddress,
-          distanceMatrixApiKey: distanceMatrixApiKey
+          distanceMatrixApiKey: distanceMatrixApiKey,
+          phone: employeeProfile?.phone
         };
         
         setUser(userProfile);
@@ -243,17 +260,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
-      const supabaseAny = supabase as any;
-      
       // Try to update existing signature first
-      const { error: updateError } = await supabaseAny
+      const { error: updateError } = await supabase
         .from('user_signatures')
         .update({ signature_data: signature })
         .eq('user_id', user.id);
       
       // If update fails (no existing record), insert new one
       if (updateError) {
-        const { error: insertError } = await supabaseAny
+        const { error: insertError } = await supabase
           .from('user_signatures')
           .insert({
             user_id: user.id,

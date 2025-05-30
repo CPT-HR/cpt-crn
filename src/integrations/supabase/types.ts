@@ -39,6 +39,60 @@ export type Database = {
         }
         Relationships: []
       }
+      employee_profiles: {
+        Row: {
+          active: boolean
+          created_at: string
+          first_name: string
+          id: string
+          last_name: string
+          location_id: string | null
+          phone: string | null
+          updated_at: string
+          user_role: string
+          vehicle_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          first_name: string
+          id: string
+          last_name: string
+          location_id?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_role?: string
+          vehicle_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          location_id?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_role?: string
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employee_profiles_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "company_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_profiles_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       global_settings: {
         Row: {
           distance_matrix_api_key: string | null
@@ -56,63 +110,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      technicians: {
-        Row: {
-          active: boolean
-          created_at: string
-          email: string
-          first_name: string
-          id: string
-          last_name: string
-          location_id: string | null
-          phone: string | null
-          updated_at: string
-          user_role: Database["public"]["Enums"]["user_role"]
-          vehicle_id: string | null
-        }
-        Insert: {
-          active?: boolean
-          created_at?: string
-          email: string
-          first_name: string
-          id?: string
-          last_name: string
-          location_id?: string | null
-          phone?: string | null
-          updated_at?: string
-          user_role?: Database["public"]["Enums"]["user_role"]
-          vehicle_id?: string | null
-        }
-        Update: {
-          active?: boolean
-          created_at?: string
-          email?: string
-          first_name?: string
-          id?: string
-          last_name?: string
-          location_id?: string | null
-          phone?: string | null
-          updated_at?: string
-          user_role?: Database["public"]["Enums"]["user_role"]
-          vehicle_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "technicians_location_id_fkey"
-            columns: ["location_id"]
-            isOneToOne: false
-            referencedRelation: "company_locations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "technicians_vehicle_id_fkey"
-            columns: ["vehicle_id"]
-            isOneToOne: false
-            referencedRelation: "vehicles"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       user_signatures: {
         Row: {
@@ -200,10 +197,9 @@ export type Database = {
           signature_coordinates: unknown | null
           signature_timestamp: string | null
           technician_comment: string | null
-          technician_name: string | null
           technician_signature: string | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
         }
         Insert: {
           client_company_address: string
@@ -236,10 +232,9 @@ export type Database = {
           signature_coordinates?: unknown | null
           signature_timestamp?: string | null
           technician_comment?: string | null
-          technician_name?: string | null
           technician_signature?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
         }
         Update: {
           client_company_address?: string
@@ -272,10 +267,9 @@ export type Database = {
           signature_coordinates?: unknown | null
           signature_timestamp?: string | null
           technician_comment?: string | null
-          technician_name?: string | null
           technician_signature?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
         }
         Relationships: []
       }

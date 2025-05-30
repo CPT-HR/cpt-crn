@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
-type UserRole = 'admin' | 'technician' | 'lead';
+type UserRole = 'admin' | 'technician';
 
 type UserData = {
   id: string;
@@ -15,9 +15,6 @@ type UserData = {
   initials: string;
   companyAddress?: string;
   distanceMatrixApiKey?: string;
-  phone?: string;
-  firstName: string;
-  lastName: string;
 };
 
 type AuthContextType = {
@@ -44,7 +41,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Load user signature from database
   const loadUserSignature = async (userId: string): Promise<string | undefined> => {
     try {
-      const { data, error } = await supabase
+      const supabaseAny = supabase as any;
+      const { data, error } = await supabaseAny
         .from('user_signatures')
         .select('signature_data')
         .eq('user_id', userId)
@@ -87,32 +85,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Get user's profile data from Supabase
   const getUserProfile = async (userId: string) => {
     try {
-      console.log('Loading user profile for:', userId);
-      
       const { data: userData } = await supabase.auth.getUser();
       
       if (userData.user && isMounted.current) {
         const email = userData.user.email || '';
-        
-        // Load employee profile from database
-        const { data: employeeProfile, error: profileError } = await supabase
-          .from('employee_profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-        
-        if (profileError) {
-          console.error('Error loading employee profile:', profileError);
-        }
-
-        console.log('Employee profile loaded:', employeeProfile);
-        
-        const firstName = employeeProfile?.first_name || userData.user.user_metadata?.first_name || email?.split('@')[0] || 'User';
-        const lastName = employeeProfile?.last_name || userData.user.user_metadata?.last_name || '';
-        const name = `${firstName} ${lastName}`.trim();
+        const name = userData.user.user_metadata?.name || email?.split('@')[0] || 'User';
         
         // Generate initials from name
-        const initials = `${firstName[0] || ''}${lastName[0] || ''}`
+        const initials = name
+          .split(' ')
+          .map(n => n[0])
+          .join('')
           .toUpperCase()
           .substring(0, 2);
         
@@ -125,28 +108,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Load distance matrix API key from localStorage
         const distanceMatrixApiKey = loadUserDistanceMatrixApiKey(userId);
         
-        // Ensure role is properly typed
-        let userRole: UserRole = 'technician';
-        if (employeeProfile?.user_role === 'admin' || employeeProfile?.user_role === 'technician' || employeeProfile?.user_role === 'lead') {
-          userRole = employeeProfile.user_role as UserRole;
-        }
-        
         const userProfile: UserData = {
           id: userId,
           email: email,
           name: name,
-          firstName: firstName,
-          lastName: lastName,
-          role: userRole,
-          approved: employeeProfile?.active || true,
+          role: 'admin', // Default as admin for the first user
+          approved: true,
           initials: initials,
           signature: signature,
           companyAddress: companyAddress,
-          distanceMatrixApiKey: distanceMatrixApiKey,
-          phone: employeeProfile?.phone
+          distanceMatrixApiKey: distanceMatrixApiKey
         };
         
-        console.log('Setting user profile:', userProfile);
         setUser(userProfile);
       }
     } catch (err) {
@@ -156,18 +129,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Handle auth state changes
   useEffect(() => {
-    console.log('Setting up auth state listener...');
-    
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         if (!isMounted.current) return;
         
-        console.log('Auth state changed:', event, currentSession ? 'session exists' : 'no session');
+        console.log('Auth state changed:', event);
         
-        setSession(currentSession);
-        
+        // Only update state if component is still mounted
         if (currentSession?.user) {
+          setSession(currentSession);
+          
           // Use setTimeout to avoid Supabase auth deadlock issues
           setTimeout(() => {
             if (isMounted.current) {
@@ -175,6 +147,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }, 0);
         } else {
+          setSession(null);
           setUser(null);
         }
         
@@ -190,7 +163,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!isMounted.current) return;
         
-        console.log('Got initial session:', currentSession ? 'yes' : 'no');
+        console.log('Got session:', currentSession ? 'yes' : 'no');
         
         setSession(currentSession);
         
@@ -270,15 +243,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
+      const supabaseAny = supabase as any;
+      
       // Try to update existing signature first
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAny
         .from('user_signatures')
         .update({ signature_data: signature })
         .eq('user_id', user.id);
       
       // If update fails (no existing record), insert new one
       if (updateError) {
-        const { error: insertError } = await supabase
+        const { error: insertError } = await supabaseAny
           .from('user_signatures')
           .insert({
             user_id: user.id,

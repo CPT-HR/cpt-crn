@@ -9,67 +9,28 @@ interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
 }
 
-type TechnicianInsert = Database["public"]["Tables"]["technicians"]["Insert"];
+type EmployeeInsert = Database["public"]["Tables"]["employee_profiles"]["Insert"];
 type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
 
 const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }) => {
   const { toast } = useToast();
 
-  const generateMockTechnicians = async () => {
+  const generateMockEmployees = async () => {
     try {
-      console.log('Attempting to create mock technicians...');
+      console.log('Attempting to create mock employees...');
 
-      const mockTechnicians: TechnicianInsert[] = [
-        {
-          first_name: "Marko",
-          last_name: "Kovačić", 
-          email: "marko.kovacic@tvrtka.hr",
-          phone: "+385 91 123 4567",
-          user_role: "technician" as const,
-          active: true
-        },
-        {
-          first_name: "Ana",
-          last_name: "Novak",
-          email: "ana.novak@tvrtka.hr", 
-          phone: "+385 92 234 5678",
-          user_role: "technician" as const,
-          active: true
-        },
-        {
-          first_name: "Petar",
-          last_name: "Babić",
-          email: "petar.babic@tvrtka.hr",
-          phone: "+385 93 345 6789", 
-          user_role: "admin" as const,
-          active: true
-        }
-      ];
-
-      console.log('Inserting technicians:', mockTechnicians);
-
-      const { data, error } = await supabase
-        .from('technicians')
-        .insert(mockTechnicians)
-        .select();
-
-      if (error) {
-        console.error('Supabase error:', error);
-        throw error;
-      }
-
-      console.log('Successfully created technicians:', data);
-
+      // Note: Employee profiles are automatically created when users register through auth
+      // This function would require actual auth.users to exist first
       toast({
-        title: "Mock tehničari stvoreni",
-        description: "Uspješno dodana 3 mock tehničara u bazu",
+        title: "Informacija",
+        description: "Profili zaposlenika se automatski kreiraju prilikom registracije korisnika",
       });
 
       if (onDataGenerated) {
         onDataGenerated();
       }
     } catch (error: any) {
-      console.error('Error creating mock technicians:', error);
+      console.error('Error with mock employees:', error);
       toast({
         variant: "destructive",
         title: "Greška",
@@ -137,8 +98,8 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
 
   return (
     <div className="flex gap-4 mb-4">
-      <Button onClick={generateMockTechnicians} variant="outline">
-        Generiraj mock tehničare
+      <Button onClick={generateMockEmployees} variant="outline">
+        Info o zaposlenicima
       </Button>
       <Button onClick={generateMockVehicles} variant="outline">
         Generiraj mock vozila

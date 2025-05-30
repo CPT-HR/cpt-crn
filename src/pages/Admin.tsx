@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -93,7 +92,11 @@ const Admin: React.FC = () => {
       if (vehiclesRes.error) throw vehiclesRes.error;
       if (locationsRes.error) throw locationsRes.error;
 
-      setEmployees(employeesRes.data || []);
+      // Type assertion to ensure proper typing
+      setEmployees((employeesRes.data || []).map(emp => ({
+        ...emp,
+        user_role: emp.user_role as 'admin' | 'technician' | 'lead'
+      })));
       setVehicles(vehiclesRes.data || []);
       setLocations(locationsRes.data || []);
     } catch (error) {

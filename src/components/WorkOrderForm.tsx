@@ -73,7 +73,7 @@ const countries = [
 let orderCounter = 1;
 
 const WorkOrderForm: React.FC = () => {
-  const { user } = useAuth();
+  const { technician } = useAuth();
   const { toast } = useToast();
   const [isCustomerSignatureModalOpen, setIsCustomerSignatureModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -113,7 +113,7 @@ const WorkOrderForm: React.FC = () => {
     calculatedHours: '0h00min',
     fieldTrip: false,
     distance: '',
-    technicianSignature: user?.signature || '',
+    technicianSignature: technician?.signature || '',
     customerSignature: '',
     customerSignerName: '',
   });
@@ -443,7 +443,7 @@ const WorkOrderForm: React.FC = () => {
     try {
       console.log('Saving work order to Supabase...', finalWorkOrder);
       
-      if (!user) throw new Error("Korisnik nije prijavljen");
+      if (!technician) throw new Error("Korisnik nije prijavljen");
       
       // Convert Point data for PostgreSQL
       const signatureCoordinates = finalWorkOrder.signatureMetadata?.coordinates 
@@ -533,7 +533,7 @@ const WorkOrderForm: React.FC = () => {
         signature_coordinates: signatureCoordinates,
         signature_address: finalWorkOrder.signatureMetadata?.address,
         date: isoDate, // Use ISO format for date
-        user_id: user.id,
+        user_id: technician.id,
       };
 
       console.log('Work order data to insert:', workOrderData);
@@ -558,7 +558,7 @@ const WorkOrderForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
+    if (!technician) {
       toast({
         variant: "destructive",
         title: "Greška",
@@ -590,7 +590,7 @@ const WorkOrderForm: React.FC = () => {
     try {
       // Generate work order number
       const year = new Date().getFullYear().toString().slice(-2);
-      const generatedId = `${user.initials}${orderCounter++}/${year}`;
+      const generatedId = `${technician.initials}${orderCounter++}/${year}`;
       
       // ISPRAVLJENA LOGIKA: koristi novu funkciju za finalne podatke
       const finalCustomerData = getFinalCustomerData();
@@ -598,8 +598,8 @@ const WorkOrderForm: React.FC = () => {
       const finalWorkOrder = {
         ...workOrder,
         id: generatedId,
-        technicianSignature: user.signature || '',
-        technicianName: user.name,
+        technicianSignature: technician.signature || '',
+        technicianName: technician.name,
         date: workOrder.date, // Keep as Date object for now, will be converted in saveToSupabase
         // Dodaj finalne podatke korisnika u workOrder objekt za PDF generaciju
         finalCustomerData,
@@ -660,7 +660,7 @@ const WorkOrderForm: React.FC = () => {
         calculatedHours: '0h00min',
         fieldTrip: false,
         distance: '',
-        technicianSignature: user?.signature || '',
+        technicianSignature: technician?.signature || '',
         customerSignature: '',
         customerSignerName: '',
       });
@@ -740,7 +740,7 @@ const WorkOrderForm: React.FC = () => {
         calculatedHours: '0h00min',
         fieldTrip: false,
         distance: '',
-        technicianSignature: user?.signature || '',
+        technicianSignature: technician?.signature || '',
         customerSignature: '',
         customerSignerName: '',
       });
@@ -1309,14 +1309,14 @@ const WorkOrderForm: React.FC = () => {
             <div>
               <Label>Potpis tehničara</Label>
               <div className="mt-2 p-2 border rounded bg-gray-50">
-                {user?.signature ? (
+                {technician?.signature ? (
                   <div className="flex flex-col items-center">
                     <img 
-                      src={user.signature} 
+                      src={technician.signature} 
                       alt="Potpis tehničara" 
                       className="max-h-20 mx-auto"
                     />
-                    <p className="text-sm text-gray-600 mt-2">{user.name}</p>
+                    <p className="text-sm text-gray-600 mt-2">{technician.name}</p>
                   </div>
                 ) : (
                   <div className="text-center text-gray-400 py-4">
@@ -1386,7 +1386,7 @@ const WorkOrderForm: React.FC = () => {
         <div className="flex justify-end gap-4">
           <Button 
             type="submit" 
-            disabled={isSubmitting || !workOrder.customerSignature || !user?.signature || !workOrder.customerSignerName}
+            disabled={isSubmitting || !workOrder.customerSignature || !technician?.signature || !workOrder.customerSignerName}
             className="relative"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

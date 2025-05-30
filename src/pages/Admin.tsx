@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -5,9 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { DataTable } from "@/components/ui/data-table"
-import { ColumnDef } from "@tanstack/react-table"
-import { ArrowUpDown } from "lucide-react"
+import MockDataGenerator from "@/components/MockDataGenerator";
 
 interface Employee {
   id: string;
@@ -71,8 +70,6 @@ const Admin = () => {
     try {
       console.log('Creating employee via Edge Function with proper auth workflow...');
 
-      // WORKFLOW: Koristi Edge Function koja ima service_role pristup
-      // Edge Function će za svakog zaposlenika prvo kreirati auth usera, zatim employee_profile
       const response = await supabase.functions.invoke('create-employee', {
         body: {
           employees: [newEmployee]
@@ -84,7 +81,6 @@ const Admin = () => {
         throw new Error(`Greška u Edge Function: ${response.error.message}`);
       }
 
-      // Parsiraj data ako je string
       let data = response.data;
       if (typeof data === 'string') {
         data = JSON.parse(data);
@@ -95,9 +91,8 @@ const Admin = () => {
         throw new Error(`Greška pri kreiranju zaposlenika: ${data.error}`);
       }
 
-      // Provjeri rezultate
       if (data.results && data.results.length > 0) {
-        const result = data.results[0]; // Prvi (i jedini) zaposlenik
+        const result = data.results[0];
         if (result.success) {
           console.log(`✓ Successfully created: ${result.email}`);
           
@@ -106,7 +101,6 @@ const Admin = () => {
             description: `${newEmployee.first_name} ${newEmployee.last_name} je uspješno dodan u sustav`,
           });
 
-          // Reset forme nakon uspješnog dodavanja
           setNewEmployee({
             first_name: "",
             last_name: "",
@@ -117,12 +111,10 @@ const Admin = () => {
             vehicle_id: ""
           });
 
-          // Refetch zaposlenika da se prikaže novi
           await refreshEmployees();
         } else {
           console.log(`✗ Failed to create: ${result.email} - ${result.error}`);
           
-          // Specifična poruka za duplikat
           const errorMessage = result.error === 'Korisnik već postoji' 
             ? 'Korisnik već postoji – nije moguće dodati zaposlenika s istim emailom.'
             : `Greška pri dodavanju zaposlenika: ${result.error}`;
@@ -145,55 +137,13 @@ const Admin = () => {
     }
   };
 
-  const columns: ColumnDef<Employee>[] = [
-    {
-      accessorKey: "first_name",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Ime
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-    },
-    {
-      accessorKey: "last_name",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Prezime
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </Button>
-        )
-      },
-    },
-    {
-      accessorKey: "email",
-      header: "Email",
-    },
-    {
-      accessorKey: "phone",
-      header: "Telefon",
-    },
-    {
-      accessorKey: "user_role",
-      header: "Uloga",
-    },
-  ]
-
   return (
     <div className="container mx-auto py-8">
       <h1 className="text-2xl font-bold mb-4">Admin Panel</h1>
 
+      <MockDataGenerator onDataGenerated={refreshEmployees} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Form for Adding New Employee */}
         <div className="bg-white shadow-md rounded-md p-4">
           <h2 className="text-lg font-semibold mb-4">Dodaj novog zaposlenika</h2>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -231,13 +181,18 @@ const Admin = () => {
           </form>
         </div>
 
-        {/* Display Employee List */}
         <div>
           <h2 className="text-lg font-semibold mb-4">Lista zaposlenika</h2>
           {loading ? (
             <p>Učitavanje...</p>
           ) : (
-            <DataTable columns={columns} data={employees} />
+            <ul className="space-y-2">
+              {employees.map((employee) => (
+                <li key={employee.id} className="bg-gray-100 p-2 rounded">
+                  <strong>{employee.first_name} {employee.last_name}</strong> - {employee.email} ({employee.user_role})
+                </li>
+              ))}
+            </ul>
           )}
         </div>
       </div>

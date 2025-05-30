@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
@@ -5,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 
 type UserRole = 'admin' | 'technician';
 
-type UserData = {
+type TechnicianData = {
   id: string;
   email: string;
   name: string;
@@ -18,7 +19,7 @@ type UserData = {
 };
 
 type AuthContextType = {
-  user: UserData | null;
+  technician: TechnicianData | null;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
@@ -31,21 +32,21 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserData | null>(null);
+  const [technician, setTechnician] = useState<TechnicianData | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
   const isMounted = useRef(true);
 
-  // Load user signature from database
-  const loadUserSignature = async (userId: string): Promise<string | undefined> => {
+  // Load technician signature from database
+  const loadTechnicianSignature = async (technicianId: string): Promise<string | undefined> => {
     try {
       const supabaseAny = supabase as any;
       const { data, error } = await supabaseAny
         .from('user_signatures')
         .select('signature_data')
-        .eq('user_id', userId)
+        .eq('user_id', technicianId)
         .maybeSingle();
       
       if (error) {
@@ -60,10 +61,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Load user company address from localStorage (temporary storage)
-  const loadUserCompanyAddress = (userId: string): string | undefined => {
+  // Load technician company address from localStorage (temporary storage)
+  const loadTechnicianCompanyAddress = (technicianId: string): string | undefined => {
     try {
-      const savedAddress = localStorage.getItem(`companyAddress_${userId}`);
+      const savedAddress = localStorage.getItem(`companyAddress_${technicianId}`);
       return savedAddress || undefined;
     } catch (err) {
       console.error('Error loading company address:', err);
@@ -71,10 +72,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Load user distance matrix API key from localStorage
-  const loadUserDistanceMatrixApiKey = (userId: string): string | undefined => {
+  // Load technician distance matrix API key from localStorage
+  const loadTechnicianDistanceMatrixApiKey = (technicianId: string): string | undefined => {
     try {
-      const savedApiKey = localStorage.getItem(`distanceMatrixApiKey_${userId}`);
+      const savedApiKey = localStorage.getItem(`distanceMatrixApiKey_${technicianId}`);
       return savedApiKey || undefined;
     } catch (err) {
       console.error('Error loading distance matrix API key:', err);
@@ -82,14 +83,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Get user's profile data from Supabase
-  const getUserProfile = async (userId: string) => {
+  // Get technician's profile data from Supabase
+  const getTechnicianProfile = async (technicianId: string) => {
     try {
       const { data: userData } = await supabase.auth.getUser();
       
       if (userData.user && isMounted.current) {
         const email = userData.user.email || '';
-        const name = userData.user.user_metadata?.name || email?.split('@')[0] || 'User';
+        const name = userData.user.user_metadata?.name || email?.split('@')[0] || 'Tehničar';
         
         // Generate initials from name
         const initials = name
@@ -100,19 +101,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .substring(0, 2);
         
         // Load signature from database
-        const signature = await loadUserSignature(userId);
+        const signature = await loadTechnicianSignature(technicianId);
         
         // Load company address from localStorage
-        const companyAddress = loadUserCompanyAddress(userId);
+        const companyAddress = loadTechnicianCompanyAddress(technicianId);
         
         // Load distance matrix API key from localStorage
-        const distanceMatrixApiKey = loadUserDistanceMatrixApiKey(userId);
+        const distanceMatrixApiKey = loadTechnicianDistanceMatrixApiKey(technicianId);
         
-        const userProfile: UserData = {
-          id: userId,
+        const technicianProfile: TechnicianData = {
+          id: technicianId,
           email: email,
           name: name,
-          role: 'admin', // Default as admin for the first user
+          role: 'admin', // Default as admin for the first technician
           approved: true,
           initials: initials,
           signature: signature,
@@ -120,10 +121,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           distanceMatrixApiKey: distanceMatrixApiKey
         };
         
-        setUser(userProfile);
+        setTechnician(technicianProfile);
       }
     } catch (err) {
-      console.error('Error fetching user profile:', err);
+      console.error('Error fetching technician profile:', err);
     }
   };
 
@@ -143,12 +144,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           // Use setTimeout to avoid Supabase auth deadlock issues
           setTimeout(() => {
             if (isMounted.current) {
-              getUserProfile(currentSession.user.id);
+              getTechnicianProfile(currentSession.user.id);
             }
           }, 0);
         } else {
           setSession(null);
-          setUser(null);
+          setTechnician(null);
         }
         
         setIsLoading(false);
@@ -168,7 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(currentSession);
         
         if (currentSession?.user) {
-          getUserProfile(currentSession.user.id);
+          getTechnicianProfile(currentSession.user.id);
         } else {
           setIsLoading(false);
         }
@@ -222,7 +223,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = async () => {
     try {
       await supabase.auth.signOut();
-      setUser(null);
+      setTechnician(null);
       setSession(null);
       toast({
         title: "Odjava uspješna",
@@ -238,8 +239,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const saveSignature = async (signature: string): Promise<void> => {
-    if (!user) {
-      throw new Error('Korisnik nije prijavljen');
+    if (!technician) {
+      throw new Error('Tehničar nije prijavljen');
     }
     
     try {
@@ -249,23 +250,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const { error: updateError } = await supabaseAny
         .from('user_signatures')
         .update({ signature_data: signature })
-        .eq('user_id', user.id);
+        .eq('user_id', technician.id);
       
       // If update fails (no existing record), insert new one
       if (updateError) {
         const { error: insertError } = await supabaseAny
           .from('user_signatures')
           .insert({
-            user_id: user.id,
+            user_id: technician.id,
             signature_data: signature
           });
         
         if (insertError) throw insertError;
       }
       
-      // Update local user state
-      const updatedUser = { ...user, signature };
-      setUser(updatedUser);
+      // Update local technician state
+      const updatedTechnician = { ...technician, signature };
+      setTechnician(updatedTechnician);
       
       // Remove from localStorage if it exists (cleanup)
       localStorage.removeItem('userSignature');
@@ -286,17 +287,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const saveCompanyAddress = async (address: string): Promise<void> => {
-    if (!user) {
-      throw new Error('Korisnik nije prijavljen');
+    if (!technician) {
+      throw new Error('Tehničar nije prijavljen');
     }
     
     try {
       // Save to localStorage for now (could be extended to database later)
-      localStorage.setItem(`companyAddress_${user.id}`, address);
+      localStorage.setItem(`companyAddress_${technician.id}`, address);
       
-      // Update local user state
-      const updatedUser = { ...user, companyAddress: address };
-      setUser(updatedUser);
+      // Update local technician state
+      const updatedTechnician = { ...technician, companyAddress: address };
+      setTechnician(updatedTechnician);
       
       toast({
         title: "Adresa spremljena",
@@ -314,17 +315,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const saveDistanceMatrixApiKey = async (apiKey: string): Promise<void> => {
-    if (!user) {
-      throw new Error('Korisnik nije prijavljen');
+    if (!technician) {
+      throw new Error('Tehničar nije prijavljen');
     }
     
     try {
       // Save to localStorage for now (could be extended to database later)
-      localStorage.setItem(`distanceMatrixApiKey_${user.id}`, apiKey);
+      localStorage.setItem(`distanceMatrixApiKey_${technician.id}`, apiKey);
       
-      // Update local user state
-      const updatedUser = { ...user, distanceMatrixApiKey: apiKey };
-      setUser(updatedUser);
+      // Update local technician state
+      const updatedTechnician = { ...technician, distanceMatrixApiKey: apiKey };
+      setTechnician(updatedTechnician);
       
       toast({
         title: "API ključ spremljen",
@@ -343,7 +344,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ 
-      user, 
+      technician, 
       isLoading, 
       error, 
       login, 

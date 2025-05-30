@@ -15,13 +15,13 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, isLoading } = useAuth();
+  const { technician, isLoading } = useAuth();
   
   if (isLoading) {
     return <div className="flex items-center justify-center min-h-screen">Učitavanje...</div>;
   }
   
-  if (!user) {
+  if (!technician) {
     return <Navigate to="/login" replace />;
   }
   

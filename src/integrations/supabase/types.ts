@@ -57,6 +57,63 @@ export type Database = {
         }
         Relationships: []
       }
+      technicians: {
+        Row: {
+          active: boolean
+          created_at: string
+          email: string
+          first_name: string
+          id: string
+          last_name: string
+          location_id: string | null
+          phone: string | null
+          updated_at: string
+          user_role: Database["public"]["Enums"]["user_role"]
+          vehicle_id: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          email: string
+          first_name: string
+          id?: string
+          last_name: string
+          location_id?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_role?: Database["public"]["Enums"]["user_role"]
+          vehicle_id?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          email?: string
+          first_name?: string
+          id?: string
+          last_name?: string
+          location_id?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_role?: Database["public"]["Enums"]["user_role"]
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "technicians_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "company_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "technicians_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_signatures: {
         Row: {
           created_at: string
@@ -81,6 +138,36 @@ export type Database = {
         }
         Relationships: []
       }
+      vehicles: {
+        Row: {
+          created_at: string
+          id: string
+          license_plate: string | null
+          model: string | null
+          name: string
+          updated_at: string
+          year: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          license_plate?: string | null
+          model?: string | null
+          name: string
+          updated_at?: string
+          year?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          license_plate?: string | null
+          model?: string | null
+          name?: string
+          updated_at?: string
+          year?: number | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -89,7 +176,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      user_role: "admin" | "technician" | "lead"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -204,6 +291,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      user_role: ["admin", "technician", "lead"],
+    },
   },
 } as const

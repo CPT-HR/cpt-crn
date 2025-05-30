@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -216,7 +215,7 @@ const WorkOrderForm: React.FC = () => {
     return `${hours}h${minutes.toString().padStart(2, '0')}min`;
   };
 
-  // Calculate distance using distancematrix.ai API
+  // Calculate distance using distancematrix.ai API with rounding to whole number
   const calculateDistance = async (companyAddress: string, targetAddress: string) => {
     try {
       console.log('Calculating distance between:', companyAddress, 'and', targetAddress);
@@ -236,9 +235,12 @@ const WorkOrderForm: React.FC = () => {
       
       if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
         const distanceText = data.rows[0].elements[0].distance?.text;
-        const distanceValue = distanceText?.replace(/[^\d.]/g, '') || '';
-        console.log('Distance calculated:', distanceValue);
-        return distanceValue;
+        const distanceValue = parseFloat(distanceText?.replace(/[^\d.]/g, '')) || 0;
+        
+        // FIXED: Round to whole number using mathematical rounding
+        const roundedDistance = Math.round(distanceValue);
+        console.log('Distance calculated and rounded:', roundedDistance);
+        return roundedDistance.toString();
       } else {
         console.log('Distance calculation failed:', data);
         return '';
@@ -462,7 +464,16 @@ const WorkOrderForm: React.FC = () => {
         ? finalWorkOrder.date.toISOString().split('T')[0] 
         : new Date(finalWorkOrder.date).toISOString().split('T')[0];
       
+      // FIX: Convert signature timestamp to ISO format for PostgreSQL
+      const isoSignatureTimestamp = finalWorkOrder.signatureMetadata?.timestamp 
+        ? new Date(finalWorkOrder.signatureMetadata.timestamp).toISOString()
+        : new Date().toISOString();
+      
       console.log('Final work order date (ISO):', isoDate);
+      console.log('Signature timestamp (ISO):', isoSignatureTimestamp);
+      
+      // FIX: Round distance to whole number
+      const roundedDistance = finalWorkOrder.distance ? Math.round(parseFloat(finalWorkOrder.distance)) : 0;
       
       const workOrderData = {
         order_number: finalWorkOrder.id,
@@ -487,11 +498,11 @@ const WorkOrderForm: React.FC = () => {
         technician_comment: technicianCommentText,
         materials: finalWorkOrder.materials,
         hours: parseFloat(finalWorkOrder.calculatedHours.replace(/[^\d.]/g, '')) || 0,
-        distance: parseFloat(finalWorkOrder.distance) || 0,
+        distance: roundedDistance, // Use rounded distance
         technician_signature: finalWorkOrder.technicianSignature,
         technician_name: finalWorkOrder.technicianName,
         customer_signature: finalWorkOrder.customerSignature,
-        signature_timestamp: finalWorkOrder.signatureMetadata?.timestamp || new Date().toISOString(),
+        signature_timestamp: isoSignatureTimestamp, // Use ISO format for timestamp
         signature_coordinates: signatureCoordinates,
         signature_address: finalWorkOrder.signatureMetadata?.address,
         date: isoDate, // Use ISO format for date
@@ -540,7 +551,7 @@ const WorkOrderForm: React.FC = () => {
 
     if (!workOrder.customerSignerName) {
       toast({
-        variant: "destructive",
+        variant: "destructive", 
         title: "Greška", 
         description: "Potrebno je ime i prezime potpisnika",
       });
@@ -622,7 +633,7 @@ const WorkOrderForm: React.FC = () => {
         calculatedHours: '0h00min',
         fieldTrip: false,
         distance: '',
-        technicianSignature: user.signature || '',
+        technicianSignature: user?.signature || '',
         customerSignature: '',
         customerSignerName: '',
       });
@@ -632,13 +643,20 @@ const WorkOrderForm: React.FC = () => {
       // Better error handling with more specific messages
       let errorMessage = "Došlo je do pogreške prilikom spremanja radnog naloga";
       
-      if (error?.code === '22007') {
-        errorMessage = "Greška s formatom datuma. Molimo pokušajte ponovo.";
+      if (error?.code === '22007' || error?.code === '22008') {
+        errorMessage = "Greška s formatom datuma ili vremena. Molimo pokušajte ponovo.";
       } else if (error?.code === '23505') {
         errorMessage = "Radni nalog s tim brojem već postoji.";
       } else if (error?.message) {
         errorMessage = `Greška: ${error.message}`;
       }
+      
+      console.error('Detailed error information:', {
+        code: error?.code,
+        message: error?.message,
+        details: error?.details,
+        hint: error?.hint
+      });
       
       toast({
         variant: "destructive",

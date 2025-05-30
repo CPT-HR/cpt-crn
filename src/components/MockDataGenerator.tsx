@@ -3,15 +3,10 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Database } from "@/integrations/supabase/types";
 
 interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
 }
-
-// Create custom types that omit the required id field since it will be auto-generated
-type EmployeeProfileInsert = Omit<Database['public']['Tables']['employee_profiles']['Insert'], 'id'>;
-type VehicleInsert = Omit<Database['public']['Tables']['vehicles']['Insert'], 'id'>;
 
 const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }) => {
   const { toast } = useToast();
@@ -20,8 +15,8 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
     try {
       console.log('Attempting to create mock employees...');
 
-      // Koristimo custom tipove bez ID-ja jer će se automatski generirati
-      const mockEmployees: EmployeeProfileInsert[] = [
+      // Use the insert method without specifying ID - it will be auto-generated
+      const mockEmployees = [
         {
           first_name: "Marko",
           last_name: "Kovačić", 
@@ -84,7 +79,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
     try {
       console.log('Attempting to create mock vehicles...');
 
-      const mockVehicles: VehicleInsert[] = [
+      const mockVehicles = [
         {
           name: "Servisno vozilo 1",
           license_plate: "ZG-1234-AB",

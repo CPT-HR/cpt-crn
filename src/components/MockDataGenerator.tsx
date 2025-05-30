@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
@@ -46,7 +47,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
       // Ne postavljamo ID, pustit ćemo da ga baza generira
       const { data, error } = await supabase
         .from('employee_profiles')
-        .insert(mockEmployees)
+        .insert(mockEmployees as any)
         .select();
 
       if (error) {

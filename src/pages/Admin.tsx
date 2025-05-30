@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -515,7 +516,7 @@ const Admin: React.FC = () => {
       // Ne postavljamo ID, pustit ćemo da ga baza generira
       const { data, error } = await supabase
         .from('employee_profiles')
-        .insert([employeeData])
+        .insert([employeeData as any])
         .select()
         .single();
       

@@ -656,13 +656,13 @@ const Admin: React.FC = () => {
   };
   
   const getLocationName = (locationId: string | null) => {
-    if (!locationId) return 'Nije dodijeljeno';
+    if (!locationId || locationId === 'none') return 'Nije dodijeljeno';
     const location = locations.find(loc => loc.id === locationId);
     return location ? location.name : 'Nepoznato';
   };
   
   const getVehicleName = (vehicleId: string | null) => {
-    if (!vehicleId) return 'Nije dodijeljeno';
+    if (!vehicleId || vehicleId === 'none') return 'Nije dodijeljeno';
     const vehicle = vehicles.find(veh => veh.id === vehicleId);
     return vehicle ? vehicle.name : 'Nepoznato';
   };
@@ -839,17 +839,17 @@ const Admin: React.FC = () => {
                                     <div className="space-y-2">
                                       <Label htmlFor="editLocation">Lokacija</Label>
                                       <Select
-                                        value={editingTechnician.location_id || ''}
+                                        value={editingTechnician.location_id || 'none'}
                                         onValueChange={(value) => setEditingTechnician({
                                           ...editingTechnician,
-                                          location_id: value || null
+                                          location_id: value === 'none' ? null : value
                                         })}
                                       >
                                         <SelectTrigger>
                                           <SelectValue placeholder="Odaberite lokaciju" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="">Bez lokacije</SelectItem>
+                                          <SelectItem value="none">Bez lokacije</SelectItem>
                                           {locations.map((location) => (
                                             <SelectItem key={location.id} value={location.id}>
                                               {location.name}
@@ -882,17 +882,17 @@ const Admin: React.FC = () => {
                                     <div className="space-y-2">
                                       <Label htmlFor="editVehicle">Vozilo</Label>
                                       <Select
-                                        value={editingTechnician.vehicle_id || ''}
+                                        value={editingTechnician.vehicle_id || 'none'}
                                         onValueChange={(value) => setEditingTechnician({
                                           ...editingTechnician,
-                                          vehicle_id: value || null
+                                          vehicle_id: value === 'none' ? null : value
                                         })}
                                       >
                                         <SelectTrigger>
                                           <SelectValue placeholder="Odaberite vozilo" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                          <SelectItem value="">Bez vozila</SelectItem>
+                                          <SelectItem value="none">Bez vozila</SelectItem>
                                           {vehicles.map((vehicle) => (
                                             <SelectItem key={vehicle.id} value={vehicle.id}>
                                               {vehicle.name}
@@ -995,14 +995,14 @@ const Admin: React.FC = () => {
                   <div className="space-y-2">
                     <Label htmlFor="techLocation">Lokacija</Label>
                     <Select 
-                      value={newTechnician.location_id} 
-                      onValueChange={(value) => setNewTechnician({ ...newTechnician, location_id: value })}
+                      value={newTechnician.location_id || 'none'} 
+                      onValueChange={(value) => setNewTechnician({ ...newTechnician, location_id: value === 'none' ? '' : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Odaberite lokaciju" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Bez lokacije</SelectItem>
+                        <SelectItem value="none">Bez lokacije</SelectItem>
                         {locations.map((location) => (
                           <SelectItem key={location.id} value={location.id}>
                             {location.name}
@@ -1032,14 +1032,14 @@ const Admin: React.FC = () => {
                   <div className="space-y-2 md:col-span-2">
                     <Label htmlFor="techVehicle">Vozilo</Label>
                     <Select 
-                      value={newTechnician.vehicle_id} 
-                      onValueChange={(value) => setNewTechnician({ ...newTechnician, vehicle_id: value })}
+                      value={newTechnician.vehicle_id || 'none'} 
+                      onValueChange={(value) => setNewTechnician({ ...newTechnician, vehicle_id: value === 'none' ? '' : value })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Odaberite vozilo" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Bez vozila</SelectItem>
+                        <SelectItem value="none">Bez vozila</SelectItem>
                         {vehicles.map((vehicle) => (
                           <SelectItem key={vehicle.id} value={vehicle.id}>
                             {vehicle.name}

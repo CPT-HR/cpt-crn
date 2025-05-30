@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
@@ -32,42 +33,41 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchUserData = async (authUser: User): Promise<UserData | null> => {
+    console.log('Fetching user data for:', authUser.email);
+    
     try {
-      console.log('Fetching user data for:', authUser.email);
-      
-      // Provjeri postoji li korisnik u users tablici
-      const { data, error } = await supabase
+      // Pokušaj dohvatiti postojećeg korisnika
+      const { data: existingUser, error: fetchError } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authUser.id)
         .maybeSingle();
 
-      if (error) {
-        console.error('Error fetching user data:', error);
+      if (fetchError) {
+        console.error('Error fetching user:', fetchError);
         return null;
       }
 
       // Ako korisnik postoji, vrati ga
-      if (data) {
-        console.log('User data found:', data);
+      if (existingUser) {
+        console.log('Existing user found:', existingUser);
         return {
-          id: data.id,
-          email: data.email,
-          name: data.name,
-          initials: data.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-          role: data.role,
-          signature: data.signature,
-          companyAddress: data.company_address_street && data.company_address_city 
-            ? `${data.company_address_street}, ${data.company_address_city}, ${data.company_address_country}`
+          id: existingUser.id,
+          email: existingUser.email,
+          name: existingUser.name,
+          initials: existingUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+          role: existingUser.role,
+          signature: existingUser.signature,
+          companyAddress: existingUser.company_address_street && existingUser.company_address_city 
+            ? `${existingUser.company_address_street}, ${existingUser.company_address_city}, ${existingUser.company_address_country}`
             : undefined,
-          distanceMatrixApiKey: data.distance_matrix_api_key
+          distanceMatrixApiKey: existingUser.distance_matrix_api_key
         };
       }
 
-      // Ako korisnik ne postoji, stvori ga
-      console.log('User not found, creating new user...');
+      // Ako korisnik ne postoji, stvori novog
+      console.log('Creating new user...');
       
-      // Provjeri koliko korisnika postoji da odrediš ulogu
       const { count } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true });
@@ -86,11 +86,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .single();
 
       if (insertError) {
-        console.error('Error creating user record:', insertError);
+        console.error('Error creating user:', insertError);
         return null;
       }
       
-      console.log('User record created successfully:', newUser);
+      console.log('New user created:', newUser);
 
       return {
         id: newUser.id,
@@ -119,23 +119,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setSession(session);
         setIsLoading(true);
         
-        if (session?.user) {
-          const userData = await fetchUserData(session.user);
-          setUser(userData);
-        } else {
+        try {
+          if (session?.user) {
+            const userData = await fetchUserData(session.user);
+            setUser(userData);
+          } else {
+            setUser(null);
+          }
+        } catch (error) {
+          console.error('Error in auth state change:', error);
           setUser(null);
+        } finally {
+          setIsLoading(false);
         }
-        setIsLoading(false);
       }
     );
 
+    // Check existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log('Checking existing session:', session?.user?.email);
-      if (session?.user) {
-        const userData = await fetchUserData(session.user);
-        setUser(userData);
+      try {
+        if (session?.user) {
+          const userData = await fetchUserData(session.user);
+          setUser(userData);
+        }
+      } catch (error) {
+        console.error('Error checking existing session:', error);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
     return () => subscription.unsubscribe();

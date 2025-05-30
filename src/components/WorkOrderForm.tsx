@@ -63,6 +63,7 @@ interface WorkOrder {
   customerSignature: string;
   customerSignerName: string;
   signatureMetadata?: SignatureMetadata;
+  technicianName?: string; // Add optional technicianName property
 }
 
 const countries = [
@@ -116,6 +117,7 @@ const WorkOrderForm: React.FC = () => {
     technicianSignature: user?.signature || '',
     customerSignature: '',
     customerSignerName: '',
+    technicianName: user?.name || '', // Add technicianName from user
   });
 
   // Mock data for work order
@@ -598,6 +600,7 @@ const WorkOrderForm: React.FC = () => {
         ...workOrder,
         id: generatedId,
         technicianSignature: user.signature || '',
+        technicianName: user.name || '', // Ensure technicianName is included
         date: workOrder.date, // Keep as Date object for now, will be converted in saveToSupabase
         // Dodaj finalne podatke korisnika u workOrder objekt za PDF generaciju
         finalCustomerData,
@@ -661,6 +664,7 @@ const WorkOrderForm: React.FC = () => {
         technicianSignature: user?.signature || '',
         customerSignature: '',
         customerSignerName: '',
+        technicianName: user?.name || '', // Include technicianName in reset
       });
     } catch (error: any) {
       console.error('Error submitting form:', error);

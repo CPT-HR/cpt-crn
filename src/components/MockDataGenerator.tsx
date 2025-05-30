@@ -3,6 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { v4 as uuidv4 } from 'uuid';
 
 interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
@@ -15,9 +16,10 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
     try {
       console.log('Attempting to create mock employees...');
 
-      // Use the insert method without specifying ID - it will be auto-generated
+      // Generate UUIDs for the employees since id is required
       const mockEmployees = [
         {
+          id: uuidv4(),
           first_name: "Marko",
           last_name: "Kovačić", 
           email: "marko.kovacic@tvrtka.hr",
@@ -26,6 +28,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           active: true
         },
         {
+          id: uuidv4(),
           first_name: "Ana",
           last_name: "Novak",
           email: "ana.novak@tvrtka.hr", 
@@ -34,6 +37,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           active: true
         },
         {
+          id: uuidv4(),
           first_name: "Petar",
           last_name: "Babić",
           email: "petar.babic@tvrtka.hr",

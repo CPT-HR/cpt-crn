@@ -15,6 +15,7 @@ type UserData = {
   signature?: string;
   initials: string;
   companyAddress?: string;
+  distanceMatrixApiKey?: string;
 };
 
 type AuthContextType = {
@@ -26,6 +27,7 @@ type AuthContextType = {
   register: (email: string, password: string, name: string) => Promise<void>;
   saveSignature: (signature: string) => Promise<void>;
   saveCompanyAddress: (address: string) => Promise<void>;
+  saveDistanceMatrixApiKey: (apiKey: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -71,6 +73,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Load user distance matrix API key from localStorage
+  const loadUserDistanceMatrixApiKey = (userId: string): string | undefined => {
+    try {
+      const savedApiKey = localStorage.getItem(`distanceMatrixApiKey_${userId}`);
+      return savedApiKey || undefined;
+    } catch (err) {
+      console.error('Error loading distance matrix API key:', err);
+      return undefined;
+    }
+  };
+
   // Get user's profile data from Supabase
   const getUserProfile = async (userId: string) => {
     try {
@@ -94,6 +107,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Load company address from localStorage
         const companyAddress = loadUserCompanyAddress(userId);
         
+        // Load distance matrix API key from localStorage
+        const distanceMatrixApiKey = loadUserDistanceMatrixApiKey(userId);
+        
         const userProfile: UserData = {
           id: userId,
           email: email,
@@ -102,7 +118,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           approved: true,
           initials: initials,
           signature: signature,
-          companyAddress: companyAddress
+          companyAddress: companyAddress,
+          distanceMatrixApiKey: distanceMatrixApiKey
         };
         
         setUser(userProfile);
@@ -333,8 +350,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const saveDistanceMatrixApiKey = async (apiKey: string): Promise<void> => {
+    if (!user) {
+      throw new Error('Korisnik nije prijavljen');
+    }
+    
+    try {
+      // Save to localStorage for now (could be extended to database later)
+      localStorage.setItem(`distanceMatrixApiKey_${user.id}`, apiKey);
+      
+      // Update local user state
+      const updatedUser = { ...user, distanceMatrixApiKey: apiKey };
+      setUser(updatedUser);
+      
+      toast({
+        title: "API ključ spremljen",
+        description: "Distance Matrix API ključ je uspješno spremljen",
+      });
+    } catch (error) {
+      console.error('Error saving distance matrix API key:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do pogreške prilikom spremanja API ključa",
+      });
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoading, error, login, logout, register, saveSignature, saveCompanyAddress }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isLoading, 
+      error, 
+      login, 
+      logout, 
+      register, 
+      saveSignature, 
+      saveCompanyAddress, 
+      saveDistanceMatrixApiKey 
+    }}>
       {children}
     </AuthContext.Provider>
   );

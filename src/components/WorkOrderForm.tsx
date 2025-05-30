@@ -128,7 +128,12 @@ const WorkOrderForm: React.FC = () => {
     try {
       console.log('Calculating distance between:', companyAddress, 'and', targetAddress);
       
-      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=YOUR_API_KEY`);
+      if (!user?.distanceMatrixApiKey) {
+        console.log('No API key found for distance calculation');
+        return '';
+      }
+      
+      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=${user.distanceMatrixApiKey}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch distance data');
@@ -140,6 +145,7 @@ const WorkOrderForm: React.FC = () => {
         const distanceText = data.rows[0].elements[0].distance?.text;
         // Extract numeric value from text like "15.2 km"
         const distanceValue = distanceText?.replace(/[^\d.]/g, '') || '';
+        console.log('Distance calculated:', distanceValue);
         return distanceValue;
       } else {
         console.log('Distance calculation failed:', data);
@@ -151,11 +157,13 @@ const WorkOrderForm: React.FC = () => {
     }
   };
 
-  // Get relevant address based on logic
+  // Get relevant address based on logic: svi podaci se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
   const getRelevantAddress = () => {
-    if (workOrder.orderForCustomer && workOrder.customerCompanyAddress) {
-      return workOrder.customerCompanyAddress;
+    if (workOrder.orderForCustomer) {
+      // Ako je nalog za korisnika, uzmi adresu korisnika ako postoji, inače naručitelja
+      return workOrder.customerCompanyAddress || workOrder.clientCompanyAddress;
     }
+    // Ako nije nalog za korisnika, uzmi adresu naručitelja
     return workOrder.clientCompanyAddress;
   };
 
@@ -168,15 +176,21 @@ const WorkOrderForm: React.FC = () => {
     if (workOrder.fieldTrip && user?.companyAddress) {
       const targetAddress = getRelevantAddress();
       
-      if (targetAddress) {
+      if (targetAddress && user?.distanceMatrixApiKey) {
+        console.log('Starting distance calculation...', { from: user.companyAddress, to: targetAddress });
         calculateDistance(user.companyAddress, targetAddress).then(distance => {
-          setWorkOrder(prev => ({ ...prev, distance }));
+          console.log('Distance calculation result:', distance);
+          if (distance) {
+            setWorkOrder(prev => ({ ...prev, distance }));
+          }
         });
+      } else {
+        console.log('Missing target address or API key for distance calculation');
       }
     } else if (!workOrder.fieldTrip) {
       setWorkOrder(prev => ({ ...prev, distance: '' }));
     }
-  }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress]);
+  }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress, user?.distanceMatrixApiKey]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -272,6 +286,25 @@ const WorkOrderForm: React.FC = () => {
       const performedWorkText = finalWorkOrder.performedWork.map((item: WorkItem) => `• ${item.text}`).filter((text: string) => text.length > 2).join('\n');
       const technicianCommentText = finalWorkOrder.technicianComment.map((item: WorkItem) => `• ${item.text}`).filter((text: string) => text.length > 2).join('\n');
       
+      // Get final customer data based on correct logic: svi podaci se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
+      const finalCustomerData = workOrder.orderForCustomer ? {
+        company_name: workOrder.customerCompanyName || workOrder.clientCompanyName,
+        company_address: workOrder.customerCompanyAddress || workOrder.clientCompanyAddress,
+        oib: workOrder.customerOib || workOrder.clientOib,
+        first_name: workOrder.customerFirstName || workOrder.clientFirstName,
+        last_name: workOrder.customerLastName || workOrder.clientLastName,
+        mobile: workOrder.customerMobile || workOrder.clientMobile,
+        email: workOrder.customerEmail || workOrder.clientEmail,
+      } : {
+        company_name: workOrder.clientCompanyName,
+        company_address: workOrder.clientCompanyAddress,
+        oib: workOrder.clientOib,
+        first_name: workOrder.clientFirstName,
+        last_name: workOrder.clientLastName,
+        mobile: workOrder.clientMobile,
+        email: workOrder.clientEmail,
+      };
+      
       // Complete type assertion to handle both the table name and insert operation
       const supabaseAny = supabase as any;
       const { error } = await supabaseAny.from('work_orders').insert({
@@ -284,13 +317,13 @@ const WorkOrderForm: React.FC = () => {
         client_mobile: finalWorkOrder.clientMobile,
         client_email: finalWorkOrder.clientEmail,
         order_for_customer: finalWorkOrder.orderForCustomer,
-        customer_company_name: finalWorkOrder.customerCompanyName,
-        customer_company_address: finalWorkOrder.customerCompanyAddress,
-        customer_oib: finalWorkOrder.customerOib,
-        customer_first_name: finalWorkOrder.customerFirstName,
-        customer_last_name: finalWorkOrder.customerLastName,
-        customer_mobile: finalWorkOrder.customerMobile,
-        customer_email: finalWorkOrder.customerEmail,
+        customer_company_name: finalCustomerData.company_name,
+        customer_company_address: finalCustomerData.company_address,
+        customer_oib: finalCustomerData.oib,
+        customer_first_name: finalCustomerData.first_name,
+        customer_last_name: finalCustomerData.last_name,
+        customer_mobile: finalCustomerData.mobile,
+        customer_email: finalCustomerData.email,
         description: descriptionText,
         found_condition: foundConditionText,
         performed_work: performedWorkText,
@@ -875,7 +908,12 @@ const WorkOrderForm: React.FC = () => {
                     Postavite adresu sjedišta tvrtke u postavkama za automatsko računanje udaljenosti.
                   </p>
                 )}
-                {user?.companyAddress && (
+                {!user?.distanceMatrixApiKey && user?.companyAddress && (
+                  <p className="text-sm text-amber-600">
+                    Postavite Distance Matrix API ključ u postavkama za automatsko računanje udaljenosti.
+                  </p>
+                )}
+                {user?.companyAddress && user?.distanceMatrixApiKey && (
                   <p className="text-sm text-green-600">
                     Udaljenost se automatski računa pomoću distancematrix.ai API-ja.
                   </p>

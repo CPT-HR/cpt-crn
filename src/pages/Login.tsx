@@ -12,20 +12,20 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState<string | null>(null);
-  const { login, isLoading, technician } = useAuth();
+  const { login, isLoading, user } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     // Clear any previous error when component mounts or dependencies change
     setLoginError(null);
     
-    // If technician is already logged in, redirect to dashboard
+    // If user is already logged in, redirect to dashboard
     // This check helps prevent redirect loops by ensuring auth is not still loading
-    if (technician && !isLoading) {
-      console.log('Technician is logged in, redirecting to dashboard');
+    if (user && !isLoading) {
+      console.log('User is logged in, redirecting to dashboard');
       navigate('/');
     }
-  }, [technician, navigate, isLoading]);
+  }, [user, navigate, isLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

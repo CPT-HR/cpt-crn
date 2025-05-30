@@ -9,10 +9,10 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
-  const { technician, logout } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   
-  if (!technician) {
+  if (!user) {
     return <Navigate to="/login" replace />;
   }
   
@@ -32,7 +32,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <NavLink to="/settings" currentPath={location.pathname}>
                 Postavke
               </NavLink>
-              {technician.role === 'admin' && (
+              {user.role === 'admin' && (
                 <NavLink to="/admin" currentPath={location.pathname}>
                   Administracija
                 </NavLink>
@@ -42,7 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           
           <div className="flex items-center gap-4">
             <span className="text-sm text-gray-500 hidden md:inline-block">
-              {technician.name}
+              {user.name}
             </span>
             <Button variant="outline" size="sm" onClick={logout}>
               Odjava

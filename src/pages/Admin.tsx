@@ -80,7 +80,7 @@ const userRoles = [
 ];
 
 const Admin: React.FC = () => {
-  const { technician } = useAuth();
+  const { user } = useAuth();
   const [pendingUsers, setPendingUsers] = useState(PENDING_USERS);
   const [locations, setLocations] = useState<CompanyLocation[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -126,20 +126,20 @@ const Admin: React.FC = () => {
   const [isEditingTechnician, setIsEditingTechnician] = useState(false);
   
   // Redirect non-admin users
-  if (!technician || technician.role !== 'admin') {
+  if (!user || user.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
   
-  // Debug current technician
+  // Debug current user
   useEffect(() => {
     const debugUser = async () => {
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       console.log('Current user data:', currentUser);
       console.log('User metadata:', currentUser?.user_metadata);
-      console.log('Technician role from context:', technician?.role);
+      console.log('User role from context:', user?.role);
     };
     debugUser();
-  }, [technician]);
+  }, [user]);
   
   // Load company locations
   useEffect(() => {

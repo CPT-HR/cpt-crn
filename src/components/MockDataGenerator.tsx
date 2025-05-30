@@ -9,9 +9,9 @@ interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
 }
 
-// Koristimo Supabase tipove direktno
-type EmployeeProfileInsert = Database['public']['Tables']['employee_profiles']['Insert'];
-type VehicleInsert = Database['public']['Tables']['vehicles']['Insert'];
+// Create custom types that omit the required id field since it will be auto-generated
+type EmployeeProfileInsert = Omit<Database['public']['Tables']['employee_profiles']['Insert'], 'id'>;
+type VehicleInsert = Omit<Database['public']['Tables']['vehicles']['Insert'], 'id'>;
 
 const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }) => {
   const { toast } = useToast();
@@ -20,7 +20,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
     try {
       console.log('Attempting to create mock employees...');
 
-      // Koristimo Supabase tipove - ID će se automatski generirati
+      // Koristimo custom tipove bez ID-ja jer će se automatski generirati
       const mockEmployees: EmployeeProfileInsert[] = [
         {
           first_name: "Marko",

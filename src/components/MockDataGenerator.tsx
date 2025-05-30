@@ -3,14 +3,28 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
 
 interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
 }
 
-type EmployeeProfileInsert = Database["public"]["Tables"]["employee_profiles"]["Insert"];
-type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
+// Koristimo extend tip za dodavanje email polja koje postoji u bazi ali nije u tipovima
+type EmployeeProfileInsertWithEmail = {
+  id: string;
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string | null;
+  user_role: 'admin' | 'technician' | 'lead';
+  active: boolean;
+};
+
+type VehicleInsert = {
+  name: string;
+  license_plate?: string | null;
+  model?: string | null;
+  year?: number | null;
+};
 
 const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }) => {
   const { toast } = useToast();
@@ -19,7 +33,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
     try {
       console.log('Attempting to create mock employees...');
 
-      const mockEmployees: EmployeeProfileInsert[] = [
+      const mockEmployees: EmployeeProfileInsertWithEmail[] = [
         {
           id: crypto.randomUUID(),
           first_name: "Marko",
@@ -51,9 +65,10 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
 
       console.log('Inserting employees:', mockEmployees);
 
+      // Koristimo any tip jer baza ima email kolonu ali tipovi još ne
       const { data, error } = await supabase
         .from('employee_profiles')
-        .insert(mockEmployees)
+        .insert(mockEmployees as any)
         .select();
 
       if (error) {

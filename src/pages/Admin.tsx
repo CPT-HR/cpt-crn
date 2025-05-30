@@ -75,7 +75,7 @@ const countries = [
 
 const userRoles = [
   { value: 'admin', label: 'Administrator' },
-  { value: 'technician', label: 'Tehničar' },
+  { value: 'technician', label: 'Zaposlenik' },
   { value: 'lead', label: 'Voditelj' }
 ];
 
@@ -210,9 +210,10 @@ const Admin: React.FC = () => {
     const fetchEmployees = async () => {
       try {
         console.log('Fetching employees...');
+        // Eksplicitno dohvaćamo email kolonu koja postoji u bazi
         const { data, error } = await supabase
           .from('employee_profiles')
-          .select('*')
+          .select('id, first_name, last_name, email, phone, location_id, user_role, vehicle_id, active')
           .order('created_at', { ascending: true });
         
         if (error) {
@@ -221,7 +222,12 @@ const Admin: React.FC = () => {
         }
         
         console.log('Employees fetched successfully:', data);
-        setEmployees(data || []);
+        // Osiguravamo da podaci imaju sva potrebna polja
+        const employeeData = (data || []).map(emp => ({
+          ...emp,
+          email: emp.email || null
+        })) as Employee[];
+        setEmployees(employeeData);
       } catch (error) {
         console.error('Error fetching employees:', error);
         toast({
@@ -275,11 +281,15 @@ const Admin: React.FC = () => {
     try {
       const { data, error } = await supabase
         .from('employee_profiles')
-        .select('*')
+        .select('id, first_name, last_name, email, phone, location_id, user_role, vehicle_id, active')
         .order('created_at', { ascending: true });
       
       if (error) throw error;
-      setEmployees(data || []);
+      const employeeData = (data || []).map(emp => ({
+        ...emp,
+        email: emp.email || null
+      })) as Employee[];
+      setEmployees(employeeData);
     } catch (error) {
       console.error('Error refreshing employees:', error);
     }
@@ -496,15 +506,17 @@ const Admin: React.FC = () => {
       console.log('Adding new employee:', newEmployee);
       
       const employeeData = {
+        id: crypto.randomUUID(), // Generiraj novi UUID
         ...newEmployee,
         phone: newEmployee.phone || null,
         location_id: newEmployee.location_id || null,
         vehicle_id: newEmployee.vehicle_id || null
       };
       
+      // Koristimo any jer baza ima email kolonu ali tipovi još ne
       const { data, error } = await supabase
         .from('employee_profiles')
-        .insert([employeeData])
+        .insert([employeeData as any])
         .select()
         .single();
       
@@ -514,7 +526,8 @@ const Admin: React.FC = () => {
       }
       
       console.log('Employee added successfully:', data);
-      setEmployees([...employees, data]);
+      const newEmp = { ...data, email: data.email || null } as Employee;
+      setEmployees([...employees, newEmp]);
       setNewEmployee({
         first_name: '',
         last_name: '',
@@ -548,6 +561,7 @@ const Admin: React.FC = () => {
     try {
       console.log('Updating employee:', editingEmployee);
       
+      // Koristimo any jer baza ima email kolonu ali tipovi još ne
       const { data, error } = await supabase
         .from('employee_profiles')
         .update({
@@ -559,7 +573,7 @@ const Admin: React.FC = () => {
           user_role: editingEmployee.user_role,
           vehicle_id: editingEmployee.vehicle_id,
           active: editingEmployee.active
-        })
+        } as any)
         .eq('id', editingEmployee.id)
         .select()
         .single();
@@ -570,7 +584,8 @@ const Admin: React.FC = () => {
       }
       
       console.log('Employee updated successfully:', data);
-      setEmployees(employees.map(emp => emp.id === editingEmployee.id ? data : emp));
+      const updatedEmp = { ...data, email: data.email || null } as Employee;
+      setEmployees(employees.map(emp => emp.id === editingEmployee.id ? updatedEmp : emp));
       setEditingEmployee(null);
       
       toast({
@@ -685,90 +700,6 @@ const Admin: React.FC = () => {
     const vehicle = vehicles.find(veh => veh.id === vehicleId);
     return vehicle ? vehicle.name : 'Nepoznato';
   };
-  
-  const generateMockData = async () => {
-    try {
-      // Generate mock technicians (including admin as technician)
-      const mockTechnicians = [
-        {
-          first_name: "Marko",
-          last_name: "Kovačić", 
-          email: "marko.kovacic@tvrtka.hr",
-          phone: "+385 91 123 4567",
-          user_role: "technician" as const,
-          active: true
-        },
-        {
-          first_name: "Ana",
-          last_name: "Novak",
-          email: "ana.novak@tvrtka.hr", 
-          phone: "+385 92 234 5678",
-          user_role: "technician" as const,
-          active: true
-        },
-        {
-          first_name: "Petar",
-          last_name: "Babić",
-          email: "petar.babic@tvrtka.hr",
-          phone: "+385 93 345 6789", 
-          user_role: "admin" as const,
-          active: true
-        }
-      ];
-
-      // Generate mock vehicles
-      const mockVehicles = [
-        {
-          name: "Servisno vozilo 1",
-          license_plate: "ZG-1234-AB",
-          model: "Volkswagen Caddy",
-          year: 2020
-        },
-        {
-          name: "Servisno vozilo 2", 
-          license_plate: "ZG-5678-CD",
-          model: "Ford Transit",
-          year: 2019
-        },
-        {
-          name: "Terensko vozilo",
-          license_plate: "ZG-9012-EF", 
-          model: "Toyota Hilux",
-          year: 2021
-        }
-      ];
-
-      // Insert technicians
-      const { error: techError } = await supabase
-        .from('technicians')
-        .insert(mockTechnicians);
-
-      if (techError) throw techError;
-
-      // Insert vehicles
-      const { error: vehicleError } = await supabase
-        .from('vehicles')
-        .insert(mockVehicles);
-
-      if (vehicleError) throw vehicleError;
-
-      // Refresh data
-      await Promise.all([refreshEmployees(), refreshVehicles()]);
-      setMockDataGenerated(true);
-
-      toast({
-        title: "Mock podaci stvoreni",
-        description: "Uspješno dodani mock tehničari i vozila",
-      });
-    } catch (error) {
-      console.error('Error generating mock data:', error);
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Došlo je do greške prilikom stvaranja mock podataka",
-      });
-    }
-  };
 
   return (
     <div className="container py-6">
@@ -783,9 +714,6 @@ const Admin: React.FC = () => {
                 <h3 className="font-medium text-amber-800">Generiraj mock podatke</h3>
                 <p className="text-sm text-amber-700">Privremena funkcionalnost za dodavanje test podataka</p>
               </div>
-              <Button onClick={generateMockData} variant="outline" className="border-amber-400">
-                Generiraj mock podatke
-              </Button>
             </div>
           </CardContent>
         </Card>

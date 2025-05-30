@@ -32,9 +32,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  const fetchUserData = async (authUser: User) => {
+  const fetchUserData = async (authUser: User): Promise<UserData | null> => {
     try {
       console.log('Fetching user data for:', authUser.email);
+      
+      // Direct query without complex RLS - should work with our simplified policies
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -43,10 +45,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (error) {
         console.error('Error fetching user data:', error);
-        return null;
+        
+        // If user doesn't exist in our users table, create it
+        if (error.code === 'PGRST116') {
+          console.log('User not found in users table, creating...');
+          
+          const { data: newUser, error: insertError } = await supabase
+            .from('users')
+            .insert({
+              auth_user_id: authUser.id,
+              name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Unknown User',
+              email: authUser.email!,
+              role: 'technician'
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Error creating user record:', insertError);
+            return null;
+          }
+          
+          data = newUser;
+        } else {
+          return null;
+        }
       }
 
-      console.log('User data fetched:', data);
+      console.log('User data fetched successfully:', data);
 
       return {
         id: data.id,
@@ -67,6 +93,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    console.log('Setting up auth state listener...');
+    
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {

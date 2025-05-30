@@ -506,17 +506,16 @@ const Admin: React.FC = () => {
       console.log('Adding new employee:', newEmployee);
       
       const employeeData = {
-        id: crypto.randomUUID(), // Generiraj novi UUID
         ...newEmployee,
         phone: newEmployee.phone || null,
         location_id: newEmployee.location_id || null,
         vehicle_id: newEmployee.vehicle_id || null
       };
       
-      // Koristimo any jer baza ima email kolonu ali tipovi još ne
+      // Ne postavljamo ID, pustit ćemo da ga baza generira
       const { data, error } = await supabase
         .from('employee_profiles')
-        .insert([employeeData as any])
+        .insert([employeeData])
         .select()
         .single();
       

@@ -168,6 +168,117 @@ export type Database = {
         }
         Relationships: []
       }
+      work_orders: {
+        Row: {
+          client_company_address: string
+          client_company_name: string
+          client_email: string
+          client_first_name: string
+          client_last_name: string
+          client_mobile: string
+          client_oib: string
+          created_at: string | null
+          customer_company_address: string | null
+          customer_company_name: string | null
+          customer_email: string | null
+          customer_first_name: string | null
+          customer_last_name: string | null
+          customer_mobile: string | null
+          customer_oib: string | null
+          customer_signature: string | null
+          date: string
+          description: string | null
+          distance: number | null
+          found_condition: string | null
+          hours: number | null
+          id: string
+          materials: Json | null
+          order_for_customer: boolean | null
+          order_number: string
+          performed_work: string | null
+          signature_address: string | null
+          signature_coordinates: unknown | null
+          signature_timestamp: string | null
+          technician_comment: string | null
+          technician_name: string | null
+          technician_signature: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          client_company_address: string
+          client_company_name: string
+          client_email: string
+          client_first_name: string
+          client_last_name: string
+          client_mobile: string
+          client_oib: string
+          created_at?: string | null
+          customer_company_address?: string | null
+          customer_company_name?: string | null
+          customer_email?: string | null
+          customer_first_name?: string | null
+          customer_last_name?: string | null
+          customer_mobile?: string | null
+          customer_oib?: string | null
+          customer_signature?: string | null
+          date: string
+          description?: string | null
+          distance?: number | null
+          found_condition?: string | null
+          hours?: number | null
+          id?: string
+          materials?: Json | null
+          order_for_customer?: boolean | null
+          order_number: string
+          performed_work?: string | null
+          signature_address?: string | null
+          signature_coordinates?: unknown | null
+          signature_timestamp?: string | null
+          technician_comment?: string | null
+          technician_name?: string | null
+          technician_signature?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          client_company_address?: string
+          client_company_name?: string
+          client_email?: string
+          client_first_name?: string
+          client_last_name?: string
+          client_mobile?: string
+          client_oib?: string
+          created_at?: string | null
+          customer_company_address?: string | null
+          customer_company_name?: string | null
+          customer_email?: string | null
+          customer_first_name?: string | null
+          customer_last_name?: string | null
+          customer_mobile?: string | null
+          customer_oib?: string | null
+          customer_signature?: string | null
+          date?: string
+          description?: string | null
+          distance?: number | null
+          found_condition?: string | null
+          hours?: number | null
+          id?: string
+          materials?: Json | null
+          order_for_customer?: boolean | null
+          order_number?: string
+          performed_work?: string | null
+          signature_address?: string | null
+          signature_coordinates?: unknown | null
+          signature_timestamp?: string | null
+          technician_comment?: string | null
+          technician_name?: string | null
+          technician_signature?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

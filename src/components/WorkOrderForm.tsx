@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -438,6 +439,8 @@ const WorkOrderForm: React.FC = () => {
 
   const saveToSupabase = async (finalWorkOrder: any) => {
     try {
+      console.log('Saving work order to Supabase...', finalWorkOrder);
+      
       if (!user) throw new Error("Korisnik nije prijavljen");
       
       // Convert Point data for PostgreSQL
@@ -454,9 +457,7 @@ const WorkOrderForm: React.FC = () => {
       // ISPRAVLJENA LOGIKA: koristi novu funkciju za finalne podatke korisnika
       const finalCustomerData = getFinalCustomerData();
       
-      // Complete type assertion to handle both the table name and insert operation
-      const supabaseAny = supabase as any;
-      const { error } = await supabaseAny.from('work_orders').insert({
+      const workOrderData = {
         order_number: finalWorkOrder.id,
         client_company_name: finalWorkOrder.clientCompanyName,
         client_company_address: `${finalWorkOrder.clientStreetAddress}, ${finalWorkOrder.clientCity}, ${finalWorkOrder.clientCountry}`,
@@ -478,8 +479,8 @@ const WorkOrderForm: React.FC = () => {
         performed_work: performedWorkText,
         technician_comment: technicianCommentText,
         materials: finalWorkOrder.materials,
-        hours: parseFloat(finalWorkOrder.hours),
-        distance: parseFloat(finalWorkOrder.distance),
+        hours: parseFloat(finalWorkOrder.calculatedHours.replace(/[^\d.]/g, '')) || 0,
+        distance: parseFloat(finalWorkOrder.distance) || 0,
         technician_signature: finalWorkOrder.technicianSignature,
         technician_name: finalWorkOrder.technicianName,
         customer_signature: finalWorkOrder.customerSignature,
@@ -488,10 +489,20 @@ const WorkOrderForm: React.FC = () => {
         signature_address: finalWorkOrder.signatureMetadata?.address,
         date: finalWorkOrder.date,
         user_id: user.id,
-      });
+      };
+
+      console.log('Work order data to insert:', workOrderData);
       
-      if (error) throw error;
+      const { error } = await supabase
+        .from('work_orders')
+        .insert(workOrderData);
       
+      if (error) {
+        console.error('Supabase insertion error:', error);
+        throw error;
+      }
+      
+      console.log('Work order saved successfully');
       return true;
     } catch (error) {
       console.error('Error saving to Supabase:', error);

@@ -18,15 +18,6 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
   const generateMockTechnicians = async () => {
     try {
       console.log('Attempting to create mock technicians...');
-      
-      // First check current user and auth status
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        throw new Error('Korisnik nije prijavljen');
-      }
-      
-      console.log('Current user:', user.id);
 
       const mockTechnicians: TechnicianInsert[] = [
         {
@@ -90,15 +81,6 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
   const generateMockVehicles = async () => {
     try {
       console.log('Attempting to create mock vehicles...');
-      
-      // First check current user and auth status
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      
-      if (authError || !user) {
-        throw new Error('Korisnik nije prijavljen');
-      }
-      
-      console.log('Current user for vehicles:', user.id);
 
       const mockVehicles: VehicleInsert[] = [
         {

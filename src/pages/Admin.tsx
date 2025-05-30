@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -504,24 +503,63 @@ const Admin: React.FC = () => {
     
     setIsAddingEmployee(true);
     try {
-      console.log('Adding new employee:', newEmployee);
+      console.log('Adding new employee - step 1: creating auth user...');
       
+      // WORKFLOW STEP 1: Prvo kreiraj korisnika u auth.users tablici
+      // Generiramo automatsku lozinku jer je to admin operacija
+      const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!";
+      
+      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+        email: newEmployee.email,
+        password: tempPassword,
+        email_confirm: true, // Automatski potvrdi email
+        user_metadata: {
+          first_name: newEmployee.first_name,
+          last_name: newEmployee.last_name,
+          role: newEmployee.user_role
+        }
+      });
+      
+      if (authError) {
+        console.error('Error creating auth user:', authError);
+        throw new Error(`Greška pri kreiranju korisničkog računa: ${authError.message}`);
+      }
+      
+      if (!authData.user) {
+        throw new Error('Korisnik nije kreiran uspješno');
+      }
+      
+      console.log('Auth user created successfully:', authData.user.id);
+      
+      // WORKFLOW STEP 2: Sada insertraj zaposlenika u employee_profiles s id-em iz auth.users
       const employeeData = {
-        ...newEmployee,
+        id: authData.user.id, // KLJUČNO: koristi id iz auth.users
+        first_name: newEmployee.first_name,
+        last_name: newEmployee.last_name,
+        email: newEmployee.email,
         phone: newEmployee.phone || null,
         location_id: newEmployee.location_id || null,
-        vehicle_id: newEmployee.vehicle_id || null
+        user_role: newEmployee.user_role,
+        vehicle_id: newEmployee.vehicle_id || null,
+        active: true
       };
       
-      // Ne postavljamo ID, pustit ćemo da ga baza generira
+      console.log('Inserting employee with auth user ID:', employeeData);
+      
       const { data, error } = await supabase
         .from('employee_profiles')
-        .insert([employeeData as any])
+        .insert([employeeData])
         .select()
         .single();
       
       if (error) {
-        console.error('Error adding employee:', error);
+        console.error('Error adding employee to profiles:', error);
+        // Ako employee_profiles insert ne uspije, pokušaj obrisati auth usera
+        try {
+          await supabase.auth.admin.deleteUser(authData.user.id);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup auth user:', cleanupError);
+        }
         throw error;
       }
       
@@ -547,7 +585,7 @@ const Admin: React.FC = () => {
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Nije moguće dodati zaposlenika",
+        description: `Nije moguće dodati zaposlenika: ${error instanceof Error ? error.message : 'Nepoznata greška'}`,
       });
     } finally {
       setIsAddingEmployee(false);

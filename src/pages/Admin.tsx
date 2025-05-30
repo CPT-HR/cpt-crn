@@ -1,107 +1,150 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth, UserData } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from "@/components/ui/use-toast";
-
-// Mock pending users
-const PENDING_USERS = [
-  {
-    id: '3',
-    email: 'pending@example.com',
-    name: 'Pending User',
-    role: 'technician',
-    approved: false,
-    date: '2023-05-10',
-  },
-  {
-    id: '4',
-    email: 'another@example.com',
-    name: 'Another Pending',
-    role: 'technician',
-    approved: false,
-    date: '2023-05-12',
-  }
-];
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 const Admin: React.FC = () => {
   const { user } = useAuth();
-  const [pendingUsers, setPendingUsers] = useState(PENDING_USERS);
+  const [allUsers, setAllUsers] = useState<UserData[]>([]);
   
   // Redirect non-admin users
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
   
-  const approveUser = (id: string) => {
-    setPendingUsers(pendingUsers.filter(user => user.id !== id));
+  useEffect(() => {
+    // Load all registered users
+    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    setAllUsers(registeredUsers);
+  }, []);
+  
+  const deleteUser = (userId: string) => {
+    const updatedUsers = allUsers.filter(u => u.id !== userId);
+    setAllUsers(updatedUsers);
+    localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
+    
     toast({
-      title: "Korisnik odobren",
-      description: "Korisnikov račun je uspješno odobren",
+      title: "Korisnik obrisan",
+      description: "Korisnik je uspješno obrisan iz sustava",
     });
   };
   
-  const rejectUser = (id: string) => {
-    setPendingUsers(pendingUsers.filter(user => user.id !== id));
+  const changeUserRole = (userId: string, newRole: string) => {
+    const updatedUsers = allUsers.map(u => 
+      u.id === userId ? { ...u, role: newRole } : u
+    );
+    setAllUsers(updatedUsers);
+    localStorage.setItem('registeredUsers', JSON.stringify(updatedUsers));
+    
+    // If changing current user's role, update current session
+    if (userId === user.id) {
+      const updatedCurrentUser = { ...user, role: newRole };
+      localStorage.setItem('user', JSON.stringify(updatedCurrentUser));
+    }
+    
     toast({
-      title: "Korisnik odbijen",
-      description: "Zahtjev za registraciju je odbijen",
+      title: "Uloga promijenjena",
+      description: `Korisnikova uloga je promijenjena na ${newRole}`,
     });
   };
   
   return (
-    <div className="container max-w-4xl py-6 space-y-6">
+    <div className="container max-w-6xl py-6 space-y-6">
       <h1 className="text-3xl font-bold">Administracija</h1>
       
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
-            <span>Zahtjevi za registraciju</span>
-            {pendingUsers.length > 0 && (
-              <Badge variant="destructive">{pendingUsers.length}</Badge>
-            )}
+            <span>Svi korisnici</span>
+            <Badge variant="secondary">{allUsers.length}</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {pendingUsers.length === 0 ? (
+          {allUsers.length === 0 ? (
             <p className="text-muted-foreground text-center py-4">
-              Nema novih zahtjeva za registraciju
+              Nema registriranih korisnika
             </p>
           ) : (
-            <div className="space-y-4">
-              {pendingUsers.map(pendingUser => (
-                <div 
-                  key={pendingUser.id} 
-                  className="flex items-center justify-between border-b pb-4 last:border-0"
-                >
-                  <div>
-                    <h3 className="font-medium">{pendingUser.name}</h3>
-                    <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
-                    <p className="text-xs text-muted-foreground">
-                      Zahtjev poslan: {new Date(pendingUser.date).toLocaleDateString('hr-HR')}
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => rejectUser(pendingUser.id)}
-                    >
-                      Odbij
-                    </Button>
-                    <Button 
-                      size="sm"
-                      onClick={() => approveUser(pendingUser.id)}
-                    >
-                      Odobri
-                    </Button>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Ime</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Uloga</TableHead>
+                  <TableHead>Potpis</TableHead>
+                  <TableHead>Adresa tvrtke</TableHead>
+                  <TableHead className="text-right">Akcije</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allUsers.map(userItem => (
+                  <TableRow key={userItem.id}>
+                    <TableCell className="font-medium">
+                      {userItem.name}
+                      {userItem.id === user.id && (
+                        <Badge variant="outline" className="ml-2">Vi</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{userItem.email}</TableCell>
+                    <TableCell>
+                      <Badge variant={userItem.role === 'admin' ? 'default' : 'secondary'}>
+                        {userItem.role === 'admin' ? 'Administrator' : 'Tehničar'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {userItem.signature ? (
+                        <Badge variant="outline">Ima potpis</Badge>
+                      ) : (
+                        <span className="text-muted-foreground">Nema potpis</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {userItem.companyAddress ? (
+                        <span className="text-sm">{userItem.companyAddress}</span>
+                      ) : (
+                        <span className="text-muted-foreground">Nije postavljena</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        {userItem.role !== 'admin' && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => changeUserRole(userItem.id, 'admin')}
+                          >
+                            Učini admin
+                          </Button>
+                        )}
+                        {userItem.role === 'admin' && userItem.id !== user.id && (
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => changeUserRole(userItem.id, 'technician')}
+                          >
+                            Ukloni admin
+                          </Button>
+                        )}
+                        {userItem.id !== user.id && (
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => deleteUser(userItem.id)}
+                          >
+                            Obriši
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>

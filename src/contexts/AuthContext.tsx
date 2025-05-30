@@ -44,18 +44,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock login - in real app this would call an API
-      const mockUser: UserData = {
-        id: '1',
-        email: email,
-        name: 'Mock User',
-        initials: 'MU',
-        role: 'admin'
-      };
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      // Check if this user exists in localStorage users list
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const existingUser = registeredUsers.find((u: UserData) => u.email === email);
+      
+      if (existingUser) {
+        setUser(existingUser);
+        localStorage.setItem('user', JSON.stringify(existingUser));
+      } else {
+        throw new Error('Korisnik ne postoji');
+      }
     } catch (error) {
-      throw new Error('Login failed');
+      throw new Error('Prijava neuspješna');
     } finally {
       setIsLoading(false);
     }
@@ -64,18 +64,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
     try {
-      // Mock registration - in real app this would call an API
-      const mockUser: UserData = {
+      // Get existing users
+      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      
+      // Check if user already exists
+      const existingUser = registeredUsers.find((u: UserData) => u.email === email);
+      if (existingUser) {
+        throw new Error('Korisnik s tim emailom već postoji');
+      }
+      
+      // Determine role - first user is admin, others are technicians
+      const role = registeredUsers.length === 0 ? 'admin' : 'technician';
+      
+      const newUser: UserData = {
         id: Date.now().toString(),
         email: email,
         name: name,
         initials: name.split(' ').map(n => n[0]).join('').toUpperCase(),
-        role: 'technician'
+        role: role
       };
-      setUser(mockUser);
-      localStorage.setItem('user', JSON.stringify(mockUser));
+      
+      // Add to registered users list
+      registeredUsers.push(newUser);
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+      
+      // Set as current user
+      setUser(newUser);
+      localStorage.setItem('user', JSON.stringify(newUser));
     } catch (error) {
-      throw new Error('Registration failed');
+      throw error;
     } finally {
       setIsLoading(false);
     }
@@ -92,6 +109,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedUser = { ...user, signature: signature };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    // Update in registered users list too
+    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    const userIndex = registeredUsers.findIndex((u: UserData) => u.id === user.id);
+    if (userIndex !== -1) {
+      registeredUsers[userIndex] = updatedUser;
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+    }
   };
 
   const saveCompanyAddress = async (address: string) => {
@@ -100,6 +125,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedUser = { ...user, companyAddress: address };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    // Update in registered users list too
+    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    const userIndex = registeredUsers.findIndex((u: UserData) => u.id === user.id);
+    if (userIndex !== -1) {
+      registeredUsers[userIndex] = updatedUser;
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+    }
+    
     console.log('Company address saved:', address);
     console.log('Updated user:', updatedUser);
   };
@@ -110,6 +144,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const updatedUser = { ...user, distanceMatrixApiKey: apiKey };
     setUser(updatedUser);
     localStorage.setItem('user', JSON.stringify(updatedUser));
+    
+    // Update in registered users list too
+    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+    const userIndex = registeredUsers.findIndex((u: UserData) => u.id === user.id);
+    if (userIndex !== -1) {
+      registeredUsers[userIndex] = updatedUser;
+      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
+    }
+    
     console.log('API key saved:', apiKey);
     console.log('Updated user:', updatedUser);
   };

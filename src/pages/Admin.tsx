@@ -77,12 +77,18 @@ const Admin: React.FC = () => {
   useEffect(() => {
     const fetchLocations = async () => {
       try {
+        console.log('Fetching company locations...');
         const { data, error } = await supabase
           .from('company_locations')
           .select('*')
           .order('created_at', { ascending: true });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching locations:', error);
+          throw error;
+        }
+        
+        console.log('Locations fetched successfully:', data);
         setLocations(data || []);
       } catch (error) {
         console.error('Error fetching locations:', error);
@@ -103,13 +109,19 @@ const Admin: React.FC = () => {
   useEffect(() => {
     const fetchGlobalSettings = async () => {
       try {
+        console.log('Fetching global settings...');
         const { data, error } = await supabase
           .from('global_settings')
           .select('*')
           .limit(1)
-          .single();
+          .maybeSingle();
         
-        if (error && error.code !== 'PGRST116') throw error;
+        if (error) {
+          console.error('Error fetching global settings:', error);
+          throw error;
+        }
+        
+        console.log('Global settings fetched:', data);
         setGlobalSettings(data);
       } catch (error) {
         console.error('Error fetching global settings:', error);
@@ -154,14 +166,19 @@ const Admin: React.FC = () => {
     
     setIsAddingLocation(true);
     try {
+      console.log('Adding new location:', newLocation);
       const { data, error } = await supabase
         .from('company_locations')
         .insert([newLocation])
         .select()
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error adding location:', error);
+        throw error;
+      }
       
+      console.log('Location added successfully:', data);
       setLocations([...locations, data]);
       setNewLocation({
         name: '',
@@ -188,13 +205,18 @@ const Admin: React.FC = () => {
   
   const deleteLocation = async (id: string) => {
     try {
+      console.log('Deleting location:', id);
       const { error } = await supabase
         .from('company_locations')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (error) {
+        console.error('Error deleting location:', error);
+        throw error;
+      }
       
+      console.log('Location deleted successfully');
       setLocations(locations.filter(loc => loc.id !== id));
       toast({
         title: "Lokacija obrisana",
@@ -215,15 +237,41 @@ const Admin: React.FC = () => {
     
     setIsSavingSettings(true);
     try {
-      const { error } = await supabase
-        .from('global_settings')
-        .upsert([{
-          id: globalSettings.id,
-          distance_matrix_api_key: globalSettings.distance_matrix_api_key
-        }]);
+      console.log('Saving global settings:', globalSettings);
       
-      if (error) throw error;
+      if (globalSettings.id) {
+        // Update postojeći zapis
+        const { error } = await supabase
+          .from('global_settings')
+          .update({
+            distance_matrix_api_key: globalSettings.distance_matrix_api_key
+          })
+          .eq('id', globalSettings.id);
+        
+        if (error) {
+          console.error('Error updating global settings:', error);
+          throw error;
+        }
+      } else {
+        // Insert novi zapis
+        const { data, error } = await supabase
+          .from('global_settings')
+          .insert([{
+            distance_matrix_api_key: globalSettings.distance_matrix_api_key
+          }])
+          .select()
+          .single();
+        
+        if (error) {
+          console.error('Error inserting global settings:', error);
+          throw error;
+        }
+        
+        console.log('New global settings inserted:', data);
+        setGlobalSettings(data);
+      }
       
+      console.log('Global settings saved successfully');
       toast({
         title: "Postavke spremljene",
         description: "Globalne postavke su uspješno spremljene",

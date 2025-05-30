@@ -485,7 +485,10 @@ const WorkOrderForm: React.FC = () => {
         technicianSignature: user.signature || '',
         technicianName: user.name,
         // Dodaj finalne podatke korisnika u workOrder objekt za PDF generaciju
-        finalCustomerData
+        finalCustomerData,
+        // Dodaj kombiniranu adresu za kompatibilnost s postojećim kodom
+        clientCompanyAddress: `${workOrder.clientStreetAddress}, ${workOrder.clientCity}, ${workOrder.clientCountry}`,
+        customerCompanyAddress: `${finalCustomerData.street_address}, ${finalCustomerData.city}, ${finalCustomerData.country}`
       };
       
       // Save to Supabase

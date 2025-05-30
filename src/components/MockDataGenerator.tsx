@@ -3,10 +3,14 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Database } from "@/integrations/supabase/types";
 
 interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
 }
+
+type TechnicianInsert = Database["public"]["Tables"]["technicians"]["Insert"];
+type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
 
 const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }) => {
   const { toast } = useToast();
@@ -24,13 +28,13 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
       
       console.log('Current user:', user.id);
 
-      const mockTechnicians = [
+      const mockTechnicians: TechnicianInsert[] = [
         {
           first_name: "Marko",
           last_name: "Kovačić", 
           email: "marko.kovacic@tvrtka.hr",
           phone: "+385 91 123 4567",
-          user_role: "technician",
+          user_role: "technician" as const,
           active: true
         },
         {
@@ -38,7 +42,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           last_name: "Novak",
           email: "ana.novak@tvrtka.hr", 
           phone: "+385 92 234 5678",
-          user_role: "technician",
+          user_role: "technician" as const,
           active: true
         },
         {
@@ -46,7 +50,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           last_name: "Babić",
           email: "petar.babic@tvrtka.hr",
           phone: "+385 93 345 6789", 
-          user_role: "admin",
+          user_role: "admin" as const,
           active: true
         }
       ];
@@ -96,7 +100,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
       
       console.log('Current user for vehicles:', user.id);
 
-      const mockVehicles = [
+      const mockVehicles: VehicleInsert[] = [
         {
           name: "Servisno vozilo 1",
           license_plate: "ZG-1234-AB",

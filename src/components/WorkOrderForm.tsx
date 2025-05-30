@@ -12,7 +12,7 @@ import SignaturePad, { SignatureMetadata } from './SignaturePad';
 import { DatePicker } from './DatePicker';
 import { useAuth } from '@/contexts/AuthContext';
 import { generatePDF } from '@/utils/pdfGenerator';
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
 
@@ -457,6 +457,13 @@ const WorkOrderForm: React.FC = () => {
       // ISPRAVLJENA LOGIKA: koristi novu funkciju za finalne podatke korisnika
       const finalCustomerData = getFinalCustomerData();
       
+      // FIX: Convert date to ISO format for PostgreSQL
+      const isoDate = finalWorkOrder.date instanceof Date 
+        ? finalWorkOrder.date.toISOString().split('T')[0] 
+        : new Date(finalWorkOrder.date).toISOString().split('T')[0];
+      
+      console.log('Final work order date (ISO):', isoDate);
+      
       const workOrderData = {
         order_number: finalWorkOrder.id,
         client_company_name: finalWorkOrder.clientCompanyName,
@@ -487,7 +494,7 @@ const WorkOrderForm: React.FC = () => {
         signature_timestamp: finalWorkOrder.signatureMetadata?.timestamp || new Date().toISOString(),
         signature_coordinates: signatureCoordinates,
         signature_address: finalWorkOrder.signatureMetadata?.address,
-        date: finalWorkOrder.date,
+        date: isoDate, // Use ISO format for date
         user_id: user.id,
       };
 
@@ -513,7 +520,14 @@ const WorkOrderForm: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) return;
+    if (!user) {
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Potrebna je prijava",
+      });
+      return;
+    }
     
     if (!workOrder.customerSignature) {
       toast({
@@ -548,7 +562,7 @@ const WorkOrderForm: React.FC = () => {
         id: generatedId,
         technicianSignature: user.signature || '',
         technicianName: user.name,
-        date: workOrder.date.toLocaleDateString('hr-HR'),
+        date: workOrder.date, // Keep as Date object for now, will be converted in saveToSupabase
         // Dodaj finalne podatke korisnika u workOrder objekt za PDF generaciju
         finalCustomerData,
         // Dodaj kombiniranu adresu za kompatibilnost s postojećim kodom
@@ -556,11 +570,19 @@ const WorkOrderForm: React.FC = () => {
         customerCompanyAddress: `${finalCustomerData.street_address}, ${finalCustomerData.city}, ${finalCustomerData.country}`
       };
       
+      console.log('Final work order before saving:', finalWorkOrder);
+      
       // Save to Supabase
       await saveToSupabase(finalWorkOrder);
       
+      // For PDF generation, convert date to Croatian format
+      const finalWorkOrderForPDF = {
+        ...finalWorkOrder,
+        date: workOrder.date.toLocaleDateString('hr-HR')
+      };
+      
       // Generate PDF
-      await generatePDF(finalWorkOrder);
+      await generatePDF(finalWorkOrderForPDF);
       
       toast({
         title: "Radni nalog spremljen",
@@ -604,12 +626,24 @@ const WorkOrderForm: React.FC = () => {
         customerSignature: '',
         customerSignerName: '',
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error submitting form:', error);
+      
+      // Better error handling with more specific messages
+      let errorMessage = "Došlo je do pogreške prilikom spremanja radnog naloga";
+      
+      if (error?.code === '22007') {
+        errorMessage = "Greška s formatom datuma. Molimo pokušajte ponovo.";
+      } else if (error?.code === '23505') {
+        errorMessage = "Radni nalog s tim brojem već postoji.";
+      } else if (error?.message) {
+        errorMessage = `Greška: ${error.message}`;
+      }
+      
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Došlo je do pogreške prilikom spremanja radnog naloga",
+        description: errorMessage,
       });
     } finally {
       setIsSubmitting(false);

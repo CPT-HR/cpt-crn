@@ -3,27 +3,15 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { Database } from "@/integrations/supabase/types";
 
 interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
 }
 
-// Koristimo tip bez ID-ja jer će ga baza automatski generirati
-type EmployeeProfileInsert = {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string | null;
-  user_role: 'admin' | 'technician' | 'lead';
-  active: boolean;
-};
-
-type VehicleInsert = {
-  name: string;
-  license_plate?: string | null;
-  model?: string | null;
-  year?: number | null;
-};
+// Koristimo Supabase tipove direktno
+type EmployeeProfileInsert = Database['public']['Tables']['employee_profiles']['Insert'];
+type VehicleInsert = Database['public']['Tables']['vehicles']['Insert'];
 
 const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }) => {
   const { toast } = useToast();
@@ -32,14 +20,14 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
     try {
       console.log('Attempting to create mock employees...');
 
-      // Uklanjamo ID jer će ga baza automatski generirati
+      // Koristimo Supabase tipove - ID će se automatski generirati
       const mockEmployees: EmployeeProfileInsert[] = [
         {
           first_name: "Marko",
           last_name: "Kovačić", 
           email: "marko.kovacic@tvrtka.hr",
           phone: "+385 91 123 4567",
-          user_role: "technician" as const,
+          user_role: "technician",
           active: true
         },
         {
@@ -47,7 +35,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           last_name: "Novak",
           email: "ana.novak@tvrtka.hr", 
           phone: "+385 92 234 5678",
-          user_role: "technician" as const,
+          user_role: "technician",
           active: true
         },
         {
@@ -55,7 +43,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           last_name: "Babić",
           email: "petar.babic@tvrtka.hr",
           phone: "+385 93 345 6789", 
-          user_role: "admin" as const,
+          user_role: "admin",
           active: true
         }
       ];

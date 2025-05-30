@@ -51,11 +51,11 @@ interface Vehicle {
   year: number | null;
 }
 
-interface Technician {
+interface Employee {
   id: string;
   first_name: string;
   last_name: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   location_id: string | null;
   user_role: 'admin' | 'technician' | 'lead';
@@ -84,11 +84,11 @@ const Admin: React.FC = () => {
   const [pendingUsers, setPendingUsers] = useState(PENDING_USERS);
   const [locations, setLocations] = useState<CompanyLocation[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [globalSettings, setGlobalSettings] = useState<GlobalSettings | null>(null);
   const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const [isLoadingVehicles, setIsLoadingVehicles] = useState(true);
-  const [isLoadingTechnicians, setIsLoadingTechnicians] = useState(true);
+  const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [mockDataGenerated, setMockDataGenerated] = useState(false);
@@ -111,8 +111,8 @@ const Admin: React.FC = () => {
   });
   const [isAddingVehicle, setIsAddingVehicle] = useState(false);
   
-  // New technician form
-  const [newTechnician, setNewTechnician] = useState({
+  // New employee form
+  const [newEmployee, setNewEmployee] = useState({
     first_name: '',
     last_name: '',
     email: '',
@@ -121,9 +121,9 @@ const Admin: React.FC = () => {
     user_role: 'technician' as 'admin' | 'technician' | 'lead',
     vehicle_id: ''
   });
-  const [isAddingTechnician, setIsAddingTechnician] = useState(false);
-  const [editingTechnician, setEditingTechnician] = useState<Technician | null>(null);
-  const [isEditingTechnician, setIsEditingTechnician] = useState(false);
+  const [isAddingEmployee, setIsAddingEmployee] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [isEditingEmployee, setIsEditingEmployee] = useState(false);
   
   // Redirect non-admin users
   if (!user || user.role !== 'admin') {
@@ -205,36 +205,36 @@ const Admin: React.FC = () => {
     fetchVehicles();
   }, []);
   
-  // Load technicians
+  // Load employees
   useEffect(() => {
-    const fetchTechnicians = async () => {
+    const fetchEmployees = async () => {
       try {
-        console.log('Fetching technicians...');
+        console.log('Fetching employees...');
         const { data, error } = await supabase
-          .from('technicians')
+          .from('employee_profiles')
           .select('*')
           .order('created_at', { ascending: true });
         
         if (error) {
-          console.error('Error fetching technicians:', error);
+          console.error('Error fetching employees:', error);
           throw error;
         }
         
-        console.log('Technicians fetched successfully:', data);
-        setTechnicians(data || []);
+        console.log('Employees fetched successfully:', data);
+        setEmployees(data || []);
       } catch (error) {
-        console.error('Error fetching technicians:', error);
+        console.error('Error fetching employees:', error);
         toast({
           variant: "destructive",
           title: "Greška",
-          description: "Nije moguće učitati tehničare",
+          description: "Nije moguće učitati zaposlenike",
         });
       } finally {
-        setIsLoadingTechnicians(false);
+        setIsLoadingEmployees(false);
       }
     };
     
-    fetchTechnicians();
+    fetchEmployees();
   }, []);
   
   // Load global settings
@@ -270,18 +270,18 @@ const Admin: React.FC = () => {
     fetchGlobalSettings();
   }, []);
   
-  // Helper function to refresh technicians data
-  const refreshTechnicians = async () => {
+  // Helper function to refresh employees data
+  const refreshEmployees = async () => {
     try {
       const { data, error } = await supabase
-        .from('technicians')
+        .from('employee_profiles')
         .select('*')
         .order('created_at', { ascending: true });
       
       if (error) throw error;
-      setTechnicians(data || []);
+      setEmployees(data || []);
     } catch (error) {
-      console.error('Error refreshing technicians:', error);
+      console.error('Error refreshing employees:', error);
     }
   };
 
@@ -481,8 +481,8 @@ const Admin: React.FC = () => {
     }
   };
   
-  const addTechnician = async () => {
-    if (!newTechnician.first_name.trim() || !newTechnician.last_name.trim() || !newTechnician.email.trim()) {
+  const addEmployee = async () => {
+    if (!newEmployee.first_name.trim() || !newEmployee.last_name.trim() || !newEmployee.email.trim()) {
       toast({
         variant: "destructive",
         title: "Greška",
@@ -491,31 +491,31 @@ const Admin: React.FC = () => {
       return;
     }
     
-    setIsAddingTechnician(true);
+    setIsAddingEmployee(true);
     try {
-      console.log('Adding new technician:', newTechnician);
+      console.log('Adding new employee:', newEmployee);
       
-      const technicianData = {
-        ...newTechnician,
-        phone: newTechnician.phone || null,
-        location_id: newTechnician.location_id || null,
-        vehicle_id: newTechnician.vehicle_id || null
+      const employeeData = {
+        ...newEmployee,
+        phone: newEmployee.phone || null,
+        location_id: newEmployee.location_id || null,
+        vehicle_id: newEmployee.vehicle_id || null
       };
       
       const { data, error } = await supabase
-        .from('technicians')
-        .insert([technicianData])
+        .from('employee_profiles')
+        .insert([employeeData])
         .select()
         .single();
       
       if (error) {
-        console.error('Error adding technician:', error);
+        console.error('Error adding employee:', error);
         throw error;
       }
       
-      console.log('Technician added successfully:', data);
-      setTechnicians([...technicians, data]);
-      setNewTechnician({
+      console.log('Employee added successfully:', data);
+      setEmployees([...employees, data]);
+      setNewEmployee({
         first_name: '',
         last_name: '',
         email: '',
@@ -526,94 +526,94 @@ const Admin: React.FC = () => {
       });
       
       toast({
-        title: "Tehničar dodan",
-        description: "Novi tehničar je uspješno dodan",
+        title: "Zaposlenik dodan",
+        description: "Novi zaposlenik je uspješno dodan",
       });
     } catch (error) {
-      console.error('Error adding technician:', error);
+      console.error('Error adding employee:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Nije moguće dodati tehničara",
+        description: "Nije moguće dodati zaposlenika",
       });
     } finally {
-      setIsAddingTechnician(false);
+      setIsAddingEmployee(false);
     }
   };
   
-  const updateTechnician = async () => {
-    if (!editingTechnician) return;
+  const updateEmployee = async () => {
+    if (!editingEmployee) return;
     
-    setIsEditingTechnician(true);
+    setIsEditingEmployee(true);
     try {
-      console.log('Updating technician:', editingTechnician);
+      console.log('Updating employee:', editingEmployee);
       
       const { data, error } = await supabase
-        .from('technicians')
+        .from('employee_profiles')
         .update({
-          first_name: editingTechnician.first_name,
-          last_name: editingTechnician.last_name,
-          email: editingTechnician.email,
-          phone: editingTechnician.phone,
-          location_id: editingTechnician.location_id,
-          user_role: editingTechnician.user_role,
-          vehicle_id: editingTechnician.vehicle_id,
-          active: editingTechnician.active
+          first_name: editingEmployee.first_name,
+          last_name: editingEmployee.last_name,
+          email: editingEmployee.email,
+          phone: editingEmployee.phone,
+          location_id: editingEmployee.location_id,
+          user_role: editingEmployee.user_role,
+          vehicle_id: editingEmployee.vehicle_id,
+          active: editingEmployee.active
         })
-        .eq('id', editingTechnician.id)
+        .eq('id', editingEmployee.id)
         .select()
         .single();
       
       if (error) {
-        console.error('Error updating technician:', error);
+        console.error('Error updating employee:', error);
         throw error;
       }
       
-      console.log('Technician updated successfully:', data);
-      setTechnicians(technicians.map(tech => tech.id === editingTechnician.id ? data : tech));
-      setEditingTechnician(null);
+      console.log('Employee updated successfully:', data);
+      setEmployees(employees.map(emp => emp.id === editingEmployee.id ? data : emp));
+      setEditingEmployee(null);
       
       toast({
-        title: "Tehničar ažuriran",
-        description: "Podaci tehničara su uspješno ažurirani",
+        title: "Zaposlenik ažuriran",
+        description: "Podaci zaposlenika su uspješno ažurirani",
       });
     } catch (error) {
-      console.error('Error updating technician:', error);
+      console.error('Error updating employee:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Nije moguće ažurirati tehničara",
+        description: "Nije moguće ažurirati zaposlenika",
       });
     } finally {
-      setIsEditingTechnician(false);
+      setIsEditingEmployee(false);
     }
   };
   
-  const deleteTechnician = async (id: string) => {
+  const deleteEmployee = async (id: string) => {
     try {
-      console.log('Deleting technician:', id);
+      console.log('Deleting employee:', id);
       const { error } = await supabase
-        .from('technicians')
+        .from('employee_profiles')
         .delete()
         .eq('id', id);
       
       if (error) {
-        console.error('Error deleting technician:', error);
+        console.error('Error deleting employee:', error);
         throw error;
       }
       
-      console.log('Technician deleted successfully');
-      setTechnicians(technicians.filter(tech => tech.id !== id));
+      console.log('Employee deleted successfully');
+      setEmployees(employees.filter(emp => emp.id !== id));
       toast({
-        title: "Tehničar obrisan",
-        description: "Tehničar je uspješno obrisan",
+        title: "Zaposlenik obrisan",
+        description: "Zaposlenik je uspješno obrisan",
       });
     } catch (error) {
-      console.error('Error deleting technician:', error);
+      console.error('Error deleting employee:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Nije moguće obrisati tehničara",
+        description: "Nije moguće obrisati zaposlenika",
       });
     }
   };
@@ -753,7 +753,7 @@ const Admin: React.FC = () => {
       if (vehicleError) throw vehicleError;
 
       // Refresh data
-      await Promise.all([refreshTechnicians(), refreshVehicles()]);
+      await Promise.all([refreshEmployees(), refreshVehicles()]);
       setMockDataGenerated(true);
 
       toast({
@@ -794,14 +794,14 @@ const Admin: React.FC = () => {
       {/* Mock Data Generator Component */}
       <MockDataGenerator 
         onDataGenerated={async () => {
-          await Promise.all([refreshTechnicians(), refreshVehicles()]);
+          await Promise.all([refreshEmployees(), refreshVehicles()]);
         }}
       />
 
       <Tabs defaultValue="locations" className="space-y-6">
         <TabsList>
           <TabsTrigger value="locations">Lokacije tvrtke</TabsTrigger>
-          <TabsTrigger value="technicians">Tehničari</TabsTrigger>
+          <TabsTrigger value="employees">Zaposlenici</TabsTrigger>
           <TabsTrigger value="vehicles">Vozila</TabsTrigger>
           <TabsTrigger value="settings">Globalne postavke</TabsTrigger>
         </TabsList>
@@ -909,16 +909,16 @@ const Admin: React.FC = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="technicians">
+        <TabsContent value="employees">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Users className="h-5 w-5" />
-                Upravljanje tehničarima
+                Upravljanje zaposlenicima
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
-              {isLoadingTechnicians ? (
+              {isLoadingEmployees ? (
                 <div className="flex justify-center py-4">
                   <Loader2 className="h-6 w-6 animate-spin" />
                 </div>
@@ -939,21 +939,21 @@ const Admin: React.FC = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {technicians.map((technician) => (
-                          <TableRow key={technician.id}>
-                            <TableCell>{technician.first_name} {technician.last_name}</TableCell>
-                            <TableCell>{technician.email}</TableCell>
-                            <TableCell>{technician.phone || 'Nije uneseno'}</TableCell>
-                            <TableCell>{getLocationName(technician.location_id)}</TableCell>
+                        {employees.map((employee) => (
+                          <TableRow key={employee.id}>
+                            <TableCell>{employee.first_name} {employee.last_name}</TableCell>
+                            <TableCell>{employee.email || 'Nije uneseno'}</TableCell>
+                            <TableCell>{employee.phone || 'Nije uneseno'}</TableCell>
+                            <TableCell>{getLocationName(employee.location_id)}</TableCell>
                             <TableCell>
-                              <Badge variant={technician.user_role === 'admin' ? 'default' : 'secondary'}>
-                                {userRoles.find(role => role.value === technician.user_role)?.label}
+                              <Badge variant={employee.user_role === 'admin' ? 'default' : 'secondary'}>
+                                {userRoles.find(role => role.value === employee.user_role)?.label}
                               </Badge>
                             </TableCell>
-                            <TableCell>{getVehicleName(technician.vehicle_id)}</TableCell>
+                            <TableCell>{getVehicleName(employee.vehicle_id)}</TableCell>
                             <TableCell>
-                              <Badge variant={technician.active ? 'default' : 'destructive'}>
-                                {technician.active ? 'Aktivan' : 'Neaktivan'}
+                              <Badge variant={employee.active ? 'default' : 'destructive'}>
+                                {employee.active ? 'Aktivan' : 'Neaktivan'}
                               </Badge>
                             </TableCell>
                             <TableCell>
@@ -963,28 +963,28 @@ const Admin: React.FC = () => {
                                     <Button
                                       variant="outline"
                                       size="sm"
-                                      onClick={() => setEditingTechnician(technician)}
+                                      onClick={() => setEditingEmployee(employee)}
                                     >
                                       <Edit className="h-4 w-4" />
                                     </Button>
                                   </SheetTrigger>
                                   <SheetContent>
                                     <SheetHeader>
-                                      <SheetTitle>Uredi tehničara</SheetTitle>
+                                      <SheetTitle>Uredi zaposlenika</SheetTitle>
                                       <SheetDescription>
-                                        Uredite podatke tehničara
+                                        Uredite podatke zaposlenika
                                       </SheetDescription>
                                     </SheetHeader>
-                                    {editingTechnician && (
+                                    {editingEmployee && (
                                       <div className="grid gap-4 py-4">
                                         <div className="grid grid-cols-2 gap-4">
                                           <div className="space-y-2">
                                             <Label htmlFor="editFirstName">Ime</Label>
                                             <Input
                                               id="editFirstName"
-                                              value={editingTechnician.first_name}
-                                              onChange={(e) => setEditingTechnician({
-                                                ...editingTechnician,
+                                              value={editingEmployee.first_name}
+                                              onChange={(e) => setEditingEmployee({
+                                                ...editingEmployee,
                                                 first_name: e.target.value
                                               })}
                                             />
@@ -993,9 +993,9 @@ const Admin: React.FC = () => {
                                             <Label htmlFor="editLastName">Prezime</Label>
                                             <Input
                                               id="editLastName"
-                                              value={editingTechnician.last_name}
-                                              onChange={(e) => setEditingTechnician({
-                                                ...editingTechnician,
+                                              value={editingEmployee.last_name}
+                                              onChange={(e) => setEditingEmployee({
+                                                ...editingEmployee,
                                                 last_name: e.target.value
                                               })}
                                             />
@@ -1006,9 +1006,9 @@ const Admin: React.FC = () => {
                                           <Input
                                             id="editEmail"
                                             type="email"
-                                            value={editingTechnician.email}
-                                            onChange={(e) => setEditingTechnician({
-                                              ...editingTechnician,
+                                            value={editingEmployee.email || ''}
+                                            onChange={(e) => setEditingEmployee({
+                                              ...editingEmployee,
                                               email: e.target.value
                                             })}
                                           />
@@ -1017,9 +1017,9 @@ const Admin: React.FC = () => {
                                           <Label htmlFor="editPhone">Telefon</Label>
                                           <Input
                                             id="editPhone"
-                                            value={editingTechnician.phone || ''}
-                                            onChange={(e) => setEditingTechnician({
-                                              ...editingTechnician,
+                                            value={editingEmployee.phone || ''}
+                                            onChange={(e) => setEditingEmployee({
+                                              ...editingEmployee,
                                               phone: e.target.value
                                             })}
                                           />
@@ -1027,9 +1027,9 @@ const Admin: React.FC = () => {
                                         <div className="space-y-2">
                                           <Label htmlFor="editLocation">Lokacija</Label>
                                           <Select
-                                            value={editingTechnician.location_id || 'none'}
-                                            onValueChange={(value) => setEditingTechnician({
-                                              ...editingTechnician,
+                                            value={editingEmployee.location_id || 'none'}
+                                            onValueChange={(value) => setEditingEmployee({
+                                              ...editingEmployee,
                                               location_id: value === 'none' ? null : value
                                             })}
                                           >
@@ -1049,9 +1049,9 @@ const Admin: React.FC = () => {
                                         <div className="space-y-2">
                                           <Label htmlFor="editRole">Uloga</Label>
                                           <Select
-                                            value={editingTechnician.user_role}
-                                            onValueChange={(value: 'admin' | 'technician' | 'lead') => setEditingTechnician({
-                                              ...editingTechnician,
+                                            value={editingEmployee.user_role}
+                                            onValueChange={(value: 'admin' | 'technician' | 'lead') => setEditingEmployee({
+                                              ...editingEmployee,
                                               user_role: value
                                             })}
                                           >
@@ -1070,9 +1070,9 @@ const Admin: React.FC = () => {
                                         <div className="space-y-2">
                                           <Label htmlFor="editVehicle">Vozilo</Label>
                                           <Select
-                                            value={editingTechnician.vehicle_id || 'none'}
-                                            onValueChange={(value) => setEditingTechnician({
-                                              ...editingTechnician,
+                                            value={editingEmployee.vehicle_id || 'none'}
+                                            onValueChange={(value) => setEditingEmployee({
+                                              ...editingEmployee,
                                               vehicle_id: value === 'none' ? null : value
                                             })}
                                           >
@@ -1092,9 +1092,9 @@ const Admin: React.FC = () => {
                                         <div className="space-y-2">
                                           <Label htmlFor="editActive">Status</Label>
                                           <Select
-                                            value={editingTechnician.active ? 'active' : 'inactive'}
-                                            onValueChange={(value) => setEditingTechnician({
-                                              ...editingTechnician,
+                                            value={editingEmployee.active ? 'active' : 'inactive'}
+                                            onValueChange={(value) => setEditingEmployee({
+                                              ...editingEmployee,
                                               active: value === 'active'
                                             })}
                                           >
@@ -1108,11 +1108,11 @@ const Admin: React.FC = () => {
                                           </Select>
                                         </div>
                                         <Button 
-                                          onClick={updateTechnician}
-                                          disabled={isEditingTechnician}
+                                          onClick={updateEmployee}
+                                          disabled={isEditingEmployee}
                                           className="w-full"
                                         >
-                                          {isEditingTechnician && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                          {isEditingEmployee && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                           Spremi promjene
                                         </Button>
                                       </div>
@@ -1122,7 +1122,7 @@ const Admin: React.FC = () => {
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  onClick={() => deleteTechnician(technician.id)}
+                                  onClick={() => deleteEmployee(employee.id)}
                                 >
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
@@ -1133,58 +1133,58 @@ const Admin: React.FC = () => {
                       </TableBody>
                     </Table>
                     
-                    {technicians.length === 0 && (
+                    {employees.length === 0 && (
                       <p className="text-muted-foreground text-center py-4">
-                        Nema dodanih tehničara
+                        Nema dodanih zaposlenika
                       </p>
                     )}
                   </div>
                   
                   <div className="border-t pt-4">
-                    <h4 className="font-medium mb-4">Dodaj novog tehničara</h4>
+                    <h4 className="font-medium mb-4">Dodaj novog zaposlenika</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="techFirstName">Ime</Label>
+                        <Label htmlFor="empFirstName">Ime</Label>
                         <Input
-                          id="techFirstName"
-                          value={newTechnician.first_name}
-                          onChange={(e) => setNewTechnician({ ...newTechnician, first_name: e.target.value })}
+                          id="empFirstName"
+                          value={newEmployee.first_name}
+                          onChange={(e) => setNewEmployee({ ...newEmployee, first_name: e.target.value })}
                           placeholder="Ime"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="techLastName">Prezime</Label>
+                        <Label htmlFor="empLastName">Prezime</Label>
                         <Input
-                          id="techLastName"
-                          value={newTechnician.last_name}
-                          onChange={(e) => setNewTechnician({ ...newTechnician, last_name: e.target.value })}
+                          id="empLastName"
+                          value={newEmployee.last_name}
+                          onChange={(e) => setNewEmployee({ ...newEmployee, last_name: e.target.value })}
                           placeholder="Prezime"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="techEmail">Email</Label>
+                        <Label htmlFor="empEmail">Email</Label>
                         <Input
-                          id="techEmail"
+                          id="empEmail"
                           type="email"
-                          value={newTechnician.email}
-                          onChange={(e) => setNewTechnician({ ...newTechnician, email: e.target.value })}
+                          value={newEmployee.email}
+                          onChange={(e) => setNewEmployee({ ...newEmployee, email: e.target.value })}
                           placeholder="email@example.com"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="techPhone">Telefon</Label>
+                        <Label htmlFor="empPhone">Telefon</Label>
                         <Input
-                          id="techPhone"
-                          value={newTechnician.phone}
-                          onChange={(e) => setNewTechnician({ ...newTechnician, phone: e.target.value })}
+                          id="empPhone"
+                          value={newEmployee.phone}
+                          onChange={(e) => setNewEmployee({ ...newEmployee, phone: e.target.value })}
                           placeholder="+385 99 123 4567"
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="techLocation">Lokacija</Label>
+                        <Label htmlFor="empLocation">Lokacija</Label>
                         <Select 
-                          value={newTechnician.location_id || 'none'} 
-                          onValueChange={(value) => setNewTechnician({ ...newTechnician, location_id: value === 'none' ? '' : value })}
+                          value={newEmployee.location_id || 'none'} 
+                          onValueChange={(value) => setNewEmployee({ ...newEmployee, location_id: value === 'none' ? '' : value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Odaberite lokaciju" />
@@ -1200,10 +1200,10 @@ const Admin: React.FC = () => {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="techRole">Uloga</Label>
+                        <Label htmlFor="empRole">Uloga</Label>
                         <Select 
-                          value={newTechnician.user_role} 
-                          onValueChange={(value: 'admin' | 'technician' | 'lead') => setNewTechnician({ ...newTechnician, user_role: value })}
+                          value={newEmployee.user_role} 
+                          onValueChange={(value: 'admin' | 'technician' | 'lead') => setNewEmployee({ ...newEmployee, user_role: value })}
                         >
                           <SelectTrigger>
                             <SelectValue />
@@ -1218,10 +1218,10 @@ const Admin: React.FC = () => {
                         </Select>
                       </div>
                       <div className="space-y-2 md:col-span-2">
-                        <Label htmlFor="techVehicle">Vozilo</Label>
+                        <Label htmlFor="empVehicle">Vozilo</Label>
                         <Select 
-                          value={newTechnician.vehicle_id || 'none'} 
-                          onValueChange={(value) => setNewTechnician({ ...newTechnician, vehicle_id: value === 'none' ? '' : value })}
+                          value={newEmployee.vehicle_id || 'none'} 
+                          onValueChange={(value) => setNewEmployee({ ...newEmployee, vehicle_id: value === 'none' ? '' : value })}
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Odaberite vozilo" />
@@ -1238,13 +1238,13 @@ const Admin: React.FC = () => {
                       </div>
                     </div>
                     <Button 
-                      onClick={addTechnician}
-                      disabled={isAddingTechnician}
+                      onClick={addEmployee}
+                      disabled={isAddingEmployee}
                       className="mt-4"
                     >
-                      {isAddingTechnician && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {isAddingEmployee && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       <Plus className="mr-2 h-4 w-4" />
-                      Dodaj tehničara
+                      Dodaj zaposlenika
                     </Button>
                   </div>
                 </>

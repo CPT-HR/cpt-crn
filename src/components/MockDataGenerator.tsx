@@ -9,18 +9,19 @@ interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
 }
 
-type TechnicianInsert = Database["public"]["Tables"]["technicians"]["Insert"];
+type EmployeeProfileInsert = Database["public"]["Tables"]["employee_profiles"]["Insert"];
 type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
 
 const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }) => {
   const { toast } = useToast();
 
-  const generateMockTechnicians = async () => {
+  const generateMockEmployees = async () => {
     try {
-      console.log('Attempting to create mock technicians...');
+      console.log('Attempting to create mock employees...');
 
-      const mockTechnicians: TechnicianInsert[] = [
+      const mockEmployees: EmployeeProfileInsert[] = [
         {
+          id: crypto.randomUUID(),
           first_name: "Marko",
           last_name: "Kovačić", 
           email: "marko.kovacic@tvrtka.hr",
@@ -29,6 +30,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           active: true
         },
         {
+          id: crypto.randomUUID(),
           first_name: "Ana",
           last_name: "Novak",
           email: "ana.novak@tvrtka.hr", 
@@ -37,6 +39,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           active: true
         },
         {
+          id: crypto.randomUUID(),
           first_name: "Petar",
           last_name: "Babić",
           email: "petar.babic@tvrtka.hr",
@@ -46,11 +49,11 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
         }
       ];
 
-      console.log('Inserting technicians:', mockTechnicians);
+      console.log('Inserting employees:', mockEmployees);
 
       const { data, error } = await supabase
-        .from('technicians')
-        .insert(mockTechnicians)
+        .from('employee_profiles')
+        .insert(mockEmployees)
         .select();
 
       if (error) {
@@ -58,18 +61,18 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
         throw error;
       }
 
-      console.log('Successfully created technicians:', data);
+      console.log('Successfully created employees:', data);
 
       toast({
-        title: "Mock tehničari stvoreni",
-        description: "Uspješno dodana 3 mock tehničara u bazu",
+        title: "Mock zaposlenici stvoreni",
+        description: "Uspješno dodana 3 mock zaposlenika u bazu",
       });
 
       if (onDataGenerated) {
         onDataGenerated();
       }
     } catch (error: any) {
-      console.error('Error creating mock technicians:', error);
+      console.error('Error creating mock employees:', error);
       toast({
         variant: "destructive",
         title: "Greška",
@@ -137,8 +140,8 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
 
   return (
     <div className="flex gap-4 mb-4">
-      <Button onClick={generateMockTechnicians} variant="outline">
-        Generiraj mock tehničare
+      <Button onClick={generateMockEmployees} variant="outline">
+        Generiraj mock zaposlenike
       </Button>
       <Button onClick={generateMockVehicles} variant="outline">
         Generiraj mock vozila

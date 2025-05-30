@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,10 +9,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useToast } from "@/components/ui/use-toast";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Plus, Trash2 } from "lucide-react";
+import { CalendarIcon, Plus, Trash2, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 import SignaturePad from './SignaturePad';
 
 interface Material {
@@ -52,13 +54,12 @@ interface WorkOrderData {
 
 const WorkOrderForm: React.FC = () => {
   const { toast } = useToast();
+  const { user } = useAuth();
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAddingMaterial, setIsAddingMaterial] = useState(false);
   const [newMaterial, setNewMaterial] = useState({ name: '', quantity: 1, unit: '', price: 0 });
   const [date, setDate] = useState<Date | undefined>(new Date());
-  const [isOrderForCustomer, setIsOrderForCustomer] = useState(false);
-  const { user } = useAuth();
   
   const [formData, setFormData] = useState<WorkOrderData>({
     orderNumber: '',
@@ -98,11 +99,6 @@ const WorkOrderForm: React.FC = () => {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: checked }));
   };
 
   const handleMaterialInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -177,7 +173,7 @@ const WorkOrderForm: React.FC = () => {
         description: formData.description || null,
         found_condition: formData.foundCondition || null,
         performed_work: formData.performedWork || null,
-        materials: formData.materials.length > 0 ? formData.materials : null,
+        materials: formData.materials.length > 0 ? JSON.stringify(formData.materials) : null,
         hours: formData.hours || null,
         distance: formData.distance || null,
         order_for_customer: formData.orderForCustomer,
@@ -190,7 +186,7 @@ const WorkOrderForm: React.FC = () => {
 
       const { data, error } = await supabase
         .from('work_orders')
-        .insert([workOrderData])
+        .insert(workOrderData)
         .select();
 
       if (error) {
@@ -385,11 +381,9 @@ const WorkOrderForm: React.FC = () => {
             <div className="flex items-center space-x-2">
               <Checkbox
                 id="orderForCustomer"
-                name="orderForCustomer"
                 checked={formData.orderForCustomer}
                 onCheckedChange={(checked) => {
-                  setIsOrderForCustomer(checked || false);
-                  setFormData(prev => ({ ...prev, orderForCustomer: checked || false }));
+                  setFormData(prev => ({ ...prev, orderForCustomer: Boolean(checked) }));
                 }}
               />
               <Label htmlFor="orderForCustomer">Radni nalog se odnosi na kupca koji nije klijent</Label>
@@ -619,16 +613,16 @@ const WorkOrderForm: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <Label>Potpis tehničara</Label>
-              <SignaturePad onSignature={(signature) => setFormData(prev => ({ ...prev, technicianSignature: signature || '' }))} />
+              <SignaturePad onSave={(signature) => setFormData(prev => ({ ...prev, technicianSignature: signature || '' }))} />
             </div>
             <div>
               <Label>Potpis kupca</Label>
-              <SignaturePad onSignature={(signature) => setFormData(prev => ({ ...prev, customerSignature: signature || '' }))} />
+              <SignaturePad onSave={(signature) => setFormData(prev => ({ ...prev, customerSignature: signature || '' }))} />
             </div>
           </div>
 
           {/* Gumb za slanje */}
-          <Button disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting}>
             {isSubmitting && (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             )}

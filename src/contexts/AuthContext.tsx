@@ -66,7 +66,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return null;
           }
           
-          data = newUser;
+          console.log('User record created successfully:', newUser);
+
+          return {
+            id: newUser.id,
+            email: newUser.email,
+            name: newUser.name,
+            initials: newUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+            role: newUser.role,
+            signature: newUser.signature,
+            companyAddress: newUser.company_address_street && newUser.company_address_city 
+              ? `${newUser.company_address_street}, ${newUser.company_address_city}, ${newUser.company_address_country}`
+              : undefined,
+            distanceMatrixApiKey: newUser.distance_matrix_api_key
+          };
         } else {
           return null;
         }

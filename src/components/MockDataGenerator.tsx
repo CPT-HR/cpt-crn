@@ -67,21 +67,32 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
       // Provjeri rezultate za svaki zaposlenik
       const successCount = data.results.filter((r: any) => r.success).length;
       const failCount = data.results.filter((r: any) => !r.success).length;
+      const duplicateCount = data.results.filter((r: any) => !r.success && r.error === 'Korisnik već postoji').length;
       
-      console.log(`Mock employees creation completed: ${successCount} success, ${failCount} failed`);
+      console.log(`Mock employees creation completed: ${successCount} success, ${failCount} failed (${duplicateCount} duplicates)`);
       
       // Prikaži detaljne rezultate u konzoli
       data.results.forEach((result: any) => {
         if (result.success) {
           console.log(`✓ Successfully created: ${result.email}`);
+        } else if (result.error === 'Korisnik već postoji') {
+          console.log(`~ Already exists: ${result.email}`);
         } else {
           console.log(`✗ Failed to create: ${result.email} - ${result.error}`);
         }
       });
 
+      let description = `Uspješno dodano ${successCount} mock zaposlenika u bazu`;
+      if (duplicateCount > 0) {
+        description += ` (${duplicateCount} već postojalo)`;
+      }
+      if (failCount - duplicateCount > 0) {
+        description += ` (${failCount - duplicateCount} neuspješno)`;
+      }
+
       toast({
         title: "Mock zaposlenici stvoreni",
-        description: `Uspješno dodano ${successCount} mock zaposlenika u bazu${failCount > 0 ? ` (${failCount} neuspješno)` : ''}`,
+        description: description,
       });
 
       if (onDataGenerated) {

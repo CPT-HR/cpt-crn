@@ -35,7 +35,68 @@ serve(async (req) => {
       try {
         console.log(`Processing employee: ${employee.email}`)
 
-        // STEP 1: Create auth user with admin privileges
+        // STEP 1: Check if auth user already exists
+        const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+        
+        if (listError) {
+          console.error(`Error listing users for ${employee.email}:`, listError)
+          results.push({ email: employee.email, success: false, error: 'Failed to check existing users' })
+          continue
+        }
+
+        const existingAuthUser = existingUsers.users.find(user => user.email === employee.email)
+        
+        if (existingAuthUser) {
+          console.log(`Auth user already exists for ${employee.email}`)
+          
+          // Check if employee profile also exists
+          const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
+            .from('employee_profiles')
+            .select('id')
+            .eq('id', existingAuthUser.id)
+            .single()
+
+          if (profileCheckError && profileCheckError.code !== 'PGRST116') { // PGRST116 = no rows returned
+            console.error(`Error checking existing profile for ${employee.email}:`, profileCheckError)
+            results.push({ email: employee.email, success: false, error: 'Failed to check existing profile' })
+            continue
+          }
+
+          if (existingProfile) {
+            console.log(`Employee profile already exists for ${employee.email}`)
+            results.push({ email: employee.email, success: false, error: 'Korisnik već postoji' })
+          } else {
+            console.log(`Creating missing employee profile for existing user ${employee.email}`)
+            
+            // Create employee profile for existing auth user
+            const employeeData = {
+              id: existingAuthUser.id,
+              first_name: employee.first_name,
+              last_name: employee.last_name,
+              email: employee.email,
+              phone: employee.phone || null,
+              location_id: employee.location_id || null,
+              user_role: employee.user_role,
+              vehicle_id: employee.vehicle_id || null,
+              active: true
+            }
+
+            const { error: profileError } = await supabaseAdmin
+              .from('employee_profiles')
+              .insert([employeeData])
+
+            if (profileError) {
+              console.error(`Profile creation error for existing user ${employee.email}:`, profileError)
+              results.push({ email: employee.email, success: false, error: profileError.message })
+            } else {
+              console.log(`Employee profile created for existing user ${employee.email}`)
+              results.push({ email: employee.email, success: true, userId: existingAuthUser.id })
+            }
+          }
+          continue
+        }
+
+        // STEP 2: Create new auth user (only if doesn't exist)
         const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!"
         
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -63,7 +124,7 @@ serve(async (req) => {
 
         console.log(`Auth user created for ${employee.email} with ID: ${authData.user.id}`)
 
-        // STEP 2: Create employee profile with auth user ID
+        // STEP 3: Create employee profile with auth user ID
         const employeeData = {
           id: authData.user.id, // Use auth user ID
           first_name: employee.first_name,

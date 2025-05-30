@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
@@ -88,6 +87,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Get user's profile data from Supabase
   const getUserProfile = async (userId: string) => {
     try {
+      console.log('Loading user profile for:', userId);
+      
       const { data: userData } = await supabase.auth.getUser();
       
       if (userData.user && isMounted.current) {
@@ -103,6 +104,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (profileError) {
           console.error('Error loading employee profile:', profileError);
         }
+
+        console.log('Employee profile loaded:', employeeProfile);
         
         const firstName = employeeProfile?.first_name || userData.user.user_metadata?.first_name || email?.split('@')[0] || 'User';
         const lastName = employeeProfile?.last_name || userData.user.user_metadata?.last_name || '';
@@ -122,13 +125,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Load distance matrix API key from localStorage
         const distanceMatrixApiKey = loadUserDistanceMatrixApiKey(userId);
         
+        // Ensure role is properly typed
+        let userRole: UserRole = 'technician';
+        if (employeeProfile?.user_role === 'admin' || employeeProfile?.user_role === 'technician' || employeeProfile?.user_role === 'lead') {
+          userRole = employeeProfile.user_role as UserRole;
+        }
+        
         const userProfile: UserData = {
           id: userId,
           email: email,
           name: name,
           firstName: firstName,
           lastName: lastName,
-          role: (employeeProfile?.user_role as UserRole) || 'technician',
+          role: userRole,
           approved: employeeProfile?.active || true,
           initials: initials,
           signature: signature,
@@ -137,6 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           phone: employeeProfile?.phone
         };
         
+        console.log('Setting user profile:', userProfile);
         setUser(userProfile);
       }
     } catch (err) {
@@ -146,17 +156,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Handle auth state changes
   useEffect(() => {
+    console.log('Setting up auth state listener...');
+    
     // Set up auth state listener first
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
         if (!isMounted.current) return;
         
-        console.log('Auth state changed:', event);
+        console.log('Auth state changed:', event, currentSession ? 'session exists' : 'no session');
         
-        // Only update state if component is still mounted
+        setSession(currentSession);
+        
         if (currentSession?.user) {
-          setSession(currentSession);
-          
           // Use setTimeout to avoid Supabase auth deadlock issues
           setTimeout(() => {
             if (isMounted.current) {
@@ -164,7 +175,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
           }, 0);
         } else {
-          setSession(null);
           setUser(null);
         }
         
@@ -180,7 +190,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         if (!isMounted.current) return;
         
-        console.log('Got session:', currentSession ? 'yes' : 'no');
+        console.log('Got initial session:', currentSession ? 'yes' : 'no');
         
         setSession(currentSession);
         

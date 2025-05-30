@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -42,9 +41,15 @@ const Admin: React.FC = () => {
     return <Navigate to="/" replace />;
   }
 
-  // Fetch users from database
+  // Fetch users from database - simplified without RLS restrictions
   const fetchUsers = async () => {
     try {
+      // Since we simplified RLS, we can directly query all users
+      // but we'll add application-level check for admin role
+      if (user.role !== 'admin') {
+        throw new Error('Unauthorized access');
+      }
+
       const { data, error } = await supabase
         .from('users')
         .select('*')
@@ -75,6 +80,11 @@ const Admin: React.FC = () => {
 
   const handleUpdateUser = async (updatedUser: User) => {
     try {
+      // Application-level admin check
+      if (user.role !== 'admin') {
+        throw new Error('Unauthorized access');
+      }
+
       const { error } = await supabase
         .from('users')
         .update({
@@ -111,6 +121,11 @@ const Admin: React.FC = () => {
   const handleDeleteUser = async (userId: string) => {
     if (confirm('Jeste li sigurni da želite obrisati ovog korisnika?')) {
       try {
+        // Application-level admin check
+        if (user.role !== 'admin') {
+          throw new Error('Unauthorized access');
+        }
+
         const { error } = await supabase
           .from('users')
           .delete()

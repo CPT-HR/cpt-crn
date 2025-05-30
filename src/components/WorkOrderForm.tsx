@@ -527,7 +527,6 @@ const WorkOrderForm: React.FC = () => {
         hours: parseFloat(finalWorkOrder.calculatedHours.replace(/[^\d.]/g, '')) || 0,
         distance: roundedDistance, // Use rounded distance
         technician_signature: finalWorkOrder.technicianSignature,
-        technician_name: finalWorkOrder.technicianName,
         customer_signature: finalWorkOrder.customerSignature,
         signature_timestamp: isoSignatureTimestamp, // Use properly converted ISO format
         signature_coordinates: signatureCoordinates,
@@ -599,7 +598,6 @@ const WorkOrderForm: React.FC = () => {
         ...workOrder,
         id: generatedId,
         technicianSignature: user.signature || '',
-        technicianName: user.name,
         date: workOrder.date, // Keep as Date object for now, will be converted in saveToSupabase
         // Dodaj finalne podatke korisnika u workOrder objekt za PDF generaciju
         finalCustomerData,

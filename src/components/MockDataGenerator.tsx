@@ -1,16 +1,15 @@
 
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
 interface MockDataGeneratorProps {
   onDataGenerated?: () => void;
 }
 
-// Koristimo extend tip za dodavanje email polja koje postoji u bazi ali nije u tipovima
-type EmployeeProfileInsertWithEmail = {
-  id: string;
+// Koristimo tip bez ID-ja jer će ga baza automatski generirati
+type EmployeeProfileInsert = {
   first_name: string;
   last_name: string;
   email: string;
@@ -33,9 +32,9 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
     try {
       console.log('Attempting to create mock employees...');
 
-      const mockEmployees: EmployeeProfileInsertWithEmail[] = [
+      // Uklanjamo ID jer će ga baza automatski generirati
+      const mockEmployees: EmployeeProfileInsert[] = [
         {
-          id: crypto.randomUUID(),
           first_name: "Marko",
           last_name: "Kovačić", 
           email: "marko.kovacic@tvrtka.hr",
@@ -44,7 +43,6 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           active: true
         },
         {
-          id: crypto.randomUUID(),
           first_name: "Ana",
           last_name: "Novak",
           email: "ana.novak@tvrtka.hr", 
@@ -53,7 +51,6 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           active: true
         },
         {
-          id: crypto.randomUUID(),
           first_name: "Petar",
           last_name: "Babić",
           email: "petar.babic@tvrtka.hr",
@@ -65,10 +62,9 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
 
       console.log('Inserting employees:', mockEmployees);
 
-      // Koristimo any tip jer baza ima email kolonu ali tipovi još ne
       const { data, error } = await supabase
         .from('employee_profiles')
-        .insert(mockEmployees as any)
+        .insert(mockEmployees)
         .select();
 
       if (error) {

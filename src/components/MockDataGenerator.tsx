@@ -13,13 +13,24 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
 
   const generateMockTechnicians = async () => {
     try {
+      console.log('Attempting to create mock technicians...');
+      
+      // First check current user and auth status
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        throw new Error('Korisnik nije prijavljen');
+      }
+      
+      console.log('Current user:', user.id);
+
       const mockTechnicians = [
         {
           first_name: "Marko",
           last_name: "Kovačić", 
           email: "marko.kovacic@tvrtka.hr",
           phone: "+385 91 123 4567",
-          user_role: "technician" as const,
+          user_role: "technician",
           active: true
         },
         {
@@ -27,7 +38,7 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           last_name: "Novak",
           email: "ana.novak@tvrtka.hr", 
           phone: "+385 92 234 5678",
-          user_role: "technician" as const,
+          user_role: "technician",
           active: true
         },
         {
@@ -35,16 +46,24 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
           last_name: "Babić",
           email: "petar.babic@tvrtka.hr",
           phone: "+385 93 345 6789", 
-          user_role: "admin" as const,
+          user_role: "admin",
           active: true
         }
       ];
 
-      const { error } = await supabase
-        .from('technicians')
-        .insert(mockTechnicians);
+      console.log('Inserting technicians:', mockTechnicians);
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('technicians')
+        .insert(mockTechnicians)
+        .select();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Successfully created technicians:', data);
 
       toast({
         title: "Mock tehničari stvoreni",
@@ -54,18 +73,29 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
       if (onDataGenerated) {
         onDataGenerated();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating mock technicians:', error);
       toast({
         variant: "destructive",
         title: "Greška",
-        description: "Došlo je do greške prilikom stvaranja mock tehničara",
+        description: `Došlo je do greške: ${error.message || 'Nepoznata greška'}`,
       });
     }
   };
 
   const generateMockVehicles = async () => {
     try {
+      console.log('Attempting to create mock vehicles...');
+      
+      // First check current user and auth status
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError || !user) {
+        throw new Error('Korisnik nije prijavljen');
+      }
+      
+      console.log('Current user for vehicles:', user.id);
+
       const mockVehicles = [
         {
           name: "Servisno vozilo 1",
@@ -87,11 +117,19 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
         }
       ];
 
-      const { error } = await supabase
-        .from('vehicles')
-        .insert(mockVehicles);
+      console.log('Inserting vehicles:', mockVehicles);
 
-      if (error) throw error;
+      const { data, error } = await supabase
+        .from('vehicles')
+        .insert(mockVehicles)
+        .select();
+
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+
+      console.log('Successfully created vehicles:', data);
 
       toast({
         title: "Mock vozila stvorena",
@@ -101,12 +139,12 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
       if (onDataGenerated) {
         onDataGenerated();
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating mock vehicles:', error);
       toast({
         variant: "destructive", 
         title: "Greška",
-        description: "Došlo je do greške prilikom stvaranja mock vozila",
+        description: `Došlo je do greške: ${error.message || 'Nepoznata greška'}`,
       });
     }
   };

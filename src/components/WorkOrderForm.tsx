@@ -8,6 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignaturePad, { SignatureMetadata } from './SignaturePad';
+import { DatePicker } from './DatePicker';
 import { useAuth } from '@/contexts/AuthContext';
 import { generatePDF } from '@/utils/pdfGenerator';
 import { useToast } from "@/components/ui/use-toast";
@@ -52,7 +53,7 @@ interface WorkOrder {
   performedWork: WorkItem[];
   technicianComment: WorkItem[];
   materials: Material[];
-  date: string;
+  date: Date;
   arrivalTime: string;
   completionTime: string;
   calculatedHours: string;
@@ -106,7 +107,7 @@ const WorkOrderForm: React.FC = () => {
     performedWork: [{ id: '1', text: '' }],
     technicianComment: [{ id: '1', text: '' }],
     materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-    date: new Date().toLocaleDateString('hr-HR'),
+    date: new Date(), // Postavi na današnji datum
     arrivalTime: '',
     completionTime: '',
     calculatedHours: '0h00min',
@@ -365,6 +366,10 @@ const WorkOrderForm: React.FC = () => {
     setWorkOrder({ ...workOrder, fieldTrip: checked, distance: checked ? workOrder.distance : '' });
   };
 
+  const handleDateChange = (date: Date | undefined) => {
+    setWorkOrder({ ...workOrder, date: date || new Date() });
+  };
+
   const handleWorkItemChange = (section: keyof Pick<WorkOrder, 'description' | 'foundCondition' | 'performedWork' | 'technicianComment'>, id: string, value: string) => {
     setWorkOrder({
       ...workOrder,
@@ -532,6 +537,7 @@ const WorkOrderForm: React.FC = () => {
         id: generatedId,
         technicianSignature: user.signature || '',
         technicianName: user.name,
+        date: workOrder.date.toLocaleDateString('hr-HR'),
         // Dodaj finalne podatke korisnika u workOrder objekt za PDF generaciju
         finalCustomerData,
         // Dodaj kombiniranu adresu za kompatibilnost s postojećim kodom
@@ -577,7 +583,7 @@ const WorkOrderForm: React.FC = () => {
         performedWork: [{ id: '1', text: '' }],
         technicianComment: [{ id: '1', text: '' }],
         materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-        date: new Date().toLocaleDateString('hr-HR'),
+        date: new Date(),
         arrivalTime: '',
         completionTime: '',
         calculatedHours: '0h00min',
@@ -638,7 +644,7 @@ const WorkOrderForm: React.FC = () => {
         performedWork: [{ id: '1', text: '' }],
         technicianComment: [{ id: '1', text: '' }],
         materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-        date: new Date().toLocaleDateString('hr-HR'),
+        date: new Date(),
         arrivalTime: '',
         completionTime: '',
         calculatedHours: '0h00min',
@@ -1114,14 +1120,12 @@ const WorkOrderForm: React.FC = () => {
           <CardContent className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="date">Datum</Label>
-                <Input 
-                  id="date" 
-                  name="date" 
-                  type="date"
-                  value={workOrder.date.split('.').reverse().join('-')}
-                  onChange={(e) => setWorkOrder({...workOrder, date: new Date(e.target.value).toLocaleDateString('hr-HR')})}
-                  required 
+                <Label>Datum</Label>
+                <DatePicker
+                  date={workOrder.date}
+                  onDateChange={handleDateChange}
+                  placeholder="Odaberite datum"
+                  className="w-full"
                 />
               </div>
               <div className="space-y-2">

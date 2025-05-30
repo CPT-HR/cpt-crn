@@ -12,7 +12,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Loader2, Plus, Trash2, Edit, Car, Users } from "lucide-react";
+import { Loader2, Plus, Trash2, Edit, Car, Users, MapPin } from "lucide-react";
 import MockDataGenerator from '@/components/MockDataGenerator';
 
 // Mock pending users
@@ -330,10 +330,6 @@ const Admin: React.FC = () => {
     try {
       console.log('Adding new location:', newLocation);
       
-      // Dodaj debug informacije za RLS
-      const { data: currentUser } = await supabase.auth.getUser();
-      console.log('Current user for location insert:', currentUser.user?.user_metadata);
-      
       const { data, error } = await supabase
         .from('company_locations')
         .insert([newLocation])
@@ -342,8 +338,6 @@ const Admin: React.FC = () => {
       
       if (error) {
         console.error('Error adding location:', error);
-        console.error('Error details:', error.details);
-        console.error('Error hint:', error.hint);
         throw error;
       }
       
@@ -631,10 +625,6 @@ const Admin: React.FC = () => {
     try {
       console.log('Saving global settings:', globalSettings);
       
-      // Dodaj debug informacije za RLS
-      const { data: currentUser } = await supabase.auth.getUser();
-      console.log('Current user for settings save:', currentUser.user?.user_metadata);
-      
       if (globalSettings.id) {
         // Update postojeći zapis
         const { error } = await supabase
@@ -646,8 +636,6 @@ const Admin: React.FC = () => {
         
         if (error) {
           console.error('Error updating global settings:', error);
-          console.error('Error details:', error.details);
-          console.error('Error hint:', error.hint);
           throw error;
         }
       } else {
@@ -662,8 +650,6 @@ const Admin: React.FC = () => {
         
         if (error) {
           console.error('Error inserting global settings:', error);
-          console.error('Error details:', error.details);
-          console.error('Error hint:', error.hint);
           throw error;
         }
         
@@ -823,50 +809,101 @@ const Admin: React.FC = () => {
         <TabsContent value="locations">
           <Card>
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                <span>Zahtjevi za registraciju</span>
-                {pendingUsers.length > 0 && (
-                  <Badge variant="destructive">{pendingUsers.length}</Badge>
-                )}
+              <CardTitle className="flex items-center gap-2">
+                <MapPin className="h-5 w-5" />
+                Upravljanje lokacijama tvrtke
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {pendingUsers.length === 0 ? (
-                <p className="text-muted-foreground text-center py-4">
-                  Nema novih zahtjeva za registraciju
-                </p>
+            <CardContent className="space-y-6">
+              {isLoadingLocations ? (
+                <div className="flex justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
               ) : (
-                <div className="space-y-4">
-                  {pendingUsers.map(pendingUser => (
-                    <div 
-                      key={pendingUser.id} 
-                      className="flex items-center justify-between border-b pb-4 last:border-0"
-                    >
-                      <div>
-                        <h3 className="font-medium">{pendingUser.name}</h3>
-                        <p className="text-sm text-muted-foreground">{pendingUser.email}</p>
-                        <p className="text-xs text-muted-foreground">
-                          Zahtjev poslan: {new Date(pendingUser.date).toLocaleDateString('hr-HR')}
-                        </p>
+                <>
+                  <div className="space-y-4">
+                    {locations.map((location) => (
+                      <div key={location.id} className="flex items-center justify-between border-b pb-4 last:border-0">
+                        <div>
+                          <h3 className="font-medium">{location.name}</h3>
+                          <p className="text-sm text-muted-foreground">
+                            {location.street_address}, {location.city}, {location.country}
+                          </p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => deleteLocation(location.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={() => rejectUser(pendingUser.id)}
-                        >
-                          Odbij
-                        </Button>
-                        <Button 
-                          size="sm"
-                          onClick={() => approveUser(pendingUser.id)}
-                        >
-                          Odobri
-                        </Button>
+                    ))}
+                    
+                    {locations.length === 0 && (
+                      <p className="text-muted-foreground text-center py-4">
+                        Nema dodanih lokacija tvrtke
+                      </p>
+                    )}
+                  </div>
+                  
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-4">Dodaj novu lokaciju</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="locationName">Naziv lokacije</Label>
+                        <Input
+                          id="locationName"
+                          value={newLocation.name}
+                          onChange={(e) => setNewLocation({ ...newLocation, name: e.target.value })}
+                          placeholder="Sjedište, Skladište..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="streetAddress">Adresa</Label>
+                        <Input
+                          id="streetAddress"
+                          value={newLocation.street_address}
+                          onChange={(e) => setNewLocation({ ...newLocation, street_address: e.target.value })}
+                          placeholder="Ilica 1"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="city">Grad</Label>
+                        <Input
+                          id="city"
+                          value={newLocation.city}
+                          onChange={(e) => setNewLocation({ ...newLocation, city: e.target.value })}
+                          placeholder="Zagreb"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="country">Država</Label>
+                        <Select value={newLocation.country} onValueChange={(value) => setNewLocation({ ...newLocation, country: value })}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {countries.map((country) => (
+                              <SelectItem key={country} value={country}>
+                                {country}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       </div>
                     </div>
-                  ))}
-                </div>
+                    <Button 
+                      onClick={addLocation}
+                      disabled={isAddingLocation}
+                      className="mt-4"
+                    >
+                      {isAddingLocation && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      <Plus className="mr-2 h-4 w-4" />
+                      Dodaj lokaciju
+                    </Button>
+                  </div>
+                </>
               )}
             </CardContent>
           </Card>

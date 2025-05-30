@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
@@ -24,7 +23,6 @@ type AuthContextType = {
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
-  register: (email: string, password: string, name: string) => Promise<void>;
   saveSignature: (signature: string) => Promise<void>;
   saveCompanyAddress: (address: string) => Promise<void>;
   saveDistanceMatrixApiKey: (apiKey: string) => Promise<void>;
@@ -221,41 +219,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const register = async (email: string, password: string, name: string) => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      // Register the new user
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: name,
-          }
-        }
-      });
-      
-      if (error) throw error;
-      
-      toast({
-        title: "Registracija uspješna",
-        description: "Vaš zahtjev je zaprimljen. Administrator će pregledati i odobriti vaš račun.",
-      });
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Došlo je do pogreške prilikom registracije';
-      setError(errorMessage);
-      toast({
-        variant: "destructive",
-        title: "Greška pri registraciji",
-        description: errorMessage,
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const logout = async () => {
     try {
       await supabase.auth.signOut();
@@ -385,7 +348,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       error, 
       login, 
       logout, 
-      register, 
       saveSignature, 
       saveCompanyAddress, 
       saveDistanceMatrixApiKey 

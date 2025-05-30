@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAuth } from '@/contexts/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Loader2 } from "lucide-react";
 
 const Login: React.FC = () => {
@@ -91,12 +91,6 @@ const Login: React.FC = () => {
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {isLoading ? 'Prijava u tijeku...' : 'Prijavi se'}
             </Button>
-            <div className="mt-4 text-center text-sm">
-              Nemate račun?{' '}
-              <Link to="/register" className="text-brand underline">
-                Registracija
-              </Link>
-            </div>
           </CardFooter>
         </form>
       </Card>

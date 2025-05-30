@@ -10,7 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
-import Register from "./pages/Register";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,7 +37,6 @@ const App = () => (
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
             
             <Route path="/" element={
               <ProtectedRoute>

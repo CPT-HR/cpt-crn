@@ -464,10 +464,37 @@ const WorkOrderForm: React.FC = () => {
         ? finalWorkOrder.date.toISOString().split('T')[0] 
         : new Date(finalWorkOrder.date).toISOString().split('T')[0];
       
-      // FIX: Convert signature timestamp to ISO format for PostgreSQL
-      const isoSignatureTimestamp = finalWorkOrder.signatureMetadata?.timestamp 
-        ? new Date(finalWorkOrder.signatureMetadata.timestamp).toISOString()
-        : new Date().toISOString();
+      // FIX: Ensure signature timestamp is in proper ISO format
+      let isoSignatureTimestamp;
+      if (finalWorkOrder.signatureMetadata?.timestamp) {
+        // If timestamp is in Croatian format like "30.05.2025. 04:21:25", convert it
+        const timestamp = finalWorkOrder.signatureMetadata.timestamp;
+        console.log('Original signature timestamp:', timestamp);
+        
+        // Check if it's already in ISO format
+        if (timestamp.includes('T') && timestamp.includes('Z')) {
+          isoSignatureTimestamp = timestamp;
+        } else {
+          // Convert from Croatian format to ISO
+          try {
+            // Parse Croatian format: "30.05.2025. 04:21:25"
+            const parts = timestamp.match(/(\d{2})\.(\d{2})\.(\d{4})\.\s+(\d{2}):(\d{2}):(\d{2})/);
+            if (parts) {
+              const [, day, month, year, hour, minute, second] = parts;
+              const dateObj = new Date(parseInt(year), parseInt(month) - 1, parseInt(day), parseInt(hour), parseInt(minute), parseInt(second));
+              isoSignatureTimestamp = dateObj.toISOString();
+            } else {
+              // Fallback: try to parse as regular date
+              isoSignatureTimestamp = new Date(timestamp).toISOString();
+            }
+          } catch (error) {
+            console.error('Error parsing timestamp:', error);
+            isoSignatureTimestamp = new Date().toISOString();
+          }
+        }
+      } else {
+        isoSignatureTimestamp = new Date().toISOString();
+      }
       
       console.log('Final work order date (ISO):', isoDate);
       console.log('Signature timestamp (ISO):', isoSignatureTimestamp);
@@ -502,7 +529,7 @@ const WorkOrderForm: React.FC = () => {
         technician_signature: finalWorkOrder.technicianSignature,
         technician_name: finalWorkOrder.technicianName,
         customer_signature: finalWorkOrder.customerSignature,
-        signature_timestamp: isoSignatureTimestamp, // Use ISO format for timestamp
+        signature_timestamp: isoSignatureTimestamp, // Use properly converted ISO format
         signature_coordinates: signatureCoordinates,
         signature_address: finalWorkOrder.signatureMetadata?.address,
         date: isoDate, // Use ISO format for date

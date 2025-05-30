@@ -36,53 +36,83 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Fetching user data for:', authUser.email);
       
-      // Direct query without complex RLS - should work with our simplified policies
       const { data, error } = await supabase
         .from('users')
         .select('*')
         .eq('auth_user_id', authUser.id)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching user data:', error);
+        return null;
+      }
+
+      if (!data) {
+        console.log('User not found in users table, creating...');
         
-        // If user doesn't exist in our users table, create it
-        if (error.code === 'PGRST116') {
-          console.log('User not found in users table, creating...');
-          
-          const { data: newUser, error: insertError } = await supabase
-            .from('users')
-            .insert({
-              auth_user_id: authUser.id,
-              name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Unknown User',
-              email: authUser.email!,
-              role: 'technician'
-            })
-            .select()
-            .single();
+        // Check if this is the first user (should be admin)
+        const { count } = await supabase
+          .from('users')
+          .select('*', { count: 'exact', head: true });
 
-          if (insertError) {
-            console.error('Error creating user record:', insertError);
-            return null;
+        const role = count === 0 ? 'admin' : 'technician';
+        
+        const { data: newUser, error: insertError } = await supabase
+          .from('users')
+          .insert({
+            auth_user_id: authUser.id,
+            name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Unknown User',
+            email: authUser.email!,
+            role: role
+          })
+          .select()
+          .single();
+
+        if (insertError) {
+          console.error('Error creating user record:', insertError);
+          // If duplicate, try to fetch the existing user
+          if (insertError.code === '23505') {
+            const { data: existingUser, error: fetchError } = await supabase
+              .from('users')
+              .select('*')
+              .eq('auth_user_id', authUser.id)
+              .single();
+            
+            if (fetchError) {
+              console.error('Error fetching existing user:', fetchError);
+              return null;
+            }
+            
+            return {
+              id: existingUser.id,
+              email: existingUser.email,
+              name: existingUser.name,
+              initials: existingUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+              role: existingUser.role,
+              signature: existingUser.signature,
+              companyAddress: existingUser.company_address_street && existingUser.company_address_city 
+                ? `${existingUser.company_address_street}, ${existingUser.company_address_city}, ${existingUser.company_address_country}`
+                : undefined,
+              distanceMatrixApiKey: existingUser.distance_matrix_api_key
+            };
           }
-          
-          console.log('User record created successfully:', newUser);
-
-          return {
-            id: newUser.id,
-            email: newUser.email,
-            name: newUser.name,
-            initials: newUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-            role: newUser.role,
-            signature: newUser.signature,
-            companyAddress: newUser.company_address_street && newUser.company_address_city 
-              ? `${newUser.company_address_street}, ${newUser.company_address_city}, ${newUser.company_address_country}`
-              : undefined,
-            distanceMatrixApiKey: newUser.distance_matrix_api_key
-          };
-        } else {
           return null;
         }
+        
+        console.log('User record created successfully:', newUser);
+
+        return {
+          id: newUser.id,
+          email: newUser.email,
+          name: newUser.name,
+          initials: newUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+          role: newUser.role,
+          signature: newUser.signature,
+          companyAddress: newUser.company_address_street && newUser.company_address_city 
+            ? `${newUser.company_address_street}, ${newUser.company_address_city}, ${newUser.company_address_country}`
+            : undefined,
+          distanceMatrixApiKey: newUser.distance_matrix_api_key
+        };
       }
 
       console.log('User data fetched successfully:', data);
@@ -108,7 +138,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     console.log('Setting up auth state listener...');
     
-    // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email);
@@ -125,7 +154,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
-    // Check for existing session
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       console.log('Checking existing session:', session?.user?.email);
       if (session?.user) {
@@ -166,7 +194,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('Attempting registration for:', email);
       
-      // First, create the auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
@@ -185,7 +212,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       console.log('Auth user created:', authData.user?.email);
 
       if (authData.user) {
-        // Check if this is the first user (should be admin)
         const { count } = await supabase
           .from('users')
           .select('*', { count: 'exact', head: true });
@@ -194,7 +220,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         console.log('Creating user record with role:', role);
 
-        // Create user record in our users table
         const { data: userData, error: userError } = await supabase
           .from('users')
           .insert({

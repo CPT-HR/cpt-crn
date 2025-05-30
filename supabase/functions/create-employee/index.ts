@@ -60,6 +60,7 @@ serve(async (req) => {
         // STEP 2: Create auth user with admin privileges
         const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!"
         
+        console.log(`Attempting to create auth user for ${employee.email}`)
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: employee.email,
           password: tempPassword,
@@ -71,6 +72,9 @@ serve(async (req) => {
           }
         })
 
+        console.log(`Auth result for ${employee.email}:`, { authData, authError })
+
+        // If auth user creation failed, stop here and go to next employee
         if (authError) {
           console.error(`Auth error for ${employee.email}:`, authError)
           results.push({ email: employee.email, success: false, error: authError.message })
@@ -83,9 +87,9 @@ serve(async (req) => {
           continue
         }
 
-        console.log(`Auth user created for ${employee.email} with ID: ${authData.user.id}`)
+        console.log(`Auth user created successfully for ${employee.email} with ID: ${authData.user.id}`)
 
-        // STEP 3: Check if employee_profile already exists with this ID
+        // STEP 3: Check if employee_profile already exists with this ID (only if auth user was created successfully)
         const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
           .from('employee_profiles')
           .select('id')
@@ -97,6 +101,7 @@ serve(async (req) => {
           // Cleanup: delete auth user if profile check fails
           try {
             await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+            console.log(`Cleaned up auth user for ${employee.email} due to profile check error`)
           } catch (cleanupError) {
             console.error(`Cleanup error for ${employee.email}:`, cleanupError)
           }
@@ -109,6 +114,7 @@ serve(async (req) => {
           // Cleanup: delete auth user since profile already exists
           try {
             await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+            console.log(`Cleaned up auth user for ${employee.email} due to existing profile`)
           } catch (cleanupError) {
             console.error(`Cleanup error for ${employee.email}:`, cleanupError)
           }
@@ -134,6 +140,7 @@ serve(async (req) => {
           active: true
         }
 
+        console.log(`Creating employee profile for ${employee.email}:`, employeeData)
         const { error: profileError } = await supabaseAdmin
           .from('employee_profiles')
           .insert([employeeData])
@@ -143,6 +150,7 @@ serve(async (req) => {
           // Cleanup: delete auth user if profile creation fails
           try {
             await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+            console.log(`Cleaned up auth user for ${employee.email} due to profile creation error`)
           } catch (cleanupError) {
             console.error(`Cleanup error for ${employee.email}:`, cleanupError)
           }
@@ -158,6 +166,7 @@ serve(async (req) => {
       }
     }
 
+    console.log('Final results:', results)
     return new Response(
       JSON.stringify({ success: true, results }),
       { 

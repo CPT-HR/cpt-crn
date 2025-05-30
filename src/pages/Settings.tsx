@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from '@/contexts/AuthContext';
 import SignaturePad from '@/components/SignaturePad';
 import { Loader2 } from "lucide-react";
@@ -13,7 +14,23 @@ const Settings: React.FC = () => {
   const { toast } = useToast();
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [companyAddress, setCompanyAddress] = useState(user?.companyAddress || '');
+  
+  // Parse existing company address into separate fields
+  const parseExistingAddress = (address: string) => {
+    if (!address) return { street: '', city: '', country: 'Hrvatska' };
+    
+    const parts = address.split(', ');
+    return {
+      street: parts[0] || '',
+      city: parts[1] || '',
+      country: parts[2] || 'Hrvatska'
+    };
+  };
+  
+  const existingAddress = parseExistingAddress(user?.companyAddress || '');
+  const [companyStreet, setCompanyStreet] = useState(existingAddress.street);
+  const [companyCity, setCompanyCity] = useState(existingAddress.city);
+  const [companyCountry, setCompanyCountry] = useState(existingAddress.country);
   const [isSavingAddress, setIsSavingAddress] = useState(false);
   const [apiKey, setApiKey] = useState(user?.distanceMatrixApiKey || '');
   const [isSavingApiKey, setIsSavingApiKey] = useState(false);
@@ -33,7 +50,8 @@ const Settings: React.FC = () => {
   const handleAddressSave = async () => {
     setIsSavingAddress(true);
     try {
-      await saveCompanyAddress(companyAddress);
+      const fullAddress = `${companyStreet}, ${companyCity}, ${companyCountry}`;
+      await saveCompanyAddress(fullAddress);
     } catch (error) {
       console.error('Failed to save company address:', error);
     } finally {
@@ -75,18 +93,50 @@ const Settings: React.FC = () => {
           </p>
           
           <div className="space-y-2">
-            <Label htmlFor="companyAddress">Adresa sjedišta</Label>
+            <Label htmlFor="companyStreet">Ulica i broj</Label>
             <Input
-              id="companyAddress"
-              value={companyAddress}
-              onChange={(e) => setCompanyAddress(e.target.value)}
-              placeholder="Unesite adresu sjedišta tvrtke"
+              id="companyStreet"
+              value={companyStreet}
+              onChange={(e) => setCompanyStreet(e.target.value)}
+              placeholder="Unesite ulicu i broj"
             />
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="companyCity">Grad</Label>
+              <Input
+                id="companyCity"
+                value={companyCity}
+                onChange={(e) => setCompanyCity(e.target.value)}
+                placeholder="Unesite grad"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="companyCountry">Država</Label>
+              <Select value={companyCountry} onValueChange={setCompanyCountry}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Odaberite državu" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Hrvatska">Hrvatska</SelectItem>
+                  <SelectItem value="Slovenija">Slovenija</SelectItem>
+                  <SelectItem value="Bosna i Hercegovina">Bosna i Hercegovina</SelectItem>
+                  <SelectItem value="Srbija">Srbija</SelectItem>
+                  <SelectItem value="Crna Gora">Crna Gora</SelectItem>
+                  <SelectItem value="Makedonija">Makedonija</SelectItem>
+                  <SelectItem value="Austrija">Austrija</SelectItem>
+                  <SelectItem value="Italija">Italija</SelectItem>
+                  <SelectItem value="Mađarska">Mađarska</SelectItem>
+                  <SelectItem value="Njemačka">Njemačka</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
           <Button 
             onClick={handleAddressSave}
-            disabled={isSavingAddress || !companyAddress.trim()}
+            disabled={isSavingAddress || !companyStreet.trim() || !companyCity.trim()}
           >
             {isSavingAddress && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Spremi adresu

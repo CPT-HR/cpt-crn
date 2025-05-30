@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignaturePad, { SignatureMetadata } from './SignaturePad';
 import { useAuth } from '@/contexts/AuthContext';
 import { generatePDF } from '@/utils/pdfGenerator';
@@ -28,7 +29,9 @@ interface WorkItem {
 interface WorkOrder {
   id: string;
   clientCompanyName: string;
-  clientCompanyAddress: string;
+  clientStreet: string;
+  clientCity: string;
+  clientCountry: string;
   clientOib: string;
   clientFirstName: string;
   clientLastName: string;
@@ -36,7 +39,9 @@ interface WorkOrder {
   clientEmail: string;
   orderForCustomer: boolean;
   customerCompanyName: string;
-  customerCompanyAddress: string;
+  customerStreet: string;
+  customerCity: string;
+  customerCountry: string;
   customerOib: string;
   customerFirstName: string;
   customerLastName: string;
@@ -70,7 +75,9 @@ const WorkOrderForm: React.FC = () => {
   const [workOrder, setWorkOrder] = useState<WorkOrder>({
     id: '',
     clientCompanyName: '',
-    clientCompanyAddress: '',
+    clientStreet: '',
+    clientCity: '',
+    clientCountry: 'Hrvatska',
     clientOib: '',
     clientFirstName: '',
     clientLastName: '',
@@ -78,7 +85,9 @@ const WorkOrderForm: React.FC = () => {
     clientEmail: '',
     orderForCustomer: false,
     customerCompanyName: '',
-    customerCompanyAddress: '',
+    customerStreet: '',
+    customerCity: '',
+    customerCountry: 'Hrvatska',
     customerOib: '',
     customerFirstName: '',
     customerLastName: '',
@@ -162,11 +171,14 @@ const WorkOrderForm: React.FC = () => {
   // Get relevant address based on correct logic - prioritize customer data
   const getRelevantAddress = () => {
     // If order is for customer and customer has address, use customer address
-    if (workOrder.orderForCustomer && workOrder.customerCompanyAddress) {
-      return workOrder.customerCompanyAddress;
+    if (workOrder.orderForCustomer && workOrder.customerStreet && workOrder.customerCity) {
+      return `${workOrder.customerStreet}, ${workOrder.customerCity}, ${workOrder.customerCountry}`;
     }
     // Otherwise use client address
-    return workOrder.clientCompanyAddress;
+    if (workOrder.clientStreet && workOrder.clientCity) {
+      return `${workOrder.clientStreet}, ${workOrder.clientCity}, ${workOrder.clientCountry}`;
+    }
+    return '';
   };
 
   useEffect(() => {
@@ -202,10 +214,14 @@ const WorkOrderForm: React.FC = () => {
       console.log('- Company address:', user?.companyAddress);
       console.log('- API key:', !!user?.distanceMatrixApiKey);
     }
-  }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress, user?.distanceMatrixApiKey]);
+  }, [workOrder.fieldTrip, workOrder.clientStreet, workOrder.clientCity, workOrder.clientCountry, workOrder.customerStreet, workOrder.customerCity, workOrder.customerCountry, workOrder.orderForCustomer, user?.companyAddress, user?.distanceMatrixApiKey]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    setWorkOrder({ ...workOrder, [name]: value });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
     setWorkOrder({ ...workOrder, [name]: value });
   };
 
@@ -303,7 +319,7 @@ const WorkOrderForm: React.FC = () => {
       const { error } = await supabaseAny.from('work_orders').insert({
         order_number: finalWorkOrder.id,
         client_company_name: finalWorkOrder.clientCompanyName,
-        client_company_address: finalWorkOrder.clientCompanyAddress,
+        client_company_address: `${finalWorkOrder.clientStreet}, ${finalWorkOrder.clientCity}, ${finalWorkOrder.clientCountry}`,
         client_oib: finalWorkOrder.clientOib,
         client_first_name: finalWorkOrder.clientFirstName,
         client_last_name: finalWorkOrder.clientLastName,
@@ -311,7 +327,7 @@ const WorkOrderForm: React.FC = () => {
         client_email: finalWorkOrder.clientEmail,
         order_for_customer: finalWorkOrder.orderForCustomer,
         customer_company_name: finalWorkOrder.customerCompanyName,
-        customer_company_address: finalWorkOrder.customerCompanyAddress,
+        customer_company_address: finalWorkOrder.orderForCustomer ? `${finalWorkOrder.customerStreet}, ${finalWorkOrder.customerCity}, ${finalWorkOrder.customerCountry}` : null,
         customer_oib: finalWorkOrder.customerOib,
         customer_first_name: finalWorkOrder.customerFirstName,
         customer_last_name: finalWorkOrder.customerLastName,
@@ -377,7 +393,10 @@ const WorkOrderForm: React.FC = () => {
         ...workOrder,
         id: generatedId,
         technicianSignature: user.signature || '',
-        technicianName: user.name
+        technicianName: user.name,
+        // Construct full addresses for PDF generation
+        clientCompanyAddress: `${workOrder.clientStreet}, ${workOrder.clientCity}, ${workOrder.clientCountry}`,
+        customerCompanyAddress: workOrder.orderForCustomer ? `${workOrder.customerStreet}, ${workOrder.customerCity}, ${workOrder.customerCountry}` : ''
       };
       
       // Save to Supabase
@@ -395,7 +414,9 @@ const WorkOrderForm: React.FC = () => {
       setWorkOrder({
         id: '',
         clientCompanyName: '',
-        clientCompanyAddress: '',
+        clientStreet: '',
+        clientCity: '',
+        clientCountry: 'Hrvatska',
         clientOib: '',
         clientFirstName: '',
         clientLastName: '',
@@ -403,7 +424,9 @@ const WorkOrderForm: React.FC = () => {
         clientEmail: '',
         orderForCustomer: false,
         customerCompanyName: '',
-        customerCompanyAddress: '',
+        customerStreet: '',
+        customerCity: '',
+        customerCountry: 'Hrvatska',
         customerOib: '',
         customerFirstName: '',
         customerLastName: '',
@@ -467,14 +490,46 @@ const WorkOrderForm: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="clientCompanyAddress">Adresa tvrtke</Label>
+              <Label htmlFor="clientStreet">Ulica i broj</Label>
               <Input 
-                id="clientCompanyAddress" 
-                name="clientCompanyAddress" 
-                value={workOrder.clientCompanyAddress} 
+                id="clientStreet" 
+                name="clientStreet" 
+                value={workOrder.clientStreet} 
                 onChange={handleChange} 
                 required 
               />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="clientCity">Grad</Label>
+                <Input 
+                  id="clientCity" 
+                  name="clientCity" 
+                  value={workOrder.clientCity} 
+                  onChange={handleChange} 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="clientCountry">Država</Label>
+                <Select value={workOrder.clientCountry} onValueChange={(value) => handleSelectChange('clientCountry', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Odaberite državu" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Hrvatska">Hrvatska</SelectItem>
+                    <SelectItem value="Slovenija">Slovenija</SelectItem>
+                    <SelectItem value="Bosna i Hercegovina">Bosna i Hercegovina</SelectItem>
+                    <SelectItem value="Srbija">Srbija</SelectItem>
+                    <SelectItem value="Crna Gora">Crna Gora</SelectItem>
+                    <SelectItem value="Makedonija">Makedonija</SelectItem>
+                    <SelectItem value="Austrija">Austrija</SelectItem>
+                    <SelectItem value="Italija">Italija</SelectItem>
+                    <SelectItem value="Mađarska">Mađarska</SelectItem>
+                    <SelectItem value="Njemačka">Njemačka</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -563,14 +618,46 @@ const WorkOrderForm: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="customerCompanyAddress">Adresa tvrtke</Label>
+                <Label htmlFor="customerStreet">Ulica i broj</Label>
                 <Input 
-                  id="customerCompanyAddress" 
-                  name="customerCompanyAddress" 
-                  value={workOrder.customerCompanyAddress} 
+                  id="customerStreet" 
+                  name="customerStreet" 
+                  value={workOrder.customerStreet} 
                   onChange={handleChange} 
                   required={workOrder.orderForCustomer}
                 />
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="customerCity">Grad</Label>
+                  <Input 
+                    id="customerCity" 
+                    name="customerCity" 
+                    value={workOrder.customerCity} 
+                    onChange={handleChange} 
+                    required={workOrder.orderForCustomer}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="customerCountry">Država</Label>
+                  <Select value={workOrder.customerCountry} onValueChange={(value) => handleSelectChange('customerCountry', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Odaberite državu" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Hrvatska">Hrvatska</SelectItem>
+                      <SelectItem value="Slovenija">Slovenija</SelectItem>
+                      <SelectItem value="Bosna i Hercegovina">Bosna i Hercegovina</SelectItem>
+                      <SelectItem value="Srbija">Srbija</SelectItem>
+                      <SelectItem value="Crna Gora">Crna Gora</SelectItem>
+                      <SelectItem value="Makedonija">Makedonija</SelectItem>
+                      <SelectItem value="Austrija">Austrija</SelectItem>
+                      <SelectItem value="Italija">Italija</SelectItem>
+                      <SelectItem value="Mađarska">Mađarska</SelectItem>
+                      <SelectItem value="Njemačka">Njemačka</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">

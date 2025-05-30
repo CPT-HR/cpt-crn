@@ -42,15 +42,21 @@ const MockDataGenerator: React.FC<MockDataGeneratorProps> = ({ onDataGenerated }
 
       // WORKFLOW: Koristi Edge Function koja ima service_role pristup
       // Edge Function će za svakog zaposlenika prvo kreirati auth usera, zatim employee_profile
-      const { data, error } = await supabase.functions.invoke('create-employee', {
+      const response = await supabase.functions.invoke('create-employee', {
         body: {
           employees: mockEmployees
         }
       });
 
-      if (error) {
-        console.error('Edge Function error:', error);
-        throw new Error(`Greška u Edge Function: ${error.message}`);
+      if (response.error) {
+        console.error('Edge Function error:', response.error);
+        throw new Error(`Greška u Edge Function: ${response.error.message}`);
+      }
+
+      // Parsiraj data ako je string
+      let data = response.data;
+      if (typeof data === 'string') {
+        data = JSON.parse(data);
       }
 
       if (!data.success) {

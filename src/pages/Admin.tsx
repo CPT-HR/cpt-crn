@@ -507,15 +507,21 @@ const Admin: React.FC = () => {
       
       // WORKFLOW: Koristi Edge Function za kreiranje auth usera i employee_profile
       // Edge Function ima service_role pristup potreban za admin.createUser operacije
-      const { data, error } = await supabase.functions.invoke('create-employee', {
+      const response = await supabase.functions.invoke('create-employee', {
         body: {
           employees: [newEmployee] // Slanje kao array jer funkcija može handlati više zaposlenika
         }
       });
 
-      if (error) {
-        console.error('Edge Function error:', error);
-        throw new Error(`Greška u Edge Function: ${error.message}`);
+      if (response.error) {
+        console.error('Edge Function error:', response.error);
+        throw new Error(`Greška u Edge Function: ${response.error.message}`);
+      }
+
+      // Parsiraj data ako je string
+      let data = response.data;
+      if (typeof data === 'string') {
+        data = JSON.parse(data);
       }
 
       if (!data.success) {

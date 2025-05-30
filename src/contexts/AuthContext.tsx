@@ -1,5 +1,7 @@
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { User, Session } from '@supabase/supabase-js';
 
 export interface UserData {
   id: string;
@@ -26,34 +28,64 @@ interface AuthContextProps {
 const AuthContext = createContext<AuthContextProps | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserData | null>(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      // Ensure all properties are loaded from localStorage
-      return {
-        ...parsedUser,
-        companyAddress: parsedUser.companyAddress || '',
-        distanceMatrixApiKey: parsedUser.distanceMatrixApiKey || ''
-      };
-    }
-    return null;
-  });
-  const [isLoading, setIsLoading] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        if (session?.user) {
+          const userData: UserData = {
+            id: session.user.id,
+            email: session.user.email || '',
+            name: session.user.user_metadata?.name || session.user.email || '',
+            initials: (session.user.user_metadata?.name || session.user.email || '').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+            role: session.user.user_metadata?.role || 'admin',
+            signature: session.user.user_metadata?.signature,
+            companyAddress: session.user.user_metadata?.companyAddress,
+            distanceMatrixApiKey: session.user.user_metadata?.distanceMatrixApiKey
+          };
+          setUser(userData);
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const userData: UserData = {
+          id: session.user.id,
+          email: session.user.email || '',
+          name: session.user.user_metadata?.name || session.user.email || '',
+          initials: (session.user.user_metadata?.name || session.user.email || '').split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+          role: session.user.user_metadata?.role || 'admin',
+          signature: session.user.user_metadata?.signature,
+          companyAddress: session.user.user_metadata?.companyAddress,
+          distanceMatrixApiKey: session.user.user_metadata?.distanceMatrixApiKey
+        };
+        setUser(userData);
+      }
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Check if this user exists in localStorage users list
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-      const existingUser = registeredUsers.find((u: UserData) => u.email === email);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       
-      if (existingUser) {
-        setUser(existingUser);
-        localStorage.setItem('user', JSON.stringify(existingUser));
-      } else {
-        throw new Error('Korisnik ne postoji');
-      }
+      if (error) throw error;
     } catch (error) {
       throw new Error('Prijava neuspješna');
     } finally {
@@ -64,33 +96,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
     try {
-      // Get existing users
-      const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name: name,
+            role: 'admin' // First user is admin
+          }
+        }
+      });
       
-      // Check if user already exists
-      const existingUser = registeredUsers.find((u: UserData) => u.email === email);
-      if (existingUser) {
-        throw new Error('Korisnik s tim emailom već postoji');
-      }
-      
-      // Determine role - first user is admin, others are technicians
-      const role = registeredUsers.length === 0 ? 'admin' : 'technician';
-      
-      const newUser: UserData = {
-        id: Date.now().toString(),
-        email: email,
-        name: name,
-        initials: name.split(' ').map(n => n[0]).join('').toUpperCase(),
-        role: role
-      };
-      
-      // Add to registered users list
-      registeredUsers.push(newUser);
-      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-      
-      // Set as current user
-      setUser(newUser);
-      localStorage.setItem('user', JSON.stringify(newUser));
+      if (error) throw error;
     } catch (error) {
       throw error;
     } finally {
@@ -98,63 +115,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('user');
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
   const saveSignature = async (signature: string) => {
     if (!user) return;
     
-    const updatedUser = { ...user, signature: signature };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    const { error } = await supabase.auth.updateUser({
+      data: { signature: signature }
+    });
     
-    // Update in registered users list too
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const userIndex = registeredUsers.findIndex((u: UserData) => u.id === user.id);
-    if (userIndex !== -1) {
-      registeredUsers[userIndex] = updatedUser;
-      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-    }
+    if (error) throw error;
   };
 
   const saveCompanyAddress = async (address: string) => {
     if (!user) return;
 
-    const updatedUser = { ...user, companyAddress: address };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    const { error } = await supabase.auth.updateUser({
+      data: { companyAddress: address }
+    });
     
-    // Update in registered users list too
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const userIndex = registeredUsers.findIndex((u: UserData) => u.id === user.id);
-    if (userIndex !== -1) {
-      registeredUsers[userIndex] = updatedUser;
-      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-    }
+    if (error) throw error;
     
     console.log('Company address saved:', address);
-    console.log('Updated user:', updatedUser);
   };
 
   const saveDistanceMatrixApiKey = async (apiKey: string) => {
     if (!user) return;
     
-    const updatedUser = { ...user, distanceMatrixApiKey: apiKey };
-    setUser(updatedUser);
-    localStorage.setItem('user', JSON.stringify(updatedUser));
+    const { error } = await supabase.auth.updateUser({
+      data: { distanceMatrixApiKey: apiKey }
+    });
     
-    // Update in registered users list too
-    const registeredUsers = JSON.parse(localStorage.getItem('registeredUsers') || '[]');
-    const userIndex = registeredUsers.findIndex((u: UserData) => u.id === user.id);
-    if (userIndex !== -1) {
-      registeredUsers[userIndex] = updatedUser;
-      localStorage.setItem('registeredUsers', JSON.stringify(registeredUsers));
-    }
+    if (error) throw error;
     
     console.log('API key saved:', apiKey);
-    console.log('Updated user:', updatedUser);
   };
 
   const value = {

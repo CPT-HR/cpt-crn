@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignaturePad, { SignatureMetadata } from './SignaturePad';
 import { useAuth } from '@/contexts/AuthContext';
 import { generatePDF } from '@/utils/pdfGenerator';
@@ -28,7 +29,9 @@ interface WorkItem {
 interface WorkOrder {
   id: string;
   clientCompanyName: string;
-  clientCompanyAddress: string;
+  clientStreetAddress: string;
+  clientCity: string;
+  clientCountry: string;
   clientOib: string;
   clientFirstName: string;
   clientLastName: string;
@@ -36,7 +39,9 @@ interface WorkOrder {
   clientEmail: string;
   orderForCustomer: boolean;
   customerCompanyName: string;
-  customerCompanyAddress: string;
+  customerStreetAddress: string;
+  customerCity: string;
+  customerCountry: string;
   customerOib: string;
   customerFirstName: string;
   customerLastName: string;
@@ -59,6 +64,11 @@ interface WorkOrder {
   signatureMetadata?: SignatureMetadata;
 }
 
+const countries = [
+  'Hrvatska', 'Srbija', 'Slovenija', 'Bosna i Hercegovina', 'Crna Gora', 
+  'Makedonija', 'Austrija', 'Njemačka', 'Italija', 'Mađarska'
+];
+
 let orderCounter = 1;
 
 const WorkOrderForm: React.FC = () => {
@@ -66,11 +76,15 @@ const WorkOrderForm: React.FC = () => {
   const { toast } = useToast();
   const [isCustomerSignatureModalOpen, setIsCustomerSignatureModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companyLocations, setCompanyLocations] = useState<any[]>([]);
+  const [globalSettings, setGlobalSettings] = useState<any>(null);
   
   const [workOrder, setWorkOrder] = useState<WorkOrder>({
     id: '',
     clientCompanyName: '',
-    clientCompanyAddress: '',
+    clientStreetAddress: '',
+    clientCity: 'Zagreb',
+    clientCountry: 'Hrvatska',
     clientOib: '',
     clientFirstName: '',
     clientLastName: '',
@@ -78,7 +92,9 @@ const WorkOrderForm: React.FC = () => {
     clientEmail: '',
     orderForCustomer: false,
     customerCompanyName: '',
-    customerCompanyAddress: '',
+    customerStreetAddress: '',
+    customerCity: 'Zagreb',
+    customerCountry: 'Hrvatska',
     customerOib: '',
     customerFirstName: '',
     customerLastName: '',
@@ -99,6 +115,33 @@ const WorkOrderForm: React.FC = () => {
     customerSignature: '',
     customerSignerName: '',
   });
+
+  // Load company locations and global settings
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Fetch company locations
+        const { data: locations } = await supabase
+          .from('company_locations')
+          .select('*')
+          .order('created_at', { ascending: true });
+        
+        // Fetch global settings
+        const { data: settings } = await supabase
+          .from('global_settings')
+          .select('*')
+          .limit(1)
+          .single();
+        
+        setCompanyLocations(locations || []);
+        setGlobalSettings(settings);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    
+    fetchData();
+  }, []);
 
   // Calculate billable hours based on arrival and completion time
   const calculateBillableHours = (arrival: string, completion: string) => {
@@ -128,12 +171,12 @@ const WorkOrderForm: React.FC = () => {
     try {
       console.log('Calculating distance between:', companyAddress, 'and', targetAddress);
       
-      if (!user?.distanceMatrixApiKey) {
+      if (!globalSettings?.distance_matrix_api_key) {
         console.log('No API key found for distance calculation');
         return '';
       }
       
-      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=${user.distanceMatrixApiKey}`);
+      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=${globalSettings.distance_matrix_api_key}`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch distance data');
@@ -143,7 +186,6 @@ const WorkOrderForm: React.FC = () => {
       
       if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
         const distanceText = data.rows[0].elements[0].distance?.text;
-        // Extract numeric value from text like "15.2 km"
         const distanceValue = distanceText?.replace(/[^\d.]/g, '') || '';
         console.log('Distance calculated:', distanceValue);
         return distanceValue;
@@ -160,11 +202,13 @@ const WorkOrderForm: React.FC = () => {
   // ISPRAVLJENA LOGIKA: svi podaci se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
   const getRelevantAddress = () => {
     if (workOrder.orderForCustomer) {
-      // Ako je označeno "nalog za korisnika", uvijet uzmi adresu korisnika ako postoji
-      return workOrder.customerCompanyAddress || workOrder.clientCompanyAddress;
+      // Ako je označeno "nalog za korisnika", uzmi adresu korisnika ako postoji
+      const customerFullAddress = `${workOrder.customerStreetAddress}, ${workOrder.customerCity}, ${workOrder.customerCountry}`.trim();
+      const clientFullAddress = `${workOrder.clientStreetAddress}, ${workOrder.clientCity}, ${workOrder.clientCountry}`.trim();
+      return customerFullAddress.length > 4 ? customerFullAddress : clientFullAddress;
     }
     // Ako nije označeno "nalog za korisnika", uzmi adresu naručitelja
-    return workOrder.clientCompanyAddress;
+    return `${workOrder.clientStreetAddress}, ${workOrder.clientCity}, ${workOrder.clientCountry}`.trim();
   };
 
   // ISPRAVLJENA LOGIKA: funkcija za dobivanje finalnih podataka korisnika
@@ -173,7 +217,9 @@ const WorkOrderForm: React.FC = () => {
       // SVI PODACI se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
       return {
         company_name: workOrder.customerCompanyName || workOrder.clientCompanyName,
-        company_address: workOrder.customerCompanyAddress || workOrder.clientCompanyAddress,
+        street_address: workOrder.customerStreetAddress || workOrder.clientStreetAddress,
+        city: workOrder.customerCity || workOrder.clientCity,
+        country: workOrder.customerCountry || workOrder.clientCountry,
         oib: workOrder.customerOib || workOrder.clientOib,
         first_name: workOrder.customerFirstName || workOrder.clientFirstName,
         last_name: workOrder.customerLastName || workOrder.clientLastName,
@@ -184,7 +230,9 @@ const WorkOrderForm: React.FC = () => {
       // Ako nije nalog za korisnika, koristi podatke naručitelja
       return {
         company_name: workOrder.clientCompanyName,
-        company_address: workOrder.clientCompanyAddress,
+        street_address: workOrder.clientStreetAddress,
+        city: workOrder.clientCity,
+        country: workOrder.clientCountry,
         oib: workOrder.clientOib,
         first_name: workOrder.clientFirstName,
         last_name: workOrder.clientLastName,
@@ -215,24 +263,28 @@ const WorkOrderForm: React.FC = () => {
   }, [workOrder.arrivalTime, workOrder.completionTime]);
 
   useEffect(() => {
-    if (workOrder.fieldTrip && user?.companyAddress) {
+    if (workOrder.fieldTrip && companyLocations.length > 0 && globalSettings?.distance_matrix_api_key) {
       const targetAddress = getRelevantAddress();
       
-      if (targetAddress && user?.distanceMatrixApiKey) {
-        console.log('Starting distance calculation...', { from: user.companyAddress, to: targetAddress });
-        calculateDistance(user.companyAddress, targetAddress).then(distance => {
+      if (targetAddress && targetAddress.length > 4) {
+        // Use first company location for distance calculation
+        const companyLocation = companyLocations[0];
+        const companyAddress = `${companyLocation.street_address}, ${companyLocation.city}, ${companyLocation.country}`;
+        
+        console.log('Starting distance calculation...', { from: companyAddress, to: targetAddress });
+        calculateDistance(companyAddress, targetAddress).then(distance => {
           console.log('Distance calculation result:', distance);
           if (distance) {
             setWorkOrder(prev => ({ ...prev, distance }));
           }
         });
       } else {
-        console.log('Missing target address or API key for distance calculation');
+        console.log('Missing target address for distance calculation');
       }
     } else if (!workOrder.fieldTrip) {
       setWorkOrder(prev => ({ ...prev, distance: '' }));
     }
-  }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress, user?.distanceMatrixApiKey]);
+  }, [workOrder.fieldTrip, workOrder.clientStreetAddress, workOrder.clientCity, workOrder.clientCountry, workOrder.customerStreetAddress, workOrder.customerCity, workOrder.customerCountry, workOrder.orderForCustomer, companyLocations, globalSettings]);
 
   // Automatsko popunjavanje imena potpisnika kad se promijene podaci
   useEffect(() => {
@@ -250,6 +302,10 @@ const WorkOrderForm: React.FC = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
+    setWorkOrder({ ...workOrder, [name]: value });
+  };
+
+  const handleSelectChange = (name: string, value: string) => {
     setWorkOrder({ ...workOrder, [name]: value });
   };
 
@@ -350,7 +406,7 @@ const WorkOrderForm: React.FC = () => {
       const { error } = await supabaseAny.from('work_orders').insert({
         order_number: finalWorkOrder.id,
         client_company_name: finalWorkOrder.clientCompanyName,
-        client_company_address: finalWorkOrder.clientCompanyAddress,
+        client_company_address: `${finalWorkOrder.clientStreetAddress}, ${finalWorkOrder.clientCity}, ${finalWorkOrder.clientCountry}`,
         client_oib: finalWorkOrder.clientOib,
         client_first_name: finalWorkOrder.clientFirstName,
         client_last_name: finalWorkOrder.clientLastName,
@@ -358,7 +414,7 @@ const WorkOrderForm: React.FC = () => {
         client_email: finalWorkOrder.clientEmail,
         order_for_customer: finalWorkOrder.orderForCustomer,
         customer_company_name: finalCustomerData.company_name,
-        customer_company_address: finalCustomerData.company_address,
+        customer_company_address: `${finalCustomerData.street_address}, ${finalCustomerData.city}, ${finalCustomerData.country}`,
         customer_oib: finalCustomerData.oib,
         customer_first_name: finalCustomerData.first_name,
         customer_last_name: finalCustomerData.last_name,
@@ -447,7 +503,9 @@ const WorkOrderForm: React.FC = () => {
       setWorkOrder({
         id: '',
         clientCompanyName: '',
-        clientCompanyAddress: '',
+        clientStreetAddress: '',
+        clientCity: 'Zagreb',
+        clientCountry: 'Hrvatska',
         clientOib: '',
         clientFirstName: '',
         clientLastName: '',
@@ -455,7 +513,9 @@ const WorkOrderForm: React.FC = () => {
         clientEmail: '',
         orderForCustomer: false,
         customerCompanyName: '',
-        customerCompanyAddress: '',
+        customerStreetAddress: '',
+        customerCity: 'Zagreb',
+        customerCountry: 'Hrvatska',
         customerOib: '',
         customerFirstName: '',
         customerLastName: '',
@@ -518,16 +578,50 @@ const WorkOrderForm: React.FC = () => {
                 />
               </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="clientCompanyAddress">Adresa tvrtke</Label>
-              <Input 
-                id="clientCompanyAddress" 
-                name="clientCompanyAddress" 
-                value={workOrder.clientCompanyAddress} 
-                onChange={handleChange} 
-                required 
-              />
+            
+            <div className="space-y-4">
+              <Label className="text-base font-medium">Adresa tvrtke</Label>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2 space-y-2">
+                  <Label htmlFor="clientStreetAddress">Ulica i broj</Label>
+                  <Input 
+                    id="clientStreetAddress" 
+                    name="clientStreetAddress" 
+                    value={workOrder.clientStreetAddress} 
+                    onChange={handleChange} 
+                    placeholder="Ilica 1"
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clientCity">Grad</Label>
+                  <Input 
+                    id="clientCity" 
+                    name="clientCity" 
+                    value={workOrder.clientCity} 
+                    onChange={handleChange} 
+                    placeholder="Zagreb"
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="clientCountry">Država</Label>
+                  <Select value={workOrder.clientCountry} onValueChange={(value) => handleSelectChange('clientCountry', value)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {countries.map((country) => (
+                        <SelectItem key={country} value={country}>
+                          {country}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="clientFirstName">Ime</Label>
@@ -600,7 +694,6 @@ const WorkOrderForm: React.FC = () => {
                     name="customerCompanyName" 
                     value={workOrder.customerCompanyName} 
                     onChange={handleChange} 
-                    required={workOrder.orderForCustomer}
                   />
                 </div>
                 <div className="space-y-2">
@@ -610,20 +703,51 @@ const WorkOrderForm: React.FC = () => {
                     name="customerOib" 
                     value={workOrder.customerOib} 
                     onChange={handleChange} 
-                    required={workOrder.orderForCustomer}
                   />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="customerCompanyAddress">Adresa tvrtke</Label>
-                <Input 
-                  id="customerCompanyAddress" 
-                  name="customerCompanyAddress" 
-                  value={workOrder.customerCompanyAddress} 
-                  onChange={handleChange} 
-                  required={workOrder.orderForCustomer}
-                />
+              
+              <div className="space-y-4">
+                <Label className="text-base font-medium">Adresa tvrtke</Label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2 space-y-2">
+                    <Label htmlFor="customerStreetAddress">Ulica i broj</Label>
+                    <Input 
+                      id="customerStreetAddress" 
+                      name="customerStreetAddress" 
+                      value={workOrder.customerStreetAddress} 
+                      onChange={handleChange} 
+                      placeholder="Ilica 1"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customerCity">Grad</Label>
+                    <Input 
+                      id="customerCity" 
+                      name="customerCity" 
+                      value={workOrder.customerCity} 
+                      onChange={handleChange} 
+                      placeholder="Zagreb"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="customerCountry">Država</Label>
+                    <Select value={workOrder.customerCountry} onValueChange={(value) => handleSelectChange('customerCountry', value)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {countries.map((country) => (
+                          <SelectItem key={country} value={country}>
+                            {country}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
               </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="customerFirstName">Ime</Label>
@@ -632,7 +756,6 @@ const WorkOrderForm: React.FC = () => {
                     name="customerFirstName" 
                     value={workOrder.customerFirstName} 
                     onChange={handleChange} 
-                    required={workOrder.orderForCustomer}
                   />
                 </div>
                 <div className="space-y-2">
@@ -642,7 +765,6 @@ const WorkOrderForm: React.FC = () => {
                     name="customerLastName" 
                     value={workOrder.customerLastName} 
                     onChange={handleChange} 
-                    required={workOrder.orderForCustomer}
                   />
                 </div>
               </div>
@@ -654,7 +776,6 @@ const WorkOrderForm: React.FC = () => {
                     name="customerMobile" 
                     value={workOrder.customerMobile} 
                     onChange={handleChange} 
-                    required={workOrder.orderForCustomer}
                   />
                 </div>
                 <div className="space-y-2">
@@ -665,7 +786,6 @@ const WorkOrderForm: React.FC = () => {
                     type="email" 
                     value={workOrder.customerEmail} 
                     onChange={handleChange} 
-                    required={workOrder.orderForCustomer}
                   />
                 </div>
               </div>
@@ -948,17 +1068,17 @@ const WorkOrderForm: React.FC = () => {
                   placeholder="Unesite broj kilometara"
                   required={workOrder.fieldTrip}
                 />
-                {!user?.companyAddress && (
+                {companyLocations.length === 0 && (
                   <p className="text-sm text-amber-600">
-                    Postavite adresu sjedišta tvrtke u postavkama za automatsko računanje udaljenosti.
+                    Admin treba postaviti lokacije tvrtke u administraciji za automatsko računanje udaljenosti.
                   </p>
                 )}
-                {!user?.distanceMatrixApiKey && user?.companyAddress && (
+                {!globalSettings?.distance_matrix_api_key && companyLocations.length > 0 && (
                   <p className="text-sm text-amber-600">
-                    Postavite Distance Matrix API ključ u postavkama za automatsko računanje udaljenosti.
+                    Admin treba postaviti Distance Matrix API ključ u administraciji za automatsko računanje udaljenosti.
                   </p>
                 )}
-                {user?.companyAddress && user?.distanceMatrixApiKey && (
+                {companyLocations.length > 0 && globalSettings?.distance_matrix_api_key && (
                   <p className="text-sm text-green-600">
                     Udaljenost se automatski računa pomoću distancematrix.ai API-ja.
                   </p>

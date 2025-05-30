@@ -9,6 +9,54 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      company_locations: {
+        Row: {
+          city: string
+          country: string
+          created_at: string
+          id: string
+          name: string
+          street_address: string
+          updated_at: string
+        }
+        Insert: {
+          city?: string
+          country?: string
+          created_at?: string
+          id?: string
+          name: string
+          street_address: string
+          updated_at?: string
+        }
+        Update: {
+          city?: string
+          country?: string
+          created_at?: string
+          id?: string
+          name?: string
+          street_address?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      global_settings: {
+        Row: {
+          distance_matrix_api_key: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          distance_matrix_api_key?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          distance_matrix_api_key?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_signatures: {
         Row: {
           created_at: string

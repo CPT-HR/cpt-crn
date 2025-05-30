@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -72,6 +71,17 @@ const Admin: React.FC = () => {
   if (!user || user.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
+  
+  // Debug current user
+  useEffect(() => {
+    const debugUser = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      console.log('Current user data:', currentUser);
+      console.log('User metadata:', currentUser?.user_metadata);
+      console.log('User role from context:', user?.role);
+    };
+    debugUser();
+  }, [user]);
   
   // Load company locations
   useEffect(() => {
@@ -167,6 +177,11 @@ const Admin: React.FC = () => {
     setIsAddingLocation(true);
     try {
       console.log('Adding new location:', newLocation);
+      
+      // Dodaj debug informacije za RLS
+      const { data: currentUser } = await supabase.auth.getUser();
+      console.log('Current user for location insert:', currentUser.user?.user_metadata);
+      
       const { data, error } = await supabase
         .from('company_locations')
         .insert([newLocation])
@@ -175,6 +190,8 @@ const Admin: React.FC = () => {
       
       if (error) {
         console.error('Error adding location:', error);
+        console.error('Error details:', error.details);
+        console.error('Error hint:', error.hint);
         throw error;
       }
       
@@ -239,6 +256,10 @@ const Admin: React.FC = () => {
     try {
       console.log('Saving global settings:', globalSettings);
       
+      // Dodaj debug informacije za RLS
+      const { data: currentUser } = await supabase.auth.getUser();
+      console.log('Current user for settings save:', currentUser.user?.user_metadata);
+      
       if (globalSettings.id) {
         // Update postojeći zapis
         const { error } = await supabase
@@ -250,6 +271,8 @@ const Admin: React.FC = () => {
         
         if (error) {
           console.error('Error updating global settings:', error);
+          console.error('Error details:', error.details);
+          console.error('Error hint:', error.hint);
           throw error;
         }
       } else {
@@ -264,6 +287,8 @@ const Admin: React.FC = () => {
         
         if (error) {
           console.error('Error inserting global settings:', error);
+          console.error('Error details:', error.details);
+          console.error('Error hint:', error.hint);
           throw error;
         }
         

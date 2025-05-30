@@ -33,51 +33,6 @@ export type Database = {
         }
         Relationships: []
       }
-      users: {
-        Row: {
-          auth_user_id: string | null
-          company_address_city: string | null
-          company_address_country: string | null
-          company_address_street: string | null
-          created_at: string
-          distance_matrix_api_key: string | null
-          email: string
-          id: string
-          name: string
-          role: string
-          signature: string | null
-          updated_at: string
-        }
-        Insert: {
-          auth_user_id?: string | null
-          company_address_city?: string | null
-          company_address_country?: string | null
-          company_address_street?: string | null
-          created_at?: string
-          distance_matrix_api_key?: string | null
-          email: string
-          id?: string
-          name: string
-          role?: string
-          signature?: string | null
-          updated_at?: string
-        }
-        Update: {
-          auth_user_id?: string | null
-          company_address_city?: string | null
-          company_address_country?: string | null
-          company_address_street?: string | null
-          created_at?: string
-          distance_matrix_api_key?: string | null
-          email?: string
-          id?: string
-          name?: string
-          role?: string
-          signature?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
     }
     Views: {
       [_ in never]: never

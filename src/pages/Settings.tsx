@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,12 +10,14 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 
 const Settings: React.FC = () => {
-  const { user, saveSignature, saveCompanyAddress } = useAuth();
+  const { user, saveSignature, saveCompanyAddress, saveDistanceMatrixApiKey } = useAuth();
   const { toast } = useToast();
   const [isSignatureModalOpen, setIsSignatureModalOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [companyAddress, setCompanyAddress] = useState(user?.companyAddress || '');
   const [isSavingAddress, setIsSavingAddress] = useState(false);
+  const [apiKey, setApiKey] = useState(user?.distanceMatrixApiKey || '');
+  const [isSavingApiKey, setIsSavingApiKey] = useState(false);
 
   const handleSignatureSave = async (signature: string) => {
     setIsSaving(true);
@@ -36,6 +39,17 @@ const Settings: React.FC = () => {
       console.error('Failed to save company address:', error);
     } finally {
       setIsSavingAddress(false);
+    }
+  };
+
+  const handleApiKeySave = async () => {
+    setIsSavingApiKey(true);
+    try {
+      await saveDistanceMatrixApiKey(apiKey);
+    } catch (error) {
+      console.error('Failed to save API key:', error);
+    } finally {
+      setIsSavingApiKey(false);
     }
   };
 
@@ -68,6 +82,36 @@ const Settings: React.FC = () => {
           >
             {isSavingAddress && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Spremi adresu
+          </Button>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Distance Matrix API</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground">
+            API ključ za automatsko računanje udaljenosti. Možete dobiti besplatan API ključ na distancematrix.ai
+          </p>
+          
+          <div className="space-y-2">
+            <Label htmlFor="apiKey">API ključ</Label>
+            <Input
+              id="apiKey"
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="Unesite vaš Distance Matrix API ključ"
+            />
+          </div>
+          
+          <Button 
+            onClick={handleApiKeySave}
+            disabled={isSavingApiKey || !apiKey.trim()}
+          >
+            {isSavingApiKey && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Spremi API ključ
           </Button>
         </CardContent>
       </Card>

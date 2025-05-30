@@ -1,176 +1,204 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
+import { useToast } from "@/components/ui/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
-export interface UserData {
+type UserRole = 'admin' | 'technician';
+
+type UserData = {
   id: string;
   email: string;
   name: string;
-  initials: string;
-  role?: string;
+  role: UserRole;
+  approved: boolean;
   signature?: string;
+  initials: string;
   companyAddress?: string;
-  distanceMatrixApiKey?: string;
-}
+};
 
-interface AuthContextProps {
+type AuthContextType = {
   user: UserData | null;
   isLoading: boolean;
+  error: string | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
   logout: () => void;
+  register: (email: string, password: string, name: string) => Promise<void>;
   saveSignature: (signature: string) => Promise<void>;
   saveCompanyAddress: (address: string) => Promise<void>;
-  saveDistanceMatrixApiKey: (apiKey: string) => Promise<void>;
-}
+};
 
-const AuthContext = createContext<AuthContextProps | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<UserData | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
+  const isMounted = useRef(true);
 
-  const fetchUserData = async (authUser: User): Promise<UserData | null> => {
-    console.log('Fetching user data for:', authUser.email);
-    
+  // Load user signature from database
+  const loadUserSignature = async (userId: string): Promise<string | undefined> => {
     try {
-      // Pokušaj dohvatiti postojećeg korisnika
-      const { data: existingUser, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('auth_user_id', authUser.id)
+      const supabaseAny = supabase as any;
+      const { data, error } = await supabaseAny
+        .from('user_signatures')
+        .select('signature_data')
+        .eq('user_id', userId)
         .maybeSingle();
-
-      if (fetchError) {
-        console.error('Error fetching user:', fetchError);
-        return null;
-      }
-
-      // Ako korisnik postoji, vrati ga
-      if (existingUser) {
-        console.log('Existing user found:', existingUser);
-        return {
-          id: existingUser.id,
-          email: existingUser.email,
-          name: existingUser.name,
-          initials: existingUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-          role: existingUser.role,
-          signature: existingUser.signature,
-          companyAddress: existingUser.company_address_street && existingUser.company_address_city 
-            ? `${existingUser.company_address_street}, ${existingUser.company_address_city}, ${existingUser.company_address_country}`
-            : undefined,
-          distanceMatrixApiKey: existingUser.distance_matrix_api_key
-        };
-      }
-
-      // Ako korisnik ne postoji, stvori novog
-      console.log('Creating new user...');
       
-      const { count } = await supabase
-        .from('users')
-        .select('*', { count: 'exact', head: true });
-
-      const role = count === 0 ? 'admin' : 'technician';
-      
-      const { data: newUser, error: insertError } = await supabase
-        .from('users')
-        .insert({
-          auth_user_id: authUser.id,
-          name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Unknown User',
-          email: authUser.email!,
-          role: role
-        })
-        .select()
-        .single();
-
-      if (insertError) {
-        console.error('Error creating user:', insertError);
-        return null;
+      if (error) {
+        console.error('Error loading signature:', error);
+        return undefined;
       }
       
-      console.log('New user created:', newUser);
-
-      return {
-        id: newUser.id,
-        email: newUser.email,
-        name: newUser.name,
-        initials: newUser.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-        role: newUser.role,
-        signature: newUser.signature,
-        companyAddress: newUser.company_address_street && newUser.company_address_city 
-          ? `${newUser.company_address_street}, ${newUser.company_address_city}, ${newUser.company_address_country}`
-          : undefined,
-        distanceMatrixApiKey: newUser.distance_matrix_api_key
-      };
-    } catch (error) {
-      console.error('Error in fetchUserData:', error);
-      return null;
+      return data?.signature_data;
+    } catch (err) {
+      console.error('Error loading signature:', err);
+      return undefined;
     }
   };
 
-  useEffect(() => {
-    console.log('Setting up auth state listener...');
-    
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state change:', event, session?.user?.email);
-        setSession(session);
-        setIsLoading(true);
+  // Load user company address from localStorage (temporary storage)
+  const loadUserCompanyAddress = (userId: string): string | undefined => {
+    try {
+      const savedAddress = localStorage.getItem(`companyAddress_${userId}`);
+      return savedAddress || undefined;
+    } catch (err) {
+      console.error('Error loading company address:', err);
+      return undefined;
+    }
+  };
+
+  // Get user's profile data from Supabase
+  const getUserProfile = async (userId: string) => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (userData.user && isMounted.current) {
+        const email = userData.user.email || '';
+        const name = userData.user.user_metadata?.name || email?.split('@')[0] || 'User';
         
-        try {
-          if (session?.user) {
-            const userData = await fetchUserData(session.user);
-            setUser(userData);
-          } else {
-            setUser(null);
-          }
-        } catch (error) {
-          console.error('Error in auth state change:', error);
+        // Generate initials from name
+        const initials = name
+          .split(' ')
+          .map(n => n[0])
+          .join('')
+          .toUpperCase()
+          .substring(0, 2);
+        
+        // Load signature from database
+        const signature = await loadUserSignature(userId);
+        
+        // Load company address from localStorage
+        const companyAddress = loadUserCompanyAddress(userId);
+        
+        const userProfile: UserData = {
+          id: userId,
+          email: email,
+          name: name,
+          role: 'admin', // Default as admin for the first user
+          approved: true,
+          initials: initials,
+          signature: signature,
+          companyAddress: companyAddress
+        };
+        
+        setUser(userProfile);
+      }
+    } catch (err) {
+      console.error('Error fetching user profile:', err);
+    }
+  };
+
+  // Handle auth state changes
+  useEffect(() => {
+    // Set up auth state listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, currentSession) => {
+        if (!isMounted.current) return;
+        
+        console.log('Auth state changed:', event);
+        
+        // Only update state if component is still mounted
+        if (currentSession?.user) {
+          setSession(currentSession);
+          
+          // Use setTimeout to avoid Supabase auth deadlock issues
+          setTimeout(() => {
+            if (isMounted.current) {
+              getUserProfile(currentSession.user.id);
+            }
+          }, 0);
+        } else {
+          setSession(null);
           setUser(null);
-        } finally {
-          setIsLoading(false);
         }
+        
+        setIsLoading(false);
       }
     );
 
-    // Check existing session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('Checking existing session:', session?.user?.email);
+    // Check for existing session
+    const initializeAuth = async () => {
       try {
-        if (session?.user) {
-          const userData = await fetchUserData(session.user);
-          setUser(userData);
+        console.log('Initializing auth...');
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        
+        if (!isMounted.current) return;
+        
+        console.log('Got session:', currentSession ? 'yes' : 'no');
+        
+        setSession(currentSession);
+        
+        if (currentSession?.user) {
+          getUserProfile(currentSession.user.id);
+        } else {
+          setIsLoading(false);
         }
-      } catch (error) {
-        console.error('Error checking existing session:', error);
-      } finally {
-        setIsLoading(false);
+      } catch (err) {
+        console.error('Error initializing auth:', err);
+        if (isMounted.current) {
+          setIsLoading(false);
+        }
       }
-    });
+    };
+    
+    initializeAuth();
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted.current = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      console.log('Attempting login for:', email);
-      const { data, error } = await supabase.auth.signInWithPassword({
+      console.log('Logging in with:', email);
+      const { error } = await supabase.auth.signInWithPassword({
         email,
-        password,
+        password
       });
       
-      if (error) {
-        console.error('Login error:', error);
-        throw error;
-      }
+      if (error) throw error;
       
-      console.log('Login successful:', data.user?.email);
-    } catch (error) {
-      console.error('Login failed:', error);
-      throw new Error('Prijava neuspješna');
+      toast({
+        title: "Prijava uspješna",
+        description: "Dobrodošli natrag!",
+      });
+    } catch (err) {
+      console.error('Login error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Došlo je do pogreške prilikom prijave';
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Greška pri prijavi",
+        description: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -178,125 +206,143 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const register = async (email: string, password: string, name: string) => {
     setIsLoading(true);
+    setError(null);
+    
     try {
-      console.log('Attempting registration for:', email);
-      
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      // Register the new user
+      const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            name: name
+            name: name,
           }
         }
       });
       
-      if (authError) {
-        console.error('Auth registration error:', authError);
-        throw authError;
-      }
-
-      console.log('Auth user created:', authData.user?.email);
-
-      if (authData.user) {
-        const { count } = await supabase
-          .from('users')
-          .select('*', { count: 'exact', head: true });
-
-        const role = count === 0 ? 'admin' : 'technician';
-        
-        console.log('Creating user record with role:', role);
-
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .insert({
-            auth_user_id: authData.user.id,
-            name: name,
-            email: email,
-            role: role
-          })
-          .select()
-          .single();
-
-        if (userError) {
-          console.error('Error creating user record:', userError);
-          throw userError;
-        }
-        
-        console.log('User record created:', userData);
-      }
-    } catch (error) {
-      console.error('Registration failed:', error);
-      throw error;
+      if (error) throw error;
+      
+      toast({
+        title: "Registracija uspješna",
+        description: "Vaš zahtjev je zaprimljen. Administrator će pregledati i odobriti vaš račun.",
+      });
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Došlo je do pogreške prilikom registracije';
+      setError(errorMessage);
+      toast({
+        variant: "destructive",
+        title: "Greška pri registraciji",
+        description: errorMessage,
+      });
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = async () => {
-    console.log('Logging out user');
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setSession(null);
+      toast({
+        title: "Odjava uspješna",
+      });
+    } catch (err) {
+      console.error('Error signing out:', err);
+      toast({
+        variant: "destructive",
+        title: "Greška pri odjavi",
+        description: "Došlo je do pogreške prilikom odjave",
+      });
+    }
   };
 
-  const saveSignature = async (signature: string) => {
-    if (!user) return;
+  const saveSignature = async (signature: string): Promise<void> => {
+    if (!user) {
+      throw new Error('Korisnik nije prijavljen');
+    }
     
-    const { error } = await supabase
-      .from('users')
-      .update({ signature: signature })
-      .eq('id', user.id);
-    
-    if (error) throw error;
+    try {
+      const supabaseAny = supabase as any;
+      
+      // Try to update existing signature first
+      const { error: updateError } = await supabaseAny
+        .from('user_signatures')
+        .update({ signature_data: signature })
+        .eq('user_id', user.id);
+      
+      // If update fails (no existing record), insert new one
+      if (updateError) {
+        const { error: insertError } = await supabaseAny
+          .from('user_signatures')
+          .insert({
+            user_id: user.id,
+            signature_data: signature
+          });
+        
+        if (insertError) throw insertError;
+      }
+      
+      // Update local user state
+      const updatedUser = { ...user, signature };
+      setUser(updatedUser);
+      
+      // Remove from localStorage if it exists (cleanup)
+      localStorage.removeItem('userSignature');
+      
+      toast({
+        title: "Potpis spremljen",
+        description: "Vaš potpis je uspješno ažuriran u bazi podataka",
+      });
+    } catch (error) {
+      console.error('Error saving signature:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do pogreške prilikom spremanja potpisa",
+      });
+      throw error;
+    }
   };
 
-  const saveCompanyAddress = async (address: string) => {
-    if (!user) return;
-
-    const parts = address.split(', ');
-    const { error } = await supabase
-      .from('users')
-      .update({
-        company_address_street: parts[0] || '',
-        company_address_city: parts[1] || '',
-        company_address_country: parts[2] || 'Hrvatska'
-      })
-      .eq('id', user.id);
+  const saveCompanyAddress = async (address: string): Promise<void> => {
+    if (!user) {
+      throw new Error('Korisnik nije prijavljen');
+    }
     
-    if (error) throw error;
-    
-    console.log('Company address saved:', address);
+    try {
+      // Save to localStorage for now (could be extended to database later)
+      localStorage.setItem(`companyAddress_${user.id}`, address);
+      
+      // Update local user state
+      const updatedUser = { ...user, companyAddress: address };
+      setUser(updatedUser);
+      
+      toast({
+        title: "Adresa spremljena",
+        description: "Adresa sjedišta tvrtke je uspješno spremljena",
+      });
+    } catch (error) {
+      console.error('Error saving company address:', error);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Došlo je do pogreške prilikom spremanja adrese",
+      });
+      throw error;
+    }
   };
 
-  const saveDistanceMatrixApiKey = async (apiKey: string) => {
-    if (!user) return;
-    
-    const { error } = await supabase
-      .from('users')
-      .update({ distance_matrix_api_key: apiKey })
-      .eq('id', user.id);
-    
-    if (error) throw error;
-    
-    console.log('API key saved:', apiKey);
-  };
-
-  const value = {
-    user,
-    isLoading,
-    login,
-    register,
-    logout,
-    saveSignature,
-    saveCompanyAddress,
-    saveDistanceMatrixApiKey,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={{ user, isLoading, error, login, logout, register, saveSignature, saveCompanyAddress }}>
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
-export const useAuth = () => {
+export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

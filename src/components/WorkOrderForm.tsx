@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SignaturePad, { SignatureMetadata } from './SignaturePad';
 import { useAuth } from '@/contexts/AuthContext';
 import { generatePDF } from '@/utils/pdfGenerator';
@@ -29,9 +28,7 @@ interface WorkItem {
 interface WorkOrder {
   id: string;
   clientCompanyName: string;
-  clientStreet: string;
-  clientCity: string;
-  clientCountry: string;
+  clientCompanyAddress: string;
   clientOib: string;
   clientFirstName: string;
   clientLastName: string;
@@ -39,9 +36,7 @@ interface WorkOrder {
   clientEmail: string;
   orderForCustomer: boolean;
   customerCompanyName: string;
-  customerStreet: string;
-  customerCity: string;
-  customerCountry: string;
+  customerCompanyAddress: string;
   customerOib: string;
   customerFirstName: string;
   customerLastName: string;
@@ -75,9 +70,7 @@ const WorkOrderForm: React.FC = () => {
   const [workOrder, setWorkOrder] = useState<WorkOrder>({
     id: '',
     clientCompanyName: '',
-    clientStreet: '',
-    clientCity: '',
-    clientCountry: 'Hrvatska',
+    clientCompanyAddress: '',
     clientOib: '',
     clientFirstName: '',
     clientLastName: '',
@@ -85,9 +78,7 @@ const WorkOrderForm: React.FC = () => {
     clientEmail: '',
     orderForCustomer: false,
     customerCompanyName: '',
-    customerStreet: '',
-    customerCity: '',
-    customerCountry: 'Hrvatska',
+    customerCompanyAddress: '',
     customerOib: '',
     customerFirstName: '',
     customerLastName: '',
@@ -135,28 +126,20 @@ const WorkOrderForm: React.FC = () => {
   // Calculate distance using distancematrix.ai API
   const calculateDistance = async (companyAddress: string, targetAddress: string) => {
     try {
-      if (!user?.distanceMatrixApiKey) {
-        console.log('No API key configured for distance calculation');
-        return '';
-      }
-
       console.log('Calculating distance between:', companyAddress, 'and', targetAddress);
       
-      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=${user.distanceMatrixApiKey}`);
+      const response = await fetch(`https://api.distancematrix.ai/maps/api/distancematrix/json?origins=${encodeURIComponent(companyAddress)}&destinations=${encodeURIComponent(targetAddress)}&key=YOUR_API_KEY`);
       
       if (!response.ok) {
         throw new Error('Failed to fetch distance data');
       }
       
       const data = await response.json();
-      console.log('Distance API response:', data);
       
       if (data.status === 'OK' && data.rows?.[0]?.elements?.[0]?.status === 'OK') {
         const distanceText = data.rows[0].elements[0].distance?.text;
-        console.log('Distance text from API:', distanceText);
         // Extract numeric value from text like "15.2 km"
         const distanceValue = distanceText?.replace(/[^\d.]/g, '') || '';
-        console.log('Extracted distance value:', distanceValue);
         return distanceValue;
       } else {
         console.log('Distance calculation failed:', data);
@@ -168,17 +151,12 @@ const WorkOrderForm: React.FC = () => {
     }
   };
 
-  // Get relevant address based on correct logic - prioritize customer data
+  // Get relevant address based on logic
   const getRelevantAddress = () => {
-    // If order is for customer and customer has address, use customer address
-    if (workOrder.orderForCustomer && workOrder.customerStreet && workOrder.customerCity) {
-      return `${workOrder.customerStreet}, ${workOrder.customerCity}, ${workOrder.customerCountry}`;
+    if (workOrder.orderForCustomer && workOrder.customerCompanyAddress) {
+      return workOrder.customerCompanyAddress;
     }
-    // Otherwise use client address
-    if (workOrder.clientStreet && workOrder.clientCity) {
-      return `${workOrder.clientStreet}, ${workOrder.clientCity}, ${workOrder.clientCountry}`;
-    }
-    return '';
+    return workOrder.clientCompanyAddress;
   };
 
   useEffect(() => {
@@ -187,41 +165,21 @@ const WorkOrderForm: React.FC = () => {
   }, [workOrder.arrivalTime, workOrder.completionTime]);
 
   useEffect(() => {
-    console.log('Distance calculation effect triggered');
-    console.log('Field trip:', workOrder.fieldTrip);
-    console.log('Company address:', user?.companyAddress);
-    console.log('API key available:', !!user?.distanceMatrixApiKey);
-    
-    if (workOrder.fieldTrip && user?.companyAddress && user?.distanceMatrixApiKey) {
+    if (workOrder.fieldTrip && user?.companyAddress) {
       const targetAddress = getRelevantAddress();
-      console.log('Target address:', targetAddress);
       
       if (targetAddress) {
-        console.log('Starting distance calculation...');
         calculateDistance(user.companyAddress, targetAddress).then(distance => {
-          console.log('Distance calculated:', distance);
           setWorkOrder(prev => ({ ...prev, distance }));
         });
-      } else {
-        console.log('No target address available');
       }
     } else if (!workOrder.fieldTrip) {
-      console.log('Field trip disabled, clearing distance');
       setWorkOrder(prev => ({ ...prev, distance: '' }));
-    } else {
-      console.log('Missing requirements for distance calculation:');
-      console.log('- Field trip:', workOrder.fieldTrip);
-      console.log('- Company address:', user?.companyAddress);
-      console.log('- API key:', !!user?.distanceMatrixApiKey);
     }
-  }, [workOrder.fieldTrip, workOrder.clientStreet, workOrder.clientCity, workOrder.clientCountry, workOrder.customerStreet, workOrder.customerCity, workOrder.customerCountry, workOrder.orderForCustomer, user?.companyAddress, user?.distanceMatrixApiKey]);
+  }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setWorkOrder({ ...workOrder, [name]: value });
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
     setWorkOrder({ ...workOrder, [name]: value });
   };
 
@@ -319,7 +277,7 @@ const WorkOrderForm: React.FC = () => {
       const { error } = await supabaseAny.from('work_orders').insert({
         order_number: finalWorkOrder.id,
         client_company_name: finalWorkOrder.clientCompanyName,
-        client_company_address: `${finalWorkOrder.clientStreet}, ${finalWorkOrder.clientCity}, ${finalWorkOrder.clientCountry}`,
+        client_company_address: finalWorkOrder.clientCompanyAddress,
         client_oib: finalWorkOrder.clientOib,
         client_first_name: finalWorkOrder.clientFirstName,
         client_last_name: finalWorkOrder.clientLastName,
@@ -327,7 +285,7 @@ const WorkOrderForm: React.FC = () => {
         client_email: finalWorkOrder.clientEmail,
         order_for_customer: finalWorkOrder.orderForCustomer,
         customer_company_name: finalWorkOrder.customerCompanyName,
-        customer_company_address: finalWorkOrder.orderForCustomer ? `${finalWorkOrder.customerStreet}, ${finalWorkOrder.customerCity}, ${finalWorkOrder.customerCountry}` : null,
+        customer_company_address: finalWorkOrder.customerCompanyAddress,
         customer_oib: finalWorkOrder.customerOib,
         customer_first_name: finalWorkOrder.customerFirstName,
         customer_last_name: finalWorkOrder.customerLastName,
@@ -393,10 +351,7 @@ const WorkOrderForm: React.FC = () => {
         ...workOrder,
         id: generatedId,
         technicianSignature: user.signature || '',
-        technicianName: user.name,
-        // Construct full addresses for PDF generation
-        clientCompanyAddress: `${workOrder.clientStreet}, ${workOrder.clientCity}, ${workOrder.clientCountry}`,
-        customerCompanyAddress: workOrder.orderForCustomer ? `${workOrder.customerStreet}, ${workOrder.customerCity}, ${workOrder.customerCountry}` : ''
+        technicianName: user.name
       };
       
       // Save to Supabase
@@ -414,9 +369,7 @@ const WorkOrderForm: React.FC = () => {
       setWorkOrder({
         id: '',
         clientCompanyName: '',
-        clientStreet: '',
-        clientCity: '',
-        clientCountry: 'Hrvatska',
+        clientCompanyAddress: '',
         clientOib: '',
         clientFirstName: '',
         clientLastName: '',
@@ -424,9 +377,7 @@ const WorkOrderForm: React.FC = () => {
         clientEmail: '',
         orderForCustomer: false,
         customerCompanyName: '',
-        customerStreet: '',
-        customerCity: '',
-        customerCountry: 'Hrvatska',
+        customerCompanyAddress: '',
         customerOib: '',
         customerFirstName: '',
         customerLastName: '',
@@ -490,46 +441,14 @@ const WorkOrderForm: React.FC = () => {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="clientStreet">Ulica i broj</Label>
+              <Label htmlFor="clientCompanyAddress">Adresa tvrtke</Label>
               <Input 
-                id="clientStreet" 
-                name="clientStreet" 
-                value={workOrder.clientStreet} 
+                id="clientCompanyAddress" 
+                name="clientCompanyAddress" 
+                value={workOrder.clientCompanyAddress} 
                 onChange={handleChange} 
                 required 
               />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="clientCity">Grad</Label>
-                <Input 
-                  id="clientCity" 
-                  name="clientCity" 
-                  value={workOrder.clientCity} 
-                  onChange={handleChange} 
-                  required 
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="clientCountry">Država</Label>
-                <Select value={workOrder.clientCountry} onValueChange={(value) => handleSelectChange('clientCountry', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Odaberite državu" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Hrvatska">Hrvatska</SelectItem>
-                    <SelectItem value="Slovenija">Slovenija</SelectItem>
-                    <SelectItem value="Bosna i Hercegovina">Bosna i Hercegovina</SelectItem>
-                    <SelectItem value="Srbija">Srbija</SelectItem>
-                    <SelectItem value="Crna Gora">Crna Gora</SelectItem>
-                    <SelectItem value="Makedonija">Makedonija</SelectItem>
-                    <SelectItem value="Austrija">Austrija</SelectItem>
-                    <SelectItem value="Italija">Italija</SelectItem>
-                    <SelectItem value="Mađarska">Mađarska</SelectItem>
-                    <SelectItem value="Njemačka">Njemačka</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -618,46 +537,14 @@ const WorkOrderForm: React.FC = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="customerStreet">Ulica i broj</Label>
+                <Label htmlFor="customerCompanyAddress">Adresa tvrtke</Label>
                 <Input 
-                  id="customerStreet" 
-                  name="customerStreet" 
-                  value={workOrder.customerStreet} 
+                  id="customerCompanyAddress" 
+                  name="customerCompanyAddress" 
+                  value={workOrder.customerCompanyAddress} 
                   onChange={handleChange} 
                   required={workOrder.orderForCustomer}
                 />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="customerCity">Grad</Label>
-                  <Input 
-                    id="customerCity" 
-                    name="customerCity" 
-                    value={workOrder.customerCity} 
-                    onChange={handleChange} 
-                    required={workOrder.orderForCustomer}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="customerCountry">Država</Label>
-                  <Select value={workOrder.customerCountry} onValueChange={(value) => handleSelectChange('customerCountry', value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Odaberite državu" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Hrvatska">Hrvatska</SelectItem>
-                      <SelectItem value="Slovenija">Slovenija</SelectItem>
-                      <SelectItem value="Bosna i Hercegovina">Bosna i Hercegovina</SelectItem>
-                      <SelectItem value="Srbija">Srbija</SelectItem>
-                      <SelectItem value="Crna Gora">Crna Gora</SelectItem>
-                      <SelectItem value="Makedonija">Makedonija</SelectItem>
-                      <SelectItem value="Austrija">Austrija</SelectItem>
-                      <SelectItem value="Italija">Italija</SelectItem>
-                      <SelectItem value="Mađarska">Mađarska</SelectItem>
-                      <SelectItem value="Njemačka">Njemačka</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -988,12 +875,7 @@ const WorkOrderForm: React.FC = () => {
                     Postavite adresu sjedišta tvrtke u postavkama za automatsko računanje udaljenosti.
                   </p>
                 )}
-                {!user?.distanceMatrixApiKey && (
-                  <p className="text-sm text-amber-600">
-                    Postavite DistanceMatrix.ai API ključ u postavkama za automatsko računanje udaljenosti.
-                  </p>
-                )}
-                {user?.companyAddress && user?.distanceMatrixApiKey && (
+                {user?.companyAddress && (
                   <p className="text-sm text-green-600">
                     Udaljenost se automatski računa pomoću distancematrix.ai API-ja.
                   </p>

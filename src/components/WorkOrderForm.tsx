@@ -160,7 +160,7 @@ const WorkOrderForm: React.FC = () => {
   // ISPRAVLJENA LOGIKA: svi podaci se uzimaju isključivo od korisnika - ako nema podataka korisnika uzimaju se podaci naručitelja
   const getRelevantAddress = () => {
     if (workOrder.orderForCustomer) {
-      // Ako je označeno "nalog za korisnika", uvijek uzmi adresu korisnika ako postoji
+      // Ako je označeno "nalog za korisnika", uvijet uzmi adresu korisnika ako postoji
       return workOrder.customerCompanyAddress || workOrder.clientCompanyAddress;
     }
     // Ako nije označeno "nalog za korisnika", uzmi adresu naručitelja
@@ -194,6 +194,21 @@ const WorkOrderForm: React.FC = () => {
     }
   };
 
+  // Funkcija za automatsko popunjavanje imena potpisnika prema istoj logici
+  const getAutoSignerName = () => {
+    if (workOrder.orderForCustomer) {
+      // Ako je nalog za korisnika, uzmi ime i prezime korisnika ako postoji, inače naručitelja
+      const firstName = workOrder.customerFirstName || workOrder.clientFirstName;
+      const lastName = workOrder.customerLastName || workOrder.clientLastName;
+      return firstName && lastName ? `${firstName} ${lastName}` : '';
+    } else {
+      // Ako nije nalog za korisnika, uzmi ime i prezime naručitelja
+      return workOrder.clientFirstName && workOrder.clientLastName 
+        ? `${workOrder.clientFirstName} ${workOrder.clientLastName}` 
+        : '';
+    }
+  };
+
   useEffect(() => {
     const calculated = calculateBillableHours(workOrder.arrivalTime, workOrder.completionTime);
     setWorkOrder(prev => ({ ...prev, calculatedHours: calculated }));
@@ -218,6 +233,20 @@ const WorkOrderForm: React.FC = () => {
       setWorkOrder(prev => ({ ...prev, distance: '' }));
     }
   }, [workOrder.fieldTrip, workOrder.clientCompanyAddress, workOrder.customerCompanyAddress, workOrder.orderForCustomer, user?.companyAddress, user?.distanceMatrixApiKey]);
+
+  // Automatsko popunjavanje imena potpisnika kad se promijene podaci
+  useEffect(() => {
+    const autoSignerName = getAutoSignerName();
+    if (autoSignerName && autoSignerName !== workOrder.customerSignerName) {
+      setWorkOrder(prev => ({ ...prev, customerSignerName: autoSignerName }));
+    }
+  }, [
+    workOrder.orderForCustomer,
+    workOrder.clientFirstName,
+    workOrder.clientLastName,
+    workOrder.customerFirstName,
+    workOrder.customerLastName
+  ]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -976,9 +1005,12 @@ const WorkOrderForm: React.FC = () => {
                     name="customerSignerName" 
                     value={workOrder.customerSignerName}
                     onChange={handleChange}
-                    placeholder="Unesite ime i prezime potpisnika"
+                    placeholder="Automatski se popunjava na osnovu unesenih podataka"
                     required
                   />
+                  <p className="text-xs text-gray-500">
+                    Ime se automatski popunjava na osnovu podataka {workOrder.orderForCustomer ? 'korisnika (ili naručitelja ako nema podataka korisnika)' : 'naručitelja'}
+                  </p>
                 </div>
                 <div 
                   className="mt-2 p-2 border rounded bg-gray-50 cursor-pointer min-h-[80px] flex items-center justify-center"

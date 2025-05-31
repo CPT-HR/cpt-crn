@@ -241,9 +241,9 @@ const WorkOrderView: React.FC = () => {
                           Datum i vrijeme: {format(new Date(workOrder.signature_timestamp), 'dd.MM.yyyy HH:mm:ss', { locale: hr })}
                         </p>
                       )}
-                      {workOrder.signature_coordinates && (
+                      {workOrder.signature_coordinates && typeof workOrder.signature_coordinates === 'object' && workOrder.signature_coordinates !== null && (
                         <p>
-                          Koordinate: {workOrder.signature_coordinates.x?.toFixed(6)}, {workOrder.signature_coordinates.y?.toFixed(6)}
+                          Koordinate: {(workOrder.signature_coordinates as any).x?.toFixed(6)}, {(workOrder.signature_coordinates as any).y?.toFixed(6)}
                         </p>
                       )}
                       {workOrder.signature_address && (

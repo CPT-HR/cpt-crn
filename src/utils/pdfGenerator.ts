@@ -50,6 +50,12 @@ interface WorkOrder {
   };
 }
 
+interface JsPDFWithInternal extends jsPDF {
+  internal: {
+    getNumberOfPages: () => number;
+  };
+}
+
 export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
@@ -58,11 +64,9 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 18;
-      const footerMargin = 15; // minimalna zona za pisače
-      const usableHeight = pageHeight - margin - footerMargin - 5;
+      const usableHeight = pageHeight - margin - 32;
       let y = margin;
       let pageNumber = 1;
-      let totalPages = 1;
 
       function drawFirstHeader() {
         pdf.setFont("Manrope-Regular", "normal");
@@ -99,9 +103,9 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         const line1 = "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr";
         const line2 = "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka";
 
-        const yFooter1 = pageHeight - footerMargin;
-        const yFooter2 = pageHeight - footerMargin + 3.5;
-        const yFooterPage = pageHeight - 5.3;
+        const yFooter1 = pageHeight - 13.1;
+        const yFooter2 = pageHeight - 10.1;
+        const yFooterPage = pageHeight - 2.6;
 
         pdf.text(line1, pageWidth / 2, yFooter1, { align: "center" });
         pdf.text(line2, pageWidth / 2, yFooter2, { align: "center" });
@@ -123,7 +127,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         }
       }
 
-      // Start
       drawFirstHeader();
       y += 46;
 
@@ -300,7 +303,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const tryFinish = () => {
         signaturesDone++;
         if (signaturesDone === 2) {
-          totalPages = (pdf as any).internal.getNumberOfPages();
+          const pdfWithPages = pdf as unknown as JsPDFWithInternal;
+          const totalPages = pdfWithPages.internal.getNumberOfPages();
           for (let p = 1; p <= totalPages; p++) {
             pdf.setPage(p);
             drawFooter(p, totalPages);

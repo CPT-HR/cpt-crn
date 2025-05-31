@@ -1,3 +1,4 @@
+
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -96,7 +97,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         columnStyles: { 0: { cellWidth: 90 }, 1: { cellWidth: 90 } },
       });
 
-      let yOffset = pdf.lastAutoTable.finalY + 5;
+      let yOffset = (pdf as any).lastAutoTable.finalY + 5;
 
       // OPIS KVARA/PROBLEMA
       pdf.setFont('helvetica', 'bold');
@@ -184,7 +185,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           headStyles: { fillColor: [220, 220, 220], fontStyle: 'bold', halign: 'center' },
           columnStyles: { 0: { cellWidth: 15 }, 1: { cellWidth: 85 }, 2: { cellWidth: 25 }, 3: { cellWidth: 25 } }
         });
-        yOffset = pdf.lastAutoTable.finalY + 5;
+        yOffset = (pdf as any).lastAutoTable.finalY + 5;
       }
 
       // VRIJEME

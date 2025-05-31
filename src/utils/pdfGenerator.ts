@@ -53,254 +53,231 @@ interface WorkOrder {
 export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
-      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdf = new jsPDF("p", "mm", "a4");
       pdf.setFont("Manrope-Regular", "normal");
-
-      const leftX = 15;
-      const rightX = 110;
-      let yRow = 32;
+      const pageWidth = 210;
       const pageHeight = 297;
-      const marginBottom = 18;
+      const margin = 17;
+      let y = 18;
 
-      // --- HEADER ---
+      // HEADER
       pdf.setFontSize(10);
-      pdf.text("Centar pametne tehnologije d.o.o.", leftX, 14);
-      pdf.text("Kovači 78c, Velika Mlaka", leftX, 19);
-      pdf.text("OIB: 75343882245", leftX, 24);
-      pdf.text("info@pametnatehnologija.hr", 115, 14);
-      pdf.text("+385 1 6525 100", 115, 19);
+      pdf.text("Centar pametne tehnologije d.o.o.", margin, y);
+      pdf.text("Kovači 78c, Velika Mlaka", margin, y + 5);
+      pdf.text("OIB: 75343882245", margin, y + 10);
+      pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 60, y);
+      pdf.text("+385 1 6525 100", pageWidth - margin - 60, y + 5);
 
-      // Naslov i broj naloga (desno poravnanje)
-      pdf.setFontSize(14);
-      pdf.text("RADNI NALOG", leftX, 29, { align: "left" });
-      pdf.setFontSize(11);
-      pdf.text(`Broj: ${workOrder.id}`, 200 - leftX, 29, { align: "right" });
+      // Title & Nalog broj
+      pdf.setFontSize(15);
+      pdf.text("RADNI NALOG", margin, y + 19);
+      pdf.setFontSize(10);
+      pdf.text(`Broj: ${workOrder.id}`, pageWidth - margin, y + 19, { align: "right" });
+      pdf.text(`Datum: ${workOrder.date}`, pageWidth - margin, y + 25, { align: "right" });
 
-      // Datum naloga (desno)
+      y += 30;
+
+      // NARUČITELJ
+      pdf.setFontSize(12);
+      pdf.text("PODACI O NARUČITELJU", margin, y);
+      y += 6;
       pdf.setFontSize(9);
-      pdf.text(`Datum: ${workOrder.date}`, 200 - leftX, 35, { align: "right" });
+      pdf.text(`Ime tvrtke: ${workOrder.clientCompanyName}`, margin, y);
+      y += 5;
+      pdf.text(`Adresa: ${workOrder.clientCompanyAddress}`, margin, y);
+      y += 5;
+      pdf.text(`OIB: ${workOrder.clientOib}`, margin, y);
+      y += 5;
+      pdf.text(`Ime i prezime: ${workOrder.clientFirstName} ${workOrder.clientLastName}`, margin, y);
+      y += 5;
+      pdf.text(`Mobitel: ${workOrder.clientMobile}`, margin, y);
+      y += 5;
+      pdf.text(`Email: ${workOrder.clientEmail}`, margin, y);
 
-      yRow = 40;
-
-      // Helper za page break
-      const pageBreak = (delta: number = 8) => {
-        if (yRow > pageHeight - marginBottom - 25) {
-          footer();
-          pdf.addPage();
-          header();
-          yRow = 40 + delta;
-        }
-      };
-
-      // HEADER draw function for multipage
-      function header() {
-        pdf.setFontSize(10);
-        pdf.text("Centar pametne tehnologije d.o.o.", leftX, 14);
-        pdf.text("Kovači 78c, Velika Mlaka", leftX, 19);
-        pdf.text("OIB: 75343882245", leftX, 24);
-        pdf.text("info@pametnatehnologija.hr", 115, 14);
-        pdf.text("+385 1 6525 100", 115, 19);
-        pdf.setFontSize(14);
-        pdf.text("RADNI NALOG", leftX, 29, { align: "left" });
-        pdf.setFontSize(11);
-        pdf.text(`Broj: ${workOrder.id}`, 200 - leftX, 29, { align: "right" });
+      if (workOrder.orderForCustomer) {
+        y += 8;
+        pdf.setFontSize(12);
+        pdf.text("PODACI O KORISNIKU", margin, y);
+        y += 6;
         pdf.setFontSize(9);
-        pdf.text(`Datum: ${workOrder.date}`, 200 - leftX, 35, { align: "right" });
+        pdf.text(`Ime tvrtke: ${workOrder.customerCompanyName}`, margin, y);
+        y += 5;
+        pdf.text(`Adresa: ${workOrder.customerCompanyAddress}`, margin, y);
+        y += 5;
+        pdf.text(`OIB: ${workOrder.customerOib}`, margin, y);
+        y += 5;
+        pdf.text(`Ime i prezime: ${workOrder.customerFirstName} ${workOrder.customerLastName}`, margin, y);
+        y += 5;
+        pdf.text(`Mobitel: ${workOrder.customerMobile}`, margin, y);
+        y += 5;
+        pdf.text(`Email: ${workOrder.customerEmail}`, margin, y);
       }
 
-      // FOOTER draw function
-      function footer() {
+      y += 10;
+      pdf.setLineWidth(0.3);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 4;
+
+      // Osnovni podaci o nalogu
+      pdf.setFontSize(10);
+      pdf.text(
+        `Vrijeme dolaska: ${workOrder.arrivalTime}   |   Vrijeme završetka: ${workOrder.completionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`,
+        margin,
+        y
+      );
+      y += 6;
+      pdf.text(
+        `Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}   |   Prijeđena udaljenost: ${workOrder.distance ? workOrder.distance + " km" : "-"}`,
+        margin,
+        y
+      );
+
+      y += 10;
+
+      // OPIS KVARA
+      pdf.setFontSize(12);
+      pdf.text("OPIS KVARA / PROBLEMA", margin, y);
+      y += 6;
+      pdf.setFontSize(9);
+      if (workOrder.description.length > 0 && workOrder.description.some(x => x.text.trim())) {
+        workOrder.description.forEach((item, idx) => {
+          if (item.text.trim()) {
+            pdf.text(`${idx + 1}. ${item.text}`, margin, y);
+            y += 5;
+          }
+        });
+      } else {
+        pdf.text("Nije uneseno.", margin, y);
+        y += 5;
+      }
+
+      y += 7;
+
+      // ZATEČENO STANJE
+      pdf.setFontSize(12);
+      pdf.text("ZATEČENO STANJE", margin, y);
+      y += 6;
+      pdf.setFontSize(9);
+      if (workOrder.foundCondition.length > 0 && workOrder.foundCondition.some(x => x.text.trim())) {
+        workOrder.foundCondition.forEach((item, idx) => {
+          if (item.text.trim()) {
+            pdf.text(`${idx + 1}. ${item.text}`, margin, y);
+            y += 5;
+          }
+        });
+      } else {
+        pdf.text("Nije uneseno.", margin, y);
+        y += 5;
+      }
+
+      y += 7;
+
+      // IZVRŠENI RADOVI
+      pdf.setFontSize(12);
+      pdf.text("IZVRŠENI RADOVI", margin, y);
+      y += 6;
+      pdf.setFontSize(9);
+      if (workOrder.performedWork.length > 0 && workOrder.performedWork.some(x => x.text.trim())) {
+        workOrder.performedWork.forEach((item, idx) => {
+          if (item.text.trim()) {
+            pdf.text(`${idx + 1}. ${item.text}`, margin, y);
+            y += 5;
+          }
+        });
+      } else {
+        pdf.text("Nije uneseno.", margin, y);
+        y += 5;
+      }
+
+      y += 7;
+
+      // KOMENTAR TEHNIČARA
+      pdf.setFontSize(12);
+      pdf.text("KOMENTAR TEHNIČARA", margin, y);
+      y += 6;
+      pdf.setFontSize(9);
+      if (workOrder.technicianComment.length > 0 && workOrder.technicianComment.some(x => x.text.trim())) {
+        workOrder.technicianComment.forEach((item, idx) => {
+          if (item.text.trim()) {
+            pdf.text(`${idx + 1}. ${item.text}`, margin, y);
+            y += 5;
+          }
+        });
+      } else {
+        pdf.text("Nije uneseno.", margin, y);
+        y += 5;
+      }
+
+      y += 7;
+
+      // UTROŠENI MATERIJAL (TABLICA)
+      pdf.setFontSize(12);
+      pdf.text("UTROŠENI MATERIJAL", margin, y);
+      y += 6;
+      pdf.setFontSize(9);
+
+      // Table header
+      pdf.setFillColor(220, 220, 220);
+      pdf.rect(margin, y - 4, pageWidth - 2 * margin, 7, "F");
+      pdf.text("Rb.", margin + 2, y);
+      pdf.text("Naziv materijala", margin + 14, y);
+      pdf.text("Količina", pageWidth - margin - 35, y);
+      pdf.text("Jedinica", pageWidth - margin - 10, y);
+
+      y += 6;
+
+      if (workOrder.materials && workOrder.materials.length > 0) {
+        workOrder.materials.forEach((mat, idx) => {
+          pdf.text(`${idx + 1}.`, margin + 2, y);
+          pdf.text(mat.name, margin + 14, y);
+          pdf.text(mat.quantity, pageWidth - margin - 35, y);
+          pdf.text(mat.unit, pageWidth - margin - 10, y);
+          y += 5;
+        });
+      } else {
+        pdf.text("Nije uneseno.", margin + 2, y);
+        y += 5;
+      }
+
+      y += 12;
+
+      // POTPISI
+      pdf.setFontSize(9);
+      pdf.text("Potpis tehničara:", margin, y);
+      pdf.text("Potpis klijenta:", pageWidth / 2 + 10, y);
+
+      // Crte za potpise
+      y += 2;
+      pdf.line(margin, y + 7, margin + 40, y + 7);
+      pdf.line(pageWidth / 2 + 10, y + 7, pageWidth / 2 + 50, y + 7);
+
+      // Imena ispod potpisa
+      pdf.text(workOrder.technicianName || "", margin, y + 13);
+      pdf.text(workOrder.customerSignerName || "", pageWidth / 2 + 10, y + 13);
+
+      // FOOTER
+      const drawFooter = () => {
         pdf.setFontSize(7);
         pdf.setTextColor(100);
         pdf.text(
           "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
-          105,
+          pageWidth / 2,
           pageHeight - 12,
           { align: "center" }
         );
         pdf.text(
           "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
-          105,
+          pageWidth / 2,
           pageHeight - 7,
           { align: "center" }
         );
         pdf.setTextColor(0);
-      }
-
-      // --- PODACI O NARUČITELJU / KORISNIKU ---
-      pdf.setFontSize(11);
-      pdf.text("PODACI O NARUČITELJU", leftX, yRow);
-      pdf.text("PODACI O KORISNIKU", rightX, yRow);
-      yRow += 6.5;
-      pageBreak();
-
-      pdf.setFontSize(9);
-      const labelGap = 5.2;
-
-      const writePair = (label: string, left: string, right: string, rightVal: string) => {
-        pdf.text(label, leftX, yRow);
-        pdf.text(left || "-", leftX + 28, yRow);
-        pdf.text(label, rightX, yRow);
-        pdf.text(rightVal || "-", rightX + 28, yRow);
-        yRow += labelGap;
-        pageBreak();
       };
 
-      writePair("Ime tvrtke:", workOrder.clientCompanyName, "Ime tvrtke:", workOrder.customerCompanyName || "");
-      writePair("Adresa tvrtke:", workOrder.clientCompanyAddress, "Adresa tvrtke:", workOrder.customerCompanyAddress || "");
-      writePair("OIB:", workOrder.clientOib, "OIB:", workOrder.customerOib || "");
-      writePair("Ime i prezime:", `${workOrder.clientFirstName} ${workOrder.clientLastName}`, "Ime i prezime:", `${workOrder.customerFirstName || ""} ${workOrder.customerLastName || ""}`.trim());
-      writePair("Mobitel:", workOrder.clientMobile, "Mobitel:", workOrder.customerMobile || "");
-      writePair("Email:", workOrder.clientEmail, "Email:", workOrder.customerEmail || "");
-      yRow += 4;
-      pageBreak();
+      drawFooter();
 
-      // --- VRIJEME I PUT ---
-      pdf.setFontSize(9);
-      pdf.text(`Datum: ${workOrder.date}`, leftX + 3, yRow);
-      pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}`, rightX + 3, yRow);
-      yRow += 5;
-      pageBreak();
-
-      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, leftX + 3, yRow);
-      if (workOrder.fieldTrip)
-        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, rightX + 3, yRow);
-      yRow += 5;
-      pageBreak();
-
-      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, leftX + 3, yRow);
-      yRow += 5;
-      pageBreak();
-
-      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, leftX + 3, yRow);
-      yRow += 8;
-      pageBreak();
-
-      // --- SEKCIJE ---
-      const section = (label: string, items: WorkItem[]) => {
-        pdf.setFontSize(11);
-        pdf.text(label, leftX, yRow);
-        yRow += 5.5;
-        pdf.setFontSize(9);
-        const filtered = items.filter(x => x.text.trim());
-        if (filtered.length > 0) {
-          filtered.forEach(item => {
-            const lines = pdf.splitTextToSize("• " + item.text, 180);
-            pdf.text(lines, leftX + 3, yRow);
-            yRow += lines.length * 5.5;
-            pageBreak();
-          });
-        } else {
-          pdf.text("• (nije uneseno)", leftX + 3, yRow);
-          yRow += 5.5;
-          pageBreak();
-        }
-        yRow += 2.5;
-        pageBreak();
-      };
-
-      section("OPIS KVARA/PROBLEMA:", workOrder.description);
-      section("ZATEČENO STANJE:", workOrder.foundCondition);
-      section("IZVRŠENI RADOVI:", workOrder.performedWork);
-      if (workOrder.technicianComment?.some(x => x.text.trim())) {
-        section("KOMENTAR TEHNIČARA:", workOrder.technicianComment);
-      }
-
-      // --- UTROŠENI MATERIJAL ---
-      pdf.setFontSize(11);
-      pdf.text("UTROŠENI MATERIJAL:", leftX, yRow);
-      yRow += 5.5;
-      pdf.setFontSize(9);
-      if (workOrder.materials && workOrder.materials.length > 0) {
-        workOrder.materials.forEach((mat, i) => {
-          pdf.text(`${i+1}. ${mat.name} – ${mat.quantity} ${mat.unit}`, leftX + 3, yRow);
-          yRow += 5.5;
-          pageBreak();
-        });
-      } else {
-        pdf.text("• (nije uneseno)", leftX + 3, yRow);
-        yRow += 5.5;
-        pageBreak();
-      }
-      yRow += 10;
-
-      // --- POTPISI ---
-      pdf.setFontSize(9);
-      pdf.text("Potpis tehničara:", leftX + 3, yRow);
-      pdf.text("Potpis klijenta:", rightX + 3, yRow);
-
-      let ySign = yRow + 2;
-      if (workOrder.technicianSignature) {
-        const techImg = new Image();
-        techImg.src = workOrder.technicianSignature;
-        techImg.onload = () => {
-          const canvas = document.createElement("canvas");
-          canvas.width = techImg.width;
-          canvas.height = techImg.height;
-          const ctx = canvas.getContext("2d");
-          if (ctx) {
-            ctx.drawImage(techImg, 0, 0);
-            pdf.addImage(canvas.toDataURL("image/png"), "PNG", leftX + 3, ySign, 36, 16);
-            pdf.text(workOrder.technicianName, leftX + 3, ySign + 20);
-
-            if (workOrder.customerSignature) {
-              const custImg = new Image();
-              custImg.src = workOrder.customerSignature;
-              custImg.onload = () => {
-                const custCanvas = document.createElement("canvas");
-                custCanvas.width = custImg.width;
-                custCanvas.height = custImg.height;
-                const custCtx = custCanvas.getContext("2d");
-                if (custCtx) {
-                  custCtx.drawImage(custImg, 0, 0);
-                  pdf.addImage(custCanvas.toDataURL("image/png"), "PNG", rightX + 3, ySign, 36, 16);
-                  pdf.text(workOrder.customerSignerName, rightX + 3, ySign + 20);
-
-                  if (workOrder.signatureMetadata) {
-                    pdf.setFontSize(7);
-                    let metaY = ySign + 25;
-                    pdf.text(`Datum i vrijeme: ${workOrder.signatureMetadata.timestamp || ""}`, rightX + 3, metaY);
-                    metaY += 4.5;
-                    if (workOrder.signatureMetadata.coordinates) {
-                      const { latitude, longitude } = workOrder.signatureMetadata.coordinates;
-                      pdf.text(`Koordinate: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, rightX + 3, metaY);
-                      metaY += 4.5;
-                    }
-                    if (workOrder.signatureMetadata.address) {
-                      const addressLines = pdf.splitTextToSize(
-                        `Adresa: ${workOrder.signatureMetadata.address}`,
-                        60
-                      );
-                      pdf.text(addressLines, rightX + 3, metaY);
-                    }
-                  }
-                  footer();
-                  pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
-                  resolve();
-                }
-              };
-              custImg.onerror = () => {
-                footer();
-                pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
-                resolve();
-              };
-            } else {
-              footer();
-              pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
-              resolve();
-            }
-          }
-        };
-        techImg.onerror = () => {
-          footer();
-          pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
-          resolve();
-        };
-      } else {
-        footer();
-        pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
-        resolve();
-      }
+      pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
+      resolve();
     } catch (error) {
       reject(error);
     }

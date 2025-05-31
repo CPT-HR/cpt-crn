@@ -1,4 +1,3 @@
-
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -57,123 +56,133 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
   return new Promise((resolve, reject) => {
     try {
       const pdf = new jsPDF('p', 'mm', 'a4');
-      pdf.setFont('helvetica');
-      pdf.setFontSize(18);
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('RADNI NALOG', 105, 18, { align: 'center' });
+
+      // HEADER
+      pdf.setFont('times', 'bold');
+      pdf.setFontSize(20);
+      pdf.text('RADNI NALOG', 105, 20, { align: 'center' });
+
       pdf.setFontSize(12);
-      pdf.text(`Broj: ${workOrder.id}`, 105, 25, { align: 'center' });
-      pdf.text(`Datum: ${workOrder.date}`, 105, 31, { align: 'center' });
+      pdf.text(`Broj: ${workOrder.id}`, 20, 30);
+      pdf.text(`Datum: ${workOrder.date}`, 150, 30);
 
-      // PODACI O NARUČITELJU I KORISNIKU – tablica 2 kolone
-      let clientData = [
-        ['Ime tvrtke:', workOrder.clientCompanyName],
-        ['Adresa tvrtke:', workOrder.clientCompanyAddress],
-        ['OIB:', workOrder.clientOib],
-        ['Ime i prezime:', `${workOrder.clientFirstName} ${workOrder.clientLastName}`],
-        ['Mobitel:', workOrder.clientMobile],
-        ['Email:', workOrder.clientEmail],
-      ];
+      pdf.setLineWidth(0.5);
+      pdf.line(20, 34, 190, 34);
 
-      let customerData = workOrder.orderForCustomer ? [
-        ['Ime tvrtke:', workOrder.customerCompanyName],
-        ['Adresa tvrtke:', workOrder.customerCompanyAddress],
-        ['OIB:', workOrder.customerOib],
-        ['Ime i prezime:', `${workOrder.customerFirstName} ${workOrder.customerLastName}`],
-        ['Mobitel:', workOrder.customerMobile],
-        ['Email:', workOrder.customerEmail],
-      ] : [];
+      // NARUČITELJ I KORISNIK - DVIJE KOLONE
+      pdf.setFont('times', 'bold');
+      pdf.setFontSize(12);
+      pdf.text('PODACI O NARUČITELJU', 20, 42);
+      if (workOrder.orderForCustomer) {
+        pdf.text('PODACI O KORISNIKU', 110, 42);
+      }
 
-      autoTable(pdf, {
-        startY: 38,
-        head: [['PODACI O NARUČITELJU', 'PODACI O KORISNIKU']],
-        body: clientData.map((row, i) => [
-          `${row[0]} ${row[1]}`,
-          customerData[i] ? `${customerData[i][0]} ${customerData[i][1]}` : ''
-        ]),
-        theme: 'plain',
-        styles: { font: 'helvetica', fontSize: 9, cellPadding: 1 },
-        headStyles: { fillColor: [220, 220, 220], fontStyle: 'bold', halign: 'center' },
-        columnStyles: { 0: { cellWidth: 90 }, 1: { cellWidth: 90 } },
-      });
+      pdf.setFont('times', 'normal');
+      pdf.setFontSize(10);
 
-      let yOffset = (pdf as any).lastAutoTable.finalY + 5;
+      const clientY = 48;
+      let customerY = 48;
+      const rowH = 6;
+
+      pdf.text(`Ime tvrtke: ${workOrder.clientCompanyName}`, 20, clientY);
+      pdf.text(`Ime i prezime: ${workOrder.clientFirstName} ${workOrder.clientLastName}`, 20, clientY + rowH);
+      pdf.text(`Adresa: ${workOrder.clientCompanyAddress}`, 20, clientY + rowH * 2);
+      pdf.text(`OIB: ${workOrder.clientOib}`, 20, clientY + rowH * 3);
+      pdf.text(`Mobitel: ${workOrder.clientMobile}`, 20, clientY + rowH * 4);
+      pdf.text(`Email: ${workOrder.clientEmail}`, 20, clientY + rowH * 5);
+
+      if (workOrder.orderForCustomer) {
+        pdf.text(`Ime tvrtke: ${workOrder.customerCompanyName}`, 110, customerY);
+        pdf.text(`Ime i prezime: ${workOrder.customerFirstName} ${workOrder.customerLastName}`, 110, customerY + rowH);
+        pdf.text(`Adresa: ${workOrder.customerCompanyAddress}`, 110, customerY + rowH * 2);
+        pdf.text(`OIB: ${workOrder.customerOib}`, 110, customerY + rowH * 3);
+        pdf.text(`Mobitel: ${workOrder.customerMobile}`, 110, customerY + rowH * 4);
+        pdf.text(`Email: ${workOrder.customerEmail}`, 110, customerY + rowH * 5);
+      }
+
+      let yOffset = clientY + rowH * 6 + 6;
+
+      pdf.setLineWidth(0.2);
+      pdf.line(20, yOffset, 190, yOffset);
+      yOffset += 7;
+
+      // SEKCIONALNI HEADER
+      const section = (label: string) => {
+        pdf.setFont('times', 'bold');
+        pdf.setFontSize(11);
+        pdf.text(label, 20, yOffset);
+        yOffset += 6;
+        pdf.setFont('times', 'normal');
+        pdf.setFontSize(10);
+      };
 
       // OPIS KVARA/PROBLEMA
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('OPIS KVARA/PROBLEMA:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 6;
-      if (workOrder.description?.length > 0) {
+      section('OPIS KVARA/PROBLEMA:');
+      if (workOrder.description?.length > 0 && workOrder.description.some(item => item.text.trim())) {
         workOrder.description.forEach(item => {
           if (item.text.trim()) {
             const lines = pdf.splitTextToSize(`• ${item.text}`, 170);
-            pdf.text(lines, 20, yOffset);
-            yOffset += lines.length * 6;
+            pdf.text(lines, 22, yOffset);
+            yOffset += lines.length * 5;
           }
         });
       } else {
-        pdf.text('• (nije uneseno)', 20, yOffset);
+        pdf.text('• (nije uneseno)', 22, yOffset);
         yOffset += 6;
       }
-      yOffset += 4;
+      yOffset += 2;
 
       // ZATEČENO STANJE
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('ZATEČENO STANJE:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 6;
-      if (workOrder.foundCondition?.length > 0) {
+      section('ZATEČENO STANJE:');
+      if (workOrder.foundCondition?.length > 0 && workOrder.foundCondition.some(item => item.text.trim())) {
         workOrder.foundCondition.forEach(item => {
           if (item.text.trim()) {
             const lines = pdf.splitTextToSize(`• ${item.text}`, 170);
-            pdf.text(lines, 20, yOffset);
-            yOffset += lines.length * 6;
+            pdf.text(lines, 22, yOffset);
+            yOffset += lines.length * 5;
           }
         });
       } else {
-        pdf.text('• (nije uneseno)', 20, yOffset);
+        pdf.text('• (nije uneseno)', 22, yOffset);
         yOffset += 6;
       }
-      yOffset += 4;
+      yOffset += 2;
 
       // IZVRŠENI RADOVI
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('IZVRŠENI RADOVI:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 6;
-      if (workOrder.performedWork?.length > 0) {
+      section('IZVRŠENI RADOVI:');
+      if (workOrder.performedWork?.length > 0 && workOrder.performedWork.some(item => item.text.trim())) {
         workOrder.performedWork.forEach(item => {
           if (item.text.trim()) {
             const lines = pdf.splitTextToSize(`• ${item.text}`, 170);
-            pdf.text(lines, 20, yOffset);
-            yOffset += lines.length * 6;
+            pdf.text(lines, 22, yOffset);
+            yOffset += lines.length * 5;
           }
         });
       } else {
-        pdf.text('• (nije uneseno)', 20, yOffset);
+        pdf.text('• (nije uneseno)', 22, yOffset);
         yOffset += 6;
       }
-      yOffset += 4;
+      yOffset += 2;
 
       // KOMENTAR TEHNIČARA
       if (workOrder.technicianComment?.some(item => item.text.trim())) {
-        pdf.setFont('helvetica', 'bold');
-        pdf.text('KOMENTAR TEHNIČARA:', 20, yOffset);
-        pdf.setFont('helvetica', 'normal');
-        yOffset += 6;
+        section('KOMENTAR TEHNIČARA:');
         workOrder.technicianComment.forEach(item => {
           if (item.text.trim()) {
             const lines = pdf.splitTextToSize(`• ${item.text}`, 170);
-            pdf.text(lines, 20, yOffset);
-            yOffset += lines.length * 6;
+            pdf.text(lines, 22, yOffset);
+            yOffset += lines.length * 5;
           }
         });
-        yOffset += 4;
+        yOffset += 2;
       }
 
       // MATERIJALI (TABLICA)
       if (workOrder.materials && workOrder.materials.length > 0) {
+        pdf.setFont('times', 'bold');
+        pdf.setFontSize(11);
+        pdf.text('UTROŠENI MATERIJAL:', 20, yOffset);
+        yOffset += 3;
         autoTable(pdf, {
           startY: yOffset,
           head: [['Rb.', 'Naziv materijala', 'Količina', 'Jedinica']],
@@ -181,121 +190,114 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
             i + 1, mat.name, mat.quantity, mat.unit
           ]),
           theme: 'grid',
-          styles: { font: 'helvetica', fontSize: 9, cellPadding: 1 },
+          styles: { font: 'times', fontSize: 9, cellPadding: 1 },
           headStyles: { fillColor: [220, 220, 220], fontStyle: 'bold', halign: 'center' },
-          columnStyles: { 0: { cellWidth: 15 }, 1: { cellWidth: 85 }, 2: { cellWidth: 25 }, 3: { cellWidth: 25 } }
+          columnStyles: { 0: { cellWidth: 15 }, 1: { cellWidth: 90 }, 2: { cellWidth: 30 }, 3: { cellWidth: 30 } }
         });
-        yOffset = (pdf as any).lastAutoTable.finalY + 5;
+        // @ts-ignore
+        yOffset = (pdf as any).lastAutoTable.finalY + 7;
       }
 
       // VRIJEME
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('VRIJEME:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 6;
-      pdf.text(`Datum: ${workOrder.date}`, 20, yOffset);
-      yOffset += 6;
-      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, 20, yOffset);
-      yOffset += 6;
-      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, 20, yOffset);
-      yOffset += 6;
-      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, 20, yOffset);
-      yOffset += 8;
+      section('VRIJEME:');
+      pdf.text(`Datum: ${workOrder.date}`, 22, yOffset);
+      yOffset += 5;
+      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, 22, yOffset);
+      yOffset += 5;
+      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, 22, yOffset);
+      yOffset += 5;
+      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, 22, yOffset);
+      yOffset += 7;
 
       // PUT
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('PUT:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 6;
+      section('PUT:');
+      pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? 'DA' : 'NE'}`, 22, yOffset);
+      yOffset += 5;
       if (workOrder.fieldTrip) {
-        pdf.text('Izlazak na teren: DA', 20, yOffset);
-        yOffset += 6;
-        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, 20, yOffset);
-      } else {
-        pdf.text('Izlazak na teren: NE', 20, yOffset);
+        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, 22, yOffset);
+        yOffset += 7;
       }
-      yOffset += 12;
+      yOffset += 4;
 
-      // POTPISI
-      if (yOffset > 220) {
+      // Novi page ako nema mjesta za potpise
+      if (yOffset > 230) {
         pdf.addPage();
         yOffset = 20;
       }
-      pdf.setFont('helvetica', 'bold');
-      pdf.text('POTPISI:', 20, yOffset);
-      pdf.setFont('helvetica', 'normal');
-      yOffset += 7;
 
-      // Potpis tehničara
+      // POTPISI
+      pdf.setFont('times', 'bold');
+      pdf.setFontSize(11);
+      pdf.text('POTPISI:', 20, yOffset);
+      yOffset += 8;
+      pdf.setFont('times', 'normal');
+      pdf.setFontSize(10);
       pdf.text('Potpis tehničara:', 20, yOffset);
-      if (workOrder.technicianSignature) {
-        const techImg = new Image();
-        techImg.src = workOrder.technicianSignature;
-        techImg.onload = () => {
+      pdf.text('Potpis klijenta:', 110, yOffset);
+
+      // Dodaj potpise ako postoje
+      const addSignature = (
+        signatureData: string,
+        x: number,
+        y: number,
+        name: string,
+        meta?: WorkOrder['signatureMetadata']
+      ) => {
+        if (!signatureData) return;
+        const img = new Image();
+        img.src = signatureData;
+        img.onload = () => {
           const canvas = document.createElement('canvas');
-          canvas.width = techImg.width;
-          canvas.height = techImg.height;
+          canvas.width = img.width;
+          canvas.height = img.height;
           const ctx = canvas.getContext('2d');
           if (ctx) {
-            ctx.drawImage(techImg, 0, 0);
+            ctx.drawImage(img, 0, 0);
             const imgData = canvas.toDataURL('image/png');
-            pdf.addImage(imgData, 'PNG', 20, yOffset + 2, 40, 20);
-            pdf.text(workOrder.technicianName, 20, yOffset + 30);
+            pdf.addImage(imgData, 'PNG', x, y + 2, 50, 22);
+            pdf.text(name, x, y + 28);
 
-            // Potpis klijenta
-            pdf.text('Potpis klijenta:', 110, yOffset);
-            if (workOrder.customerSignature) {
-              const custImg = new Image();
-              custImg.src = workOrder.customerSignature;
-              custImg.onload = () => {
-                const custCanvas = document.createElement('canvas');
-                custCanvas.width = custImg.width;
-                custCanvas.height = custImg.height;
-                const custCtx = custCanvas.getContext('2d');
-                if (custCtx) {
-                  custCtx.drawImage(custImg, 0, 0);
-                  const custImgData = custCanvas.toDataURL('image/png');
-                  pdf.addImage(custImgData, 'PNG', 110, yOffset + 2, 40, 20);
-                  pdf.text(workOrder.customerSignerName, 110, yOffset + 25);
-
-                  // signature metadata
-                  if (workOrder.signatureMetadata) {
-                    pdf.setFontSize(6);
-                    let metaY = yOffset + 30;
-                    if (workOrder.signatureMetadata.timestamp) {
-                      pdf.text(`Datum i vrijeme: ${workOrder.signatureMetadata.timestamp}`, 110, metaY);
-                      metaY += 3;
-                    }
-                    if (workOrder.signatureMetadata.coordinates) {
-                      const { latitude, longitude } = workOrder.signatureMetadata.coordinates;
-                      pdf.text(`Koordinate: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, 110, metaY);
-                      metaY += 3;
-                    }
-                    if (workOrder.signatureMetadata.address) {
-                      const addressLines = pdf.splitTextToSize(`Adresa: ${workOrder.signatureMetadata.address}`, 80);
-                      pdf.text(addressLines, 110, metaY);
-                    }
-                    pdf.setFontSize(10);
-                  }
-                  pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
-                  resolve();
-                }
-              };
-              custImg.onerror = (err) => {
-                pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
-                resolve();
-              };
-            } else {
-              pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
-              resolve();
+            // Signature metadata (opcionalno)
+            if (meta) {
+              pdf.setFontSize(6);
+              let metaY = y + 33;
+              if (meta.timestamp) {
+                pdf.text(`Datum i vrijeme: ${meta.timestamp}`, x, metaY);
+                metaY += 3;
+              }
+              if (meta.coordinates) {
+                const { latitude, longitude } = meta.coordinates;
+                pdf.text(`Koordinate: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, x, metaY);
+                metaY += 3;
+              }
+              if (meta.address) {
+                const addressLines = pdf.splitTextToSize(`Adresa: ${meta.address}`, 70);
+                pdf.text(addressLines, x, metaY);
+              }
+              pdf.setFontSize(10);
             }
           }
-        };
-        techImg.onerror = (err) => {
           pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
           resolve();
         };
-      } else {
+        img.onerror = () => {
+          pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
+          resolve();
+        };
+      };
+
+      let signatureY = yOffset + 6;
+      addSignature(workOrder.technicianSignature, 20, signatureY, workOrder.technicianName);
+      addSignature(
+        workOrder.customerSignature,
+        110,
+        signatureY,
+        workOrder.customerSignerName,
+        workOrder.signatureMetadata
+      );
+
+      // Ako nema slika potpisa, samo odmah spremi PDF
+      if (!workOrder.technicianSignature && !workOrder.customerSignature) {
         pdf.save(`Radni_nalog_${workOrder.id.replace('/', '-')}.pdf`);
         resolve();
       }

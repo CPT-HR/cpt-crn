@@ -99,7 +99,7 @@ const ManagerHierarchy: React.FC = () => {
 
     assignManagerMutation.mutate({
       employeeId: selectedEmployee,
-      managerId: selectedManager || null
+      managerId: selectedManager === 'none' ? null : selectedManager
     });
   };
 
@@ -193,7 +193,7 @@ const ManagerHierarchy: React.FC = () => {
                   <SelectValue placeholder="Odaberite voditelja (opcijsko)" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Nema voditelja</SelectItem>
+                  <SelectItem value="none">Nema voditelja</SelectItem>
                   {potentialManagers.map((manager) => (
                     <SelectItem key={manager.id} value={manager.id}>
                       {getEmployeeFullName(manager)} ({getRoleDisplayName(manager.user_role)})

@@ -27,7 +27,7 @@ const WorkOrders: React.FC = () => {
         .from('work_orders')
         .select(`
           *,
-          employee_profiles!inner(
+          employee_profiles!work_orders_user_id_fkey (
             first_name,
             last_name
           )

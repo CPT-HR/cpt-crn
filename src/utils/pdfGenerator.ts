@@ -1,3 +1,4 @@
+
 import { jsPDF } from "jspdf";
 import "../../src/fonts/Manrope-Regular-normal.js";
 

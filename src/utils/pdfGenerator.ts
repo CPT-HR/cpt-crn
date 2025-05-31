@@ -249,15 +249,22 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       y += 13;
 
-      // POTPISI - SLIKE I IMENA
+      // POTPISI - SLIKE, IMENA I METAPODACI
       pdf.setFontSize(9.3);
       pdf.text("Potpis tehničara:", margin, y);
       pdf.text("Potpis klijenta:", pageWidth / 2 + 10, y);
 
-      // Prikaz bitmap potpisa
-      const drawSignature = (imgSrc: string, x: number, y: number, cb: () => void) => {
+      // Prikaz bitmap potpisa i metapodataka
+      const drawSignature = (
+        imgSrc: string,
+        x: number,
+        y: number,
+        name: string,
+        metadata?: WorkOrder["signatureMetadata"],
+        cb?: () => void
+      ) => {
         if (!imgSrc) {
-          cb();
+          if (cb) cb();
           return;
         }
         const img = new Image();
@@ -270,21 +277,44 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           if (ctx) {
             ctx.drawImage(img, 0, 0);
             const imgData = canvas.toDataURL("image/png");
-            pdf.addImage(imgData, "PNG", x, y, 40, 18);
+            pdf.addImage(imgData, "PNG", x, y + 3, 40, 18);
           }
-          cb();
+          pdf.text(name || "", x, y + 25);
+
+          // Metapodaci
+          if (metadata) {
+            pdf.setFontSize(7.2);
+            let metaY = y + 29;
+            if (metadata.timestamp) {
+              pdf.text(`Datum i vrijeme: ${metadata.timestamp}`, x, metaY);
+              metaY += 3;
+            }
+            if (metadata.coordinates) {
+              pdf.text(
+                `Koordinate: ${metadata.coordinates.latitude?.toFixed(6)}, ${metadata.coordinates.longitude?.toFixed(6)}`,
+                x,
+                metaY
+              );
+              metaY += 3;
+            }
+            if (metadata.address) {
+              const addressLines = pdf.splitTextToSize(`Adresa: ${metadata.address}`, 40);
+              pdf.text(addressLines, x, metaY);
+            }
+            pdf.setFontSize(9.3);
+          }
+          if (cb) cb();
         };
-        img.onerror = () => cb();
+        img.onerror = () => {
+          pdf.text(name || "", x, y + 25);
+          if (cb) cb();
+        };
       };
 
       let signaturesDone = 0;
       const tryFinish = () => {
         signaturesDone++;
         if (signaturesDone === 2) {
-          // Imena ispod
-          pdf.text(workOrder.technicianName || "", margin, y + 25);
-          pdf.text(workOrder.customerSignerName || "", pageWidth / 2 + 10, y + 25);
-
           // FOOTER
           pdf.setFontSize(7.2);
           pdf.setTextColor(100);
@@ -307,9 +337,22 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         }
       };
 
-      drawSignature(workOrder.technicianSignature, margin, y + 3, tryFinish);
-      drawSignature(workOrder.customerSignature, pageWidth / 2 + 10, y + 3, tryFinish);
-
+      drawSignature(
+        workOrder.technicianSignature,
+        margin,
+        y,
+        workOrder.technicianName,
+        workOrder.signatureMetadata,
+        tryFinish
+      );
+      drawSignature(
+        workOrder.customerSignature,
+        pageWidth / 2 + 10,
+        y,
+        workOrder.customerSignerName,
+        workOrder.signatureMetadata,
+        tryFinish
+      );
     } catch (error) {
       reject(error);
     }

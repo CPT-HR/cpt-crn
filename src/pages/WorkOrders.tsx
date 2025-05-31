@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
+import { useNavigate } from 'react-router-dom';
 import { 
   Table, 
   TableBody, 
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 
@@ -36,6 +38,7 @@ type WorkOrderWithProfile = {
 const WorkOrders: React.FC = () => {
   const { user } = useAuth();
   const { data: employeeProfile } = useEmployeeProfile();
+  const navigate = useNavigate();
 
   const { data: workOrders, isLoading, error } = useQuery({
     queryKey: ['work-orders'],
@@ -145,13 +148,21 @@ const WorkOrders: React.FC = () => {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
-                        <button className="text-blue-600 hover:underline text-sm">
+                        <Button 
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/work-orders/${order.id}`)}
+                        >
                           Pregled
-                        </button>
+                        </Button>
                         {(user?.role === 'admin' || order.employee_profile_id === employeeProfile?.id) && (
-                          <button className="text-green-600 hover:underline text-sm">
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/work-orders/${order.id}/edit`)}
+                          >
                             Uredi
-                          </button>
+                          </Button>
                         )}
                       </div>
                     </TableCell>

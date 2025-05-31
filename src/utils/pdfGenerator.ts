@@ -58,7 +58,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 18;
-      const usableHeight = pageHeight - margin - 32;
+      const usableHeight = pageHeight - margin - 30;
       let y = margin;
       let pageNumber = 1;
       let totalPages = 1;
@@ -72,11 +72,10 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, margin);
         pdf.text("+385 1 6525 100", pageWidth - margin - 65, margin + 5);
         pdf.setFontSize(16);
-        // VIŠE PRAZNOG PROSTORA IZNAD I ISPOD NASLOVA
         pdf.text(
           `RADNI NALOG  Broj: ${workOrder.id}`,
           pageWidth / 2,
-          margin + 32,
+          margin + 22,
           { align: "center" }
         );
       }
@@ -96,29 +95,36 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.setFontSize(6.1);
         pdf.setTextColor(100);
 
-        const line1 = "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr";
-        const line2 = "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka";
+        const yFirma = pageHeight - 15;
+        const yLegal = pageHeight - 10;
+        const yPage = pageHeight - 5;
 
-        const yFooter1 = pageHeight - 10.1;
-        const yFooter2 = pageHeight - 7.1;
-        const yFooterPage = pageHeight - 2.6;
-
-        pdf.text(line1, pageWidth / 2, yFooter1, { align: "center" });
-        pdf.text(line2, pageWidth / 2, yFooter2, { align: "center" });
+        pdf.text(
+          "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
+          pageWidth / 2,
+          yFirma,
+          { align: "center", maxWidth: pageWidth - 2 * margin }
+        );
+        pdf.text(
+          "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
+          pageWidth / 2,
+          yLegal,
+          { align: "center", maxWidth: pageWidth - 2 * margin }
+        );
+        pdf.setFontSize(6.0);
         pdf.text(
           `Stranica ${currPage}/${allPages}`,
           pageWidth - margin,
-          yFooterPage,
+          yPage,
           { align: "right" }
         );
         pdf.setTextColor(0);
       }
 
-      // VELIKI razmak ispod headera na svakoj idućoj stranici
       function maybeAddPage(nextBlockHeight: number, headerFnc?: () => void) {
         if (y + nextBlockHeight > usableHeight) {
           pdf.addPage();
-          y = margin + 24;
+          y = margin + 9;
           pageNumber++;
           headerFnc ? headerFnc() : drawSmallHeader();
         }
@@ -126,8 +132,9 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       // Start
       drawFirstHeader();
-      y += 46;
+      y += 35;
 
+      // PODACI O NARUČITELJU I KORISNIKU
       pdf.setFontSize(12);
       pdf.setTextColor(32, 32, 32);
       pdf.text("PODACI O NARUČITELJU", margin, y);
@@ -173,7 +180,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text(datumTekst, margin, y);
       y += 6;
       pdf.text(
-        `Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}   |   Prijeđena udaljenost: ${workOrder.distance ? workOrder.distance + " km" : "-"}`,
+        `Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}   |   Udaljenost: ${workOrder.distance ? workOrder.distance + " km" : "-"}`,
         margin,
         y
       );
@@ -207,6 +214,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       section("IZVRŠENI RADOVI", workOrder.performedWork);
       section("KOMENTAR TEHNIČARA", workOrder.technicianComment);
 
+      // UTROŠENI MATERIJAL
       let matBlockHeight = 16 + workOrder.materials.length * 6;
       maybeAddPage(matBlockHeight, drawSmallHeader);
       pdf.setFontSize(12);
@@ -237,6 +245,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       }
       y += 13;
 
+      // POTPISI - SLIKE, IMENA I METAPODACI
       maybeAddPage(38, drawSmallHeader);
       pdf.setFontSize(9.3);
       pdf.text("Potpis tehničara:", margin, y);
@@ -269,7 +278,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           }
           pdf.text(name || "", x, y + 25);
           if (meta && metadata) {
-            pdf.setFontSize(6.1);
+            pdf.setFontSize(6.1); // Koristi istu veličinu kao u footeru
             let metaY = y + 29;
             if (metadata.timestamp) {
               pdf.text(`Datum i vrijeme: ${metadata.timestamp}`, x, metaY);

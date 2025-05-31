@@ -76,27 +76,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       yRow += 8;
       pageBreak();
 
-      // VRIJEME I PUT - bez naslova, iznad svega ostalog
-      pdf.setFontSize(9);
-      pdf.text(`Datum: ${workOrder.date}`, leftX + 3, yRow);
-      pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}`, rightX + 3, yRow);
-      yRow += 5;
-      pageBreak();
-
-      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, leftX + 3, yRow);
-      if (workOrder.fieldTrip)
-        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, rightX + 3, yRow);
-      yRow += 5;
-      pageBreak();
-
-      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, leftX + 3, yRow);
-      yRow += 5;
-      pageBreak();
-
-      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, leftX + 3, yRow);
-      yRow += 8;
-      pageBreak();
-
       // PODACI O NARUČITELJU / KORISNIKU
       pdf.setFontSize(11);
       pdf.text("PODACI O NARUČITELJU", 15, yRow);
@@ -123,6 +102,27 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       writePair("Mobitel:", workOrder.clientMobile, "Mobitel:", workOrder.customerMobile || "");
       writePair("Email:", workOrder.clientEmail, "Email:", workOrder.customerEmail || "");
       yRow += 4;
+      pageBreak();
+
+      // VRIJEME I PUT - bez naslova, prije OPIS KVARA/PROBLEMA:
+      pdf.setFontSize(9);
+      pdf.text(`Datum: ${workOrder.date}`, leftX + 3, yRow);
+      pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}`, rightX + 3, yRow);
+      yRow += 5;
+      pageBreak();
+
+      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, leftX + 3, yRow);
+      if (workOrder.fieldTrip)
+        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, rightX + 3, yRow);
+      yRow += 5;
+      pageBreak();
+
+      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, leftX + 3, yRow);
+      yRow += 5;
+      pageBreak();
+
+      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, leftX + 3, yRow);
+      yRow += 8;
       pageBreak();
 
       // SEKCIJE

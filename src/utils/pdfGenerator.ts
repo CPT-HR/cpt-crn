@@ -90,6 +90,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         );
       }
 
+      // DODATNI RAZMAK između drugog i trećeg reda (npr. 3.5mm)
       function drawFooter(currPage: number, allPages: number) {
         pdf.setFont("Manrope-Regular", "normal");
         pdf.setFontSize(6.1);
@@ -98,9 +99,10 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         const line1 = "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr";
         const line2 = "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka";
 
-        const yFooter1 = pageHeight - 10.1; // prvi red
-        const yFooter2 = pageHeight - 7.1;  // drugi red (SINGLE-LINE razmak, NIJE ogroman NI zalijepljen)
-        const yFooterPage = pageHeight - 5.1; // Stranica X/Y, u kut
+        const yFooter1 = pageHeight - 10.1;
+        const yFooter2 = pageHeight - 7.1;
+        // *** DODATNI razmak, treći red još NIŽE
+        const yFooterPage = pageHeight - 2.6;
 
         pdf.text(line1, pageWidth / 2, yFooter1, { align: "center" });
         pdf.text(line2, pageWidth / 2, yFooter2, { align: "center" });
@@ -126,7 +128,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       drawFirstHeader();
       y += 35;
 
-      // PODACI O NARUČITELJU I KORISNIKU
       pdf.setFontSize(12);
       pdf.setTextColor(32, 32, 32);
       pdf.text("PODACI O NARUČITELJU", margin, y);
@@ -206,7 +207,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       section("IZVRŠENI RADOVI", workOrder.performedWork);
       section("KOMENTAR TEHNIČARA", workOrder.technicianComment);
 
-      // UTROŠENI MATERIJAL
       let matBlockHeight = 16 + workOrder.materials.length * 6;
       maybeAddPage(matBlockHeight, drawSmallHeader);
       pdf.setFontSize(12);
@@ -237,7 +237,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       }
       y += 13;
 
-      // POTPISI - SLIKE, IMENA I METAPODACI
       maybeAddPage(38, drawSmallHeader);
       pdf.setFontSize(9.3);
       pdf.text("Potpis tehničara:", margin, y);

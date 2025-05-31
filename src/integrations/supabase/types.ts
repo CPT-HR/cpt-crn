@@ -62,7 +62,7 @@ export type Database = {
           created_at?: string
           email?: string | null
           first_name: string
-          id: string
+          id?: string
           last_name: string
           location_id?: string | null
           manager_id?: string | null
@@ -296,6 +296,10 @@ export type Database = {
     Functions: {
       get_current_user_role: {
         Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      get_next_order_number: {
+        Args: { user_initials: string }
         Returns: string
       }
       is_admin: {

@@ -78,8 +78,6 @@ const countries = [
   'Makedonija', 'Austrija', 'Njemačka', 'Italija', 'Mađarska'
 ];
 
-let orderCounter = 1;
-
 const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   const { user } = useAuth();
   const { data: employeeProfile } = useEmployeeProfile();
@@ -151,7 +149,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       const customerAddress = parseAddress(initialData.customer_company_address || '');
       
       return {
-        id: initialData.order_number || '',
+        id: initialData.order_number || '', // Za edit mode prikazuj order_number kao id
         clientCompanyName: initialData.client_company_name || '',
         clientStreetAddress: clientAddress.street,
         clientCity: clientAddress.city,
@@ -190,7 +188,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     }
 
     return {
-      id: '',
+      id: '', // Prazan za nove naloge - prikazat će se nakon generiranja
       clientCompanyName: '',
       clientStreetAddress: '',
       clientCity: 'Zagreb',
@@ -452,6 +450,28 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     workOrder.customerLastName
   ]);
 
+  // Funkcija za dobivanje sljedećeg broja radnog naloga koristeći Supabase RPC
+  const getNextOrderNumber = async (userInitials: string): Promise<string> => {
+    try {
+      console.log('Getting next order number for user initials:', userInitials);
+      
+      const { data, error } = await supabase.rpc('get_next_order_number', {
+        user_initials: userInitials
+      });
+      
+      if (error) {
+        console.error('Error getting next order number:', error);
+        throw error;
+      }
+      
+      console.log('Generated order number:', data);
+      return data;
+    } catch (error) {
+      console.error('Error in getNextOrderNumber:', error);
+      throw error;
+    }
+  };
+
   const handleClientInfoChange = (field: string, value: string | boolean) => {
     setWorkOrder(prev => ({ ...prev, [field]: value }));
   };
@@ -592,7 +612,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       const roundedDistance = finalWorkOrder.distance ? Math.round(parseFloat(finalWorkOrder.distance)) : 0;
       
       const workOrderData = {
-        order_number: finalWorkOrder.id,
+        order_number: finalWorkOrder.orderNumber, // Koristi generirani order_number
         client_company_name: finalWorkOrder.clientCompanyName,
         client_company_address: `${finalWorkOrder.clientStreetAddress}, ${finalWorkOrder.clientCity}, ${finalWorkOrder.clientCountry}`,
         client_oib: finalWorkOrder.clientOib,
@@ -622,7 +642,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         signature_address: finalWorkOrder.signatureMetadata?.address,
         date: isoDate,
         employee_profile_id: employeeProfile.id,
-        user_id: user.id, // Add the missing user_id field
+        user_id: user.id,
       };
 
       console.log('Work order data to insert:', workOrderData);
@@ -639,7 +659,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
           throw error;
         }
       } else {
-        // Insert new work order
+        // Insert new work order - UUID ID će se automatski generirati na backendu
         const { error } = await supabase
           .from('work_orders')
           .insert(workOrderData);
@@ -691,14 +711,22 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     setIsSubmitting(true);
     
     try {
-      const year = new Date().getFullYear().toString().slice(-2);
-      const generatedId = isEditMode ? workOrder.id : `${user.initials}${orderCounter++}/${year}`;
+      // Generiraj order_number samo za nove naloge
+      let orderNumber = workOrder.id; // Za edit mode koristi postojeći
+      
+      if (!isEditMode) {
+        if (!user.initials) {
+          throw new Error("User initials nisu pronađeni");
+        }
+        orderNumber = await getNextOrderNumber(user.initials);
+        console.log('Generated new order number:', orderNumber);
+      }
       
       const finalCustomerData = getFinalCustomerData();
       
       const finalWorkOrder = {
         ...workOrder,
-        id: generatedId,
+        orderNumber, // Dodijeli generirani order_number
         technicianSignature: user.signature || '',
         technicianName: user.name || '',
         date: workOrder.date,
@@ -711,8 +739,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       
       await saveToSupabase(finalWorkOrder);
       
+      // Za PDF koristi order_number kao id
       const finalWorkOrderForPDF = {
         ...finalWorkOrder,
+        id: orderNumber, // PDF koristi order_number kao ID
         date: workOrder.date.toLocaleDateString('hr-HR')
       };
       
@@ -720,11 +750,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       
       toast({
         title: isEditMode ? "Radni nalog ažuriran" : "Radni nalog spremljen",
-        description: `Radni nalog ${generatedId} je uspješno ${isEditMode ? 'ažuriran' : 'kreiran'} i spreman za ispis`,
+        description: `Radni nalog ${orderNumber} je uspješno ${isEditMode ? 'ažuriran' : 'kreiran'} i spreman za ispis`,
       });
       
       if (!isEditMode) {
-        // Reset form only for new work orders
+        // Reset form only for new work orders and set the new order number as id for display
         setWorkOrder({
           id: '',
           clientCompanyName: '',

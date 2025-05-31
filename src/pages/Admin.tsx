@@ -13,27 +13,6 @@ import { Navigate } from 'react-router-dom';
 import { toast } from "@/components/ui/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Plus, Trash2, Edit, Car, Users, MapPin } from "lucide-react";
-import MockDataGenerator from '@/components/MockDataGenerator';
-
-// Mock pending users
-const PENDING_USERS = [
-  {
-    id: '3',
-    email: 'pending@example.com',
-    name: 'Pending User',
-    role: 'technician',
-    approved: false,
-    date: '2023-05-10',
-  },
-  {
-    id: '4',
-    email: 'another@example.com',
-    name: 'Another Pending',
-    role: 'technician',
-    approved: false,
-    date: '2023-05-12',
-  }
-];
 
 interface CompanyLocation {
   id: string;
@@ -81,7 +60,6 @@ const userRoles = [
 
 const Admin: React.FC = () => {
   const { user } = useAuth();
-  const [pendingUsers, setPendingUsers] = useState([]);
   const [locations, setLocations] = useState<CompanyLocation[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -91,7 +69,6 @@ const Admin: React.FC = () => {
   const [isLoadingEmployees, setIsLoadingEmployees] = useState(true);
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-  const [mockDataGenerated, setMockDataGenerated] = useState(false);
   
   // New location form
   const [newLocation, setNewLocation] = useState({
@@ -308,22 +285,6 @@ const Admin: React.FC = () => {
     } catch (error) {
       console.error('Error refreshing vehicles:', error);
     }
-  };
-  
-  const approveUser = (id: string) => {
-    setPendingUsers(pendingUsers.filter(user => user.id !== id));
-    toast({
-      title: "Korisnik odobren",
-      description: "Korisnikov račun je uspješno odobren",
-    });
-  };
-  
-  const rejectUser = (id: string) => {
-    setPendingUsers(pendingUsers.filter(user => user.id !== id));
-    toast({
-      title: "Korisnik odbijen",
-      description: "Zahtjev za registraciju je odbijen",
-    });
   };
   
   const addLocation = async () => {
@@ -716,27 +677,6 @@ const Admin: React.FC = () => {
   return (
     <div className="container py-6">
       <h1 className="text-3xl font-bold mb-6">Administracija</h1>
-      
-      {/* Mock data generation - TEMPORARY FEATURE */}
-      {!mockDataGenerated && (
-        <Card className="mb-6 border-dashed border-amber-400 bg-amber-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="font-medium text-amber-800">Generiraj mock podatke</h3>
-                <p className="text-sm text-amber-700">Privremena funkcionalnost za dodavanje test podataka</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Mock Data Generator Component */}
-      <MockDataGenerator 
-        onDataGenerated={async () => {
-          await Promise.all([refreshEmployees(), refreshVehicles()]);
-        }}
-      />
 
       <Tabs defaultValue="locations" className="space-y-6">
         <TabsList>

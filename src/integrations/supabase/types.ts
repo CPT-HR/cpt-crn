@@ -184,6 +184,7 @@ export type Database = {
           date: string
           description: string | null
           distance: number | null
+          employee_profile_id: string | null
           found_condition: string | null
           hours: number | null
           id: string
@@ -219,6 +220,7 @@ export type Database = {
           date: string
           description?: string | null
           distance?: number | null
+          employee_profile_id?: string | null
           found_condition?: string | null
           hours?: number | null
           id?: string
@@ -254,6 +256,7 @@ export type Database = {
           date?: string
           description?: string | null
           distance?: number | null
+          employee_profile_id?: string | null
           found_condition?: string | null
           hours?: number | null
           id?: string
@@ -269,7 +272,15 @@ export type Database = {
           updated_at?: string | null
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "work_orders_employee_profile_id_fkey"
+            columns: ["employee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "employee_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

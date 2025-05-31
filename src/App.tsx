@@ -10,7 +10,6 @@ import Dashboard from "./pages/Dashboard";
 import WorkOrders from "./pages/WorkOrders";
 import WorkOrderView from "./pages/WorkOrderView";
 import WorkOrderEdit from "./pages/WorkOrderEdit";
-import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound";
@@ -62,12 +61,6 @@ const App = () => (
             <Route path="/work-orders/:id/edit" element={
               <ProtectedRoute>
                 <WorkOrderEdit />
-              </ProtectedRoute>
-            } />
-            
-            <Route path="/settings" element={
-              <ProtectedRoute>
-                <Settings />
               </ProtectedRoute>
             } />
             

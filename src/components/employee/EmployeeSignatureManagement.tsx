@@ -28,7 +28,7 @@ interface EmployeeSignatureManagementProps {
   employee: Employee;
 }
 
-const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = ({ employee }) => {
+export const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = ({ employee }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
@@ -148,5 +148,3 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
     </div>
   );
 };
-
-export default EmployeeSignatureManagement;

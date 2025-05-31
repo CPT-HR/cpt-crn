@@ -543,6 +543,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       console.log('Saving work order to Supabase...', finalWorkOrder);
       
       if (!employeeProfile) throw new Error("Employee profile nije pronađen");
+      if (!user?.id) throw new Error("User ID nije pronađen");
       
       const signatureCoordinates = finalWorkOrder.signatureMetadata?.coordinates 
         ? `(${finalWorkOrder.signatureMetadata.coordinates.longitude},${finalWorkOrder.signatureMetadata.coordinates.latitude})`
@@ -621,6 +622,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         signature_address: finalWorkOrder.signatureMetadata?.address,
         date: isoDate,
         employee_profile_id: employeeProfile.id,
+        user_id: user.id, // Add the missing user_id field
       };
 
       console.log('Work order data to insert:', workOrderData);

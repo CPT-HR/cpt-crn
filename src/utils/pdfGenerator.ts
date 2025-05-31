@@ -58,28 +58,62 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 18;
-      let y = 18;
+      const usableHeight = pageHeight - margin - 30;
+      let y = margin;
 
-      // HEADER
-      pdf.setFontSize(11);
-      pdf.text("Centar pametne tehnologije d.o.o.", margin, y);
-      pdf.text("Kovači 78c, Velika Mlaka", margin, y + 5);
-      pdf.text("OIB: 75343882245", margin, y + 10);
-      pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, y);
-      pdf.text("+385 1 6525 100", pageWidth - margin - 65, y + 5);
+      // Zaglavlje
+      function drawHeader() {
+        pdf.setFont("Manrope-Regular", "normal");
+        pdf.setFontSize(11);
+        pdf.text("Centar pametne tehnologije d.o.o.", margin, margin);
+        pdf.text("Kovači 78c, Velika Mlaka", margin, margin + 5);
+        pdf.text("OIB: 75343882245", margin, margin + 10);
+        pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, margin);
+        pdf.text("+385 1 6525 100", pageWidth - margin - 65, margin + 5);
 
-      // Title & Nalog broj - centrirano
-      pdf.setFontSize(16);
-      pdf.text(
-        `RADNI NALOG  Broj: ${workOrder.id}`,
-        pageWidth / 2,
-        y + 22,
-        { align: "center" }
-      );
+        pdf.setFontSize(16);
+        pdf.text(
+          `RADNI NALOG  Broj: ${workOrder.id}`,
+          pageWidth / 2,
+          margin + 22,
+          { align: "center" }
+        );
+      }
+      // Footer
+      function drawFooter() {
+        pdf.setFont("Manrope-Regular", "normal");
+        pdf.setFontSize(7.2);
+        pdf.setTextColor(100);
+        pdf.text(
+          "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
+          pageWidth / 2,
+          pageHeight - 12,
+          { align: "center" }
+        );
+        pdf.text(
+          "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
+          pageWidth / 2,
+          pageHeight - 7,
+          { align: "center" }
+        );
+        pdf.setTextColor(0);
+      }
 
+      // Provjera prelaska na novu stranicu
+      function maybeAddPage(nextBlockHeight: number) {
+        if (y + nextBlockHeight > usableHeight) {
+          drawFooter();
+          pdf.addPage();
+          drawHeader();
+          y = margin + 30;
+        }
+      }
+
+      // Početak dokumenta
+      drawHeader();
       y += 35;
 
-      // NARUČITELJ I KORISNIK - DVA STUPCA
+      // PODACI O NARUČITELJU I KORISNIKU
       pdf.setFontSize(12);
       pdf.setTextColor(32, 32, 32);
       pdf.text("PODACI O NARUČITELJU", margin, y);
@@ -89,31 +123,24 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       y += 5.5;
       pdf.setFontSize(9.3);
 
-      // Naručitelj lijevo, korisnik desno
       let yL = y, yR = y;
       const colL = margin;
       const colR = pageWidth / 2 + 2;
-
       pdf.text(`Ime tvrtke: ${workOrder.clientCompanyName}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`Ime tvrtke: ${workOrder.customerCompanyName}`, colR, yR);
       yL += 5; yR += 5;
-
       pdf.text(`Adresa: ${workOrder.clientCompanyAddress}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`Adresa: ${workOrder.customerCompanyAddress}`, colR, yR);
       yL += 5; yR += 5;
-
       pdf.text(`OIB: ${workOrder.clientOib}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`OIB: ${workOrder.customerOib}`, colR, yR);
       yL += 5; yR += 5;
-
       pdf.text(`Ime i prezime: ${workOrder.clientFirstName} ${workOrder.clientLastName}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`Ime i prezime: ${workOrder.customerFirstName} ${workOrder.customerLastName}`, colR, yR);
       yL += 5; yR += 5;
-
       pdf.text(`Mobitel: ${workOrder.clientMobile}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`Mobitel: ${workOrder.customerMobile}`, colR, yR);
       yL += 5; yR += 5;
-
       pdf.text(`Email: ${workOrder.clientEmail}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`Email: ${workOrder.customerEmail}`, colR, yR);
 
@@ -128,9 +155,9 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFontSize(10);
       pdf.setTextColor(60, 60, 60);
 
+      maybeAddPage(12);
       let datumTekst = `Datum: ${workOrder.date}   |   Vrijeme dolaska: ${workOrder.arrivalTime}   |   Vrijeme završetka: ${workOrder.completionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`;
       pdf.text(datumTekst, margin, y);
-
       y += 6;
       pdf.text(
         `Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}   |   Prijeđena udaljenost: ${workOrder.distance ? workOrder.distance + " km" : "-"}`,
@@ -141,89 +168,41 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       y += 11;
 
-      // OPIS KVARA
-      pdf.setFontSize(12);
-      pdf.text("OPIS KVARA / PROBLEMA", margin, y);
-      y += 5.3;
-      pdf.setFontSize(9.2);
-      if (workOrder.description.length > 0 && workOrder.description.some(x => x.text.trim())) {
-        workOrder.description.forEach((item, idx) => {
-          if (item.text.trim()) {
-            pdf.text(`${idx + 1}. ${item.text}`, margin, y);
-            y += 5;
-          }
-        });
-      } else {
-        pdf.text("Nije uneseno.", margin, y);
-        y += 5;
+      // Sekcije: (provjera mjesta za svaku)
+      function section(title: string, arr: WorkItem[], blockMinHeight = 13) {
+        let est = blockMinHeight + arr.length * 6;
+        maybeAddPage(est);
+        pdf.setFontSize(12);
+        pdf.text(title, margin, y);
+        y += 5.3;
+        pdf.setFontSize(9.2);
+        if (arr.length > 0 && arr.some(x => x.text.trim())) {
+          arr.forEach((item, idx) => {
+            if (item.text.trim()) {
+              pdf.text(`${idx + 1}. ${item.text}`, margin, y);
+              y += 5;
+            }
+          });
+        } else {
+          pdf.text("Nije uneseno.", margin, y);
+          y += 5;
+        }
+        y += 7.3;
       }
 
-      y += 7.3;
+      // OPIS KVARA / ZATEČENO STANJE / IZVRŠENI RADOVI / KOMENTAR TEHNIČARA / UTROŠENI MATERIJAL
+      section("OPIS KVARA / PROBLEMA", workOrder.description);
+      section("ZATEČENO STANJE", workOrder.foundCondition);
+      section("IZVRŠENI RADOVI", workOrder.performedWork);
+      section("KOMENTAR TEHNIČARA", workOrder.technicianComment);
 
-      // ZATEČENO STANJE
-      pdf.setFontSize(12);
-      pdf.text("ZATEČENO STANJE", margin, y);
-      y += 5.3;
-      pdf.setFontSize(9.2);
-      if (workOrder.foundCondition.length > 0 && workOrder.foundCondition.some(x => x.text.trim())) {
-        workOrder.foundCondition.forEach((item, idx) => {
-          if (item.text.trim()) {
-            pdf.text(`${idx + 1}. ${item.text}`, margin, y);
-            y += 5;
-          }
-        });
-      } else {
-        pdf.text("Nije uneseno.", margin, y);
-        y += 5;
-      }
-
-      y += 7.3;
-
-      // IZVRŠENI RADOVI
-      pdf.setFontSize(12);
-      pdf.text("IZVRŠENI RADOVI", margin, y);
-      y += 5.3;
-      pdf.setFontSize(9.2);
-      if (workOrder.performedWork.length > 0 && workOrder.performedWork.some(x => x.text.trim())) {
-        workOrder.performedWork.forEach((item, idx) => {
-          if (item.text.trim()) {
-            pdf.text(`${idx + 1}. ${item.text}`, margin, y);
-            y += 5;
-          }
-        });
-      } else {
-        pdf.text("Nije uneseno.", margin, y);
-        y += 5;
-      }
-
-      y += 7.3;
-
-      // KOMENTAR TEHNIČARA
-      pdf.setFontSize(12);
-      pdf.text("KOMENTAR TEHNIČARA", margin, y);
-      y += 5.3;
-      pdf.setFontSize(9.2);
-      if (workOrder.technicianComment.length > 0 && workOrder.technicianComment.some(x => x.text.trim())) {
-        workOrder.technicianComment.forEach((item, idx) => {
-          if (item.text.trim()) {
-            pdf.text(`${idx + 1}. ${item.text}`, margin, y);
-            y += 5;
-          }
-        });
-      } else {
-        pdf.text("Nije uneseno.", margin, y);
-        y += 5;
-      }
-
-      y += 7.3;
-
-      // UTROŠENI MATERIJAL (TABLICA)
+      // UTROŠENI MATERIJAL (provjera mjesta)
+      let matBlockHeight = 16 + workOrder.materials.length * 6;
+      maybeAddPage(matBlockHeight);
       pdf.setFontSize(12);
       pdf.text("UTROŠENI MATERIJAL", margin, y);
       y += 5.3;
       pdf.setFontSize(9.2);
-
-      // Table header
       pdf.setFillColor(230, 230, 230);
       pdf.rect(margin, y - 4, pageWidth - 2 * margin, 6.5, "F");
       pdf.setTextColor(32, 32, 32);
@@ -231,12 +210,11 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text("Naziv materijala", margin + 14, y);
       pdf.text("Količina", pageWidth - margin - 35, y);
       pdf.text("Jedinica", pageWidth - margin - 10, y);
-
       y += 6.1;
-
       pdf.setTextColor(40, 40, 40);
       if (workOrder.materials && workOrder.materials.length > 0) {
         workOrder.materials.forEach((mat, idx) => {
+          maybeAddPage(7);
           pdf.text(`${idx + 1}.`, margin + 2, y);
           pdf.text(mat.name, margin + 14, y);
           pdf.text(mat.quantity, pageWidth - margin - 35, y);
@@ -247,10 +225,10 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text("Nije uneseno.", margin + 2, y);
         y += 5;
       }
-
       y += 13;
 
       // POTPISI - SLIKE, IMENA I METAPODACI
+      maybeAddPage(38);
       pdf.setFontSize(9.3);
       pdf.text("Potpis tehničara:", margin, y);
       pdf.text("Potpis klijenta:", pageWidth / 2 + 10, y);
@@ -317,23 +295,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const tryFinish = () => {
         signaturesDone++;
         if (signaturesDone === 2) {
-          // FOOTER
-          pdf.setFontSize(7.2);
-          pdf.setTextColor(100);
-          pdf.text(
-            "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
-            pageWidth / 2,
-            pageHeight - 12,
-            { align: "center" }
-          );
-          pdf.text(
-            "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
-            pageWidth / 2,
-            pageHeight - 7,
-            { align: "center" }
-          );
-          pdf.setTextColor(0);
-
+          drawFooter();
           pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
           resolve();
         }
@@ -344,7 +306,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         margin,
         y,
         workOrder.technicianName,
-        false, // NEMA metapodataka ispod tehničara
+        false,
         undefined,
         tryFinish
       );
@@ -353,7 +315,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pageWidth / 2 + 10,
         y,
         workOrder.customerSignerName,
-        true, // DA, metapodaci ispod klijenta
+        true,
         workOrder.signatureMetadata,
         tryFinish
       );

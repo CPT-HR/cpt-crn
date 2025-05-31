@@ -95,26 +95,25 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.setFontSize(6.1);
         pdf.setTextColor(100);
 
-        const yFirma = pageHeight - 7.1;
-        const yLegal = pageHeight - 5.2;
-        const yPage = pageHeight - 2.5;
+        const yBase = pageHeight - 4.0;
+        const lineHeight = 1.3;
 
         pdf.text(
           "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
           pageWidth / 2,
-          yFirma,
+          yBase,
           { align: "center" }
         );
         pdf.text(
           "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
           pageWidth / 2,
-          yLegal,
+          yBase + lineHeight,
           { align: "center" }
         );
         pdf.text(
           `Stranica ${currPage}/${allPages}`,
           pageWidth - margin,
-          yPage,
+          yBase + lineHeight * 2,
           { align: "right" }
         );
         pdf.setTextColor(0);

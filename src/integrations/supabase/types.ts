@@ -274,6 +274,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_work_orders_employee_profile"
+            columns: ["employee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "employee_profiles"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "work_orders_employee_profile_id_fkey"
             columns: ["employee_profile_id"]
             isOneToOne: false
@@ -287,7 +294,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
     }
     Enums: {
       user_role: "admin" | "technician" | "lead"

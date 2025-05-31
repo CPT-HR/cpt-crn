@@ -1,8 +1,10 @@
 
 import React from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Building2 } from 'lucide-react';
-import ManagerHierarchy from '@/components/ManagerHierarchy';
+import { Users, Car, MapPin } from 'lucide-react';
+import VehicleManagement from '@/components/VehicleManagement';
+import LocationManagement from '@/components/LocationManagement';
+import EmployeeManagement from '@/components/EmployeeManagement';
 
 const Admin: React.FC = () => {
   return (
@@ -12,26 +14,32 @@ const Admin: React.FC = () => {
         <h1 className="text-3xl font-bold">Administracija</h1>
       </div>
 
-      <Tabs defaultValue="hierarchy" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="hierarchy" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Hijerarhija voditelja
-          </TabsTrigger>
+      <Tabs defaultValue="employees" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="employees" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Zaposlenici
           </TabsTrigger>
+          <TabsTrigger value="vehicles" className="flex items-center gap-2">
+            <Car className="h-4 w-4" />
+            Vozila
+          </TabsTrigger>
+          <TabsTrigger value="locations" className="flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
+            Lokacije
+          </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="hierarchy" className="mt-6">
-          <ManagerHierarchy />
+        <TabsContent value="employees" className="mt-6">
+          <EmployeeManagement />
         </TabsContent>
 
-        <TabsContent value="employees" className="mt-6">
-          <div className="text-center py-8 text-muted-foreground">
-            Upravljanje zaposlenicima - uskoro
-          </div>
+        <TabsContent value="vehicles" className="mt-6">
+          <VehicleManagement />
+        </TabsContent>
+
+        <TabsContent value="locations" className="mt-6">
+          <LocationManagement />
         </TabsContent>
       </Tabs>
     </div>

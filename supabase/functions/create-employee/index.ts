@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -22,43 +21,38 @@ serve(async (req) => {
     )
 
     const { employees } = await req.json()
-    console.log('--- DEBUG EMPLOYEE INSERT ---');
-    console.log('Got employees:', employees);
-
     const results = []
 
     for (const employee of employees) {
       try {
-        console.log('-----------------------------------');
-        console.log(`[START] Obrada: ${employee.email}`);
-
-        // STEP 1: Provjeri postoji li korisnik već u auth.users
-        console.log(`[CHECK] listUsers for email: ${employee.email}`);
-        const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-        if (listError) {
-          console.error(`[ERROR] listUsers:`, listError);
-          results.push({ email: employee.email, success: false, error: listError.message });
-          continue;
+        // 1. Prvo provjeri postoji li user s tim emailom u auth.users
+        const { data: usersList, error: usersListError } = await supabaseAdmin.auth.admin.listUsers({ email: employee.email })
+        if (usersListError) {
+          results.push({ email: employee.email, success: false, error: usersListError.message })
+          continue
         }
-        const existingAuthUser = existingUsers.users.find(user => user.email === employee.email);
-        if (existingAuthUser) {
-          console.log(`[FOUND] User already exists in auth.users for: ${employee.email}, id: ${existingAuthUser.id}`);
-          // Provjeri postoji li već profile
+
+        let userId = null
+
+        if (usersList && usersList.users && usersList.users.length > 0) {
+          // Korisnik već postoji!
+          userId = usersList.users[0].id
+
+          // Provjeri postoji li profile za taj auth user id
           const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
-            .from('employee_profiles').select('id').eq('id', existingAuthUser.id).maybeSingle();
+            .from('employee_profiles').select('id').eq('id', userId).maybeSingle()
           if (profileCheckError) {
-            console.error(`[ERROR] profileCheck for existing user:`, profileCheckError);
-            results.push({ email: employee.email, success: false, error: profileCheckError.message });
-            continue;
+            results.push({ email: employee.email, success: false, error: profileCheckError.message })
+            continue
           }
           if (existingProfile) {
-            console.log(`[DUPLICATE] employee_profile already exists for: ${employee.email}, id: ${existingAuthUser.id}`);
-            results.push({ email: employee.email, success: false, error: 'Korisnik već postoji (profile)' });
-            continue;
+            results.push({ email: employee.email, success: false, error: 'Korisnik već postoji (profile)' })
+            continue
           }
-          // Ako ne postoji profile, pokušaj ga kreirati
+
+          // Ako postoji user ali ne postoji profile – kreiraj profile
           const employeeData = {
-            id: existingAuthUser.id,
+            id: userId,
             first_name: employee.first_name,
             last_name: employee.last_name,
             email: employee.email,
@@ -68,20 +62,17 @@ serve(async (req) => {
             vehicle_id: employee.vehicle_id || null,
             active: true
           }
-          console.log(`[INSERT] employee_profile za existing user:`, employeeData);
-          const { error: profileError } = await supabaseAdmin.from('employee_profiles').insert([employeeData]);
+          const { error: profileError } = await supabaseAdmin.from('employee_profiles').insert([employeeData])
           if (profileError) {
-            console.error(`[ERROR] profile insert for existing user:`, profileError);
-            results.push({ email: employee.email, success: false, error: profileError.message });
+            results.push({ email: employee.email, success: false, error: profileError.message })
           } else {
-            results.push({ email: employee.email, success: true, userId: existingAuthUser.id, info: 'Profile added to existing user' });
+            results.push({ email: employee.email, success: true, info: 'Profile dodan postojećem korisniku', userId })
           }
-          continue;
+          continue
         }
 
-        // STEP 2: Kreiraj auth usera
-        const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!";
-        console.log(`[CREATE] createUser for: ${employee.email}, password: ${tempPassword}`);
+        // 2. Ako user ne postoji – stvori auth usera
+        const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!"
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: employee.email,
           password: tempPassword,
@@ -92,52 +83,20 @@ serve(async (req) => {
             role: employee.user_role
           }
         })
-        console.log(`[RESULT] createUser:`, { authData, authError });
 
         if (authError) {
-          console.error(`[ERROR] createUser:`, authError);
-          results.push({ email: employee.email, success: false, error: authError.message });
-          continue;
+          results.push({ email: employee.email, success: false, error: authError.message })
+          continue
         }
         if (!authData.user) {
-          console.error(`[ERROR] createUser returned no user:`, authData);
-          results.push({ email: employee.email, success: false, error: 'No user created' });
-          continue;
+          results.push({ email: employee.email, success: false, error: 'Greška: Auth korisnik nije kreiran.' })
+          continue
         }
+        userId = authData.user.id
 
-        console.log(`[SUCCESS] User created for ${employee.email}, id: ${authData.user.id}`);
-
-        // STEP 3: Provjeri postoji li već employee_profile za taj id
-        const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
-          .from('employee_profiles').select('id').eq('id', authData.user.id).maybeSingle();
-        if (profileCheckError) {
-          console.error(`[ERROR] profileCheck after createUser:`, profileCheckError);
-          // Cleanup: delete auth user if profile check fails
-          try {
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-            console.log(`[CLEANUP] Deleted user after profileCheck fail for ${employee.email}`);
-          } catch (cleanupError) {
-            console.error(`[CLEANUP ERROR]`, cleanupError);
-          }
-          results.push({ email: employee.email, success: false, error: profileCheckError.message });
-          continue;
-        }
-        if (existingProfile) {
-          console.log(`[DUPLICATE] employee_profile already exists after createUser for: ${employee.email}`);
-          // Cleanup: delete auth user since profile already exists
-          try {
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-            console.log(`[CLEANUP] Deleted user after duplicate profile for ${employee.email}`);
-          } catch (cleanupError) {
-            console.error(`[CLEANUP ERROR]`, cleanupError);
-          }
-          results.push({ email: employee.email, success: false, error: 'Korisnik već postoji (profile after createUser)' });
-          continue;
-        }
-
-        // STEP 4: Kreiraj employee profile
+        // 3. Insert profile za novog korisnika
         const employeeData = {
-          id: authData.user.id,
+          id: userId,
           first_name: employee.first_name,
           last_name: employee.last_name,
           email: employee.email,
@@ -147,30 +106,19 @@ serve(async (req) => {
           vehicle_id: employee.vehicle_id || null,
           active: true
         }
-        console.log(`[INSERT] employee_profile after createUser:`, employeeData);
-        const { error: profileError } = await supabaseAdmin.from('employee_profiles').insert([employeeData]);
+        const { error: profileError } = await supabaseAdmin.from('employee_profiles').insert([employeeData])
         if (profileError) {
-          console.error(`[ERROR] profile insert after createUser:`, profileError);
-          // Cleanup: delete auth user if profile creation fails
-          try {
-            await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-            console.log(`[CLEANUP] Deleted user after profile insert fail for ${employee.email}`);
-          } catch (cleanupError) {
-            console.error(`[CLEANUP ERROR]`, cleanupError);
-          }
-          results.push({ email: employee.email, success: false, error: profileError.message });
+          // Cleanup, delete user if profile insert fails
+          try { await supabaseAdmin.auth.admin.deleteUser(userId) } catch (e) {}
+          results.push({ email: employee.email, success: false, error: profileError.message })
         } else {
-          results.push({ email: employee.email, success: true, userId: authData.user.id, info: 'User and profile created' });
+          results.push({ email: employee.email, success: true, info: 'Korisnik i profil kreirani', userId })
         }
 
       } catch (error) {
-        console.error(`[CATCH ALL] Error for ${employee.email}:`, error);
-        results.push({ email: employee.email, success: false, error: error.message });
+        results.push({ email: employee.email, success: false, error: error.message })
       }
     }
-
-    console.log('--- FINAL DEBUG RESULTS ---');
-    console.log(JSON.stringify(results, null, 2));
 
     return new Response(
       JSON.stringify({ success: true, results }),
@@ -181,7 +129,6 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('[FATAL ERROR] in create-employee function:', error)
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {

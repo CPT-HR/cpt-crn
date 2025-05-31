@@ -1,5 +1,4 @@
 import { jsPDF } from "jspdf";
-import autoTable from "jspdf-autotable";
 import "../../src/fonts/Manrope-Regular-normal.js";
 
 interface Material {
@@ -65,76 +64,73 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text(`Broj: ${workOrder.id}`, 15, 32);
       pdf.text(`Datum: ${workOrder.date}`, 170, 32, { align: "right" });
 
-      // NARUČITELJ & KORISNIK - side by side (bez linija, s više razmaka)
-      const client = [
-        ["Ime tvrtke:", workOrder.clientCompanyName],
-        ["Adresa tvrtke:", workOrder.clientCompanyAddress],
-        ["OIB:", workOrder.clientOib],
-        ["Ime i prezime:", `${workOrder.clientFirstName} ${workOrder.clientLastName}`],
-        ["Mobitel:", workOrder.clientMobile],
-        ["Email:", workOrder.clientEmail],
-      ];
-      const customer = workOrder.orderForCustomer
-        ? [
-            ["Ime tvrtke:", workOrder.customerCompanyName],
-            ["Adresa tvrtke:", workOrder.customerCompanyAddress],
-            ["OIB:", workOrder.customerOib],
-            ["Ime i prezime:", `${workOrder.customerFirstName} ${workOrder.customerLastName}`],
-            ["Mobitel:", workOrder.customerMobile],
-            ["Email:", workOrder.customerEmail],
-          ]
-        : [["", ""], ["", ""], ["", ""], ["", ""], ["", ""], ["", ""]];
+      // PODACI O NARUČITELJU / KORISNIKU
+      pdf.setFontSize(14);
+      pdf.text("PODACI O NARUČITELJU", 15, 45);
+      pdf.text("PODACI O KORISNIKU", 110, 45);
 
-      autoTable(pdf, {
-        startY: 38,
-        styles: {
-          font: "Manrope-Regular",
-          fontSize: 12,
-          lineColor: [255,255,255], // bijela linija = nevidljivo
-          lineWidth: 0,
-          cellPadding: { top: 2.2, right: 2, bottom: 2.2, left: 2 },
-          overflow: 'linebreak'
-        },
-        headStyles: {
-          fillColor: [255,255,255],
-          textColor: 20,
-          fontStyle: "normal",
-          halign: 'left'
-        },
-        bodyStyles: {
-          fillColor: [255,255,255],
-          textColor: 30,
-        },
-        columnStyles: {
-          0: { cellWidth: 40 },
-          1: { cellWidth: 56 },
-          2: { cellWidth: 40 },
-          3: { cellWidth: 56 }
-        },
-        head: [["PODACI O NARUČITELJU", "", "PODACI O KORISNIKU", ""]],
-        body: client.map((row, i) => [row[0], row[1], customer[i][0], customer[i][1]])
-      });
+      pdf.setFontSize(12);
+      let yRow = 53;
+      const labelGap = 6.8;
 
-      let y = (pdf as any).lastAutoTable.finalY + 10;
+      const leftX = 15;
+      const rightX = 110;
 
-      // Helper
-      const section = (label: string, items: WorkItem[], fontSize = 14) => {
-        pdf.setFontSize(fontSize);
-        pdf.text(label, 15, y);
-        y += fontSize === 14 ? 8 : 6;
+      // Naručitelj
+      pdf.text("Ime tvrtke:", leftX, yRow);
+      pdf.text(workOrder.clientCompanyName, leftX + 30, yRow);
+      pdf.text("Ime tvrtke:", rightX, yRow);
+      pdf.text(workOrder.customerCompanyName || "-", rightX + 32, yRow);
+      yRow += labelGap;
+
+      pdf.text("Adresa tvrtke:", leftX, yRow);
+      pdf.text(workOrder.clientCompanyAddress, leftX + 30, yRow);
+      pdf.text("Adresa tvrtke:", rightX, yRow);
+      pdf.text(workOrder.customerCompanyAddress || "-", rightX + 32, yRow);
+      yRow += labelGap;
+
+      pdf.text("OIB:", leftX, yRow);
+      pdf.text(workOrder.clientOib, leftX + 30, yRow);
+      pdf.text("OIB:", rightX, yRow);
+      pdf.text(workOrder.customerOib || "-", rightX + 32, yRow);
+      yRow += labelGap;
+
+      pdf.text("Ime i prezime:", leftX, yRow);
+      pdf.text(`${workOrder.clientFirstName} ${workOrder.clientLastName}`, leftX + 30, yRow);
+      pdf.text("Ime i prezime:", rightX, yRow);
+      pdf.text(`${workOrder.customerFirstName || ""} ${workOrder.customerLastName || ""}`.trim() || "-", rightX + 32, yRow);
+      yRow += labelGap;
+
+      pdf.text("Mobitel:", leftX, yRow);
+      pdf.text(workOrder.clientMobile, leftX + 30, yRow);
+      pdf.text("Mobitel:", rightX, yRow);
+      pdf.text(workOrder.customerMobile || "-", rightX + 32, yRow);
+      yRow += labelGap;
+
+      pdf.text("Email:", leftX, yRow);
+      pdf.text(workOrder.clientEmail, leftX + 30, yRow);
+      pdf.text("Email:", rightX, yRow);
+      pdf.text(workOrder.customerEmail || "-", rightX + 32, yRow);
+      yRow += labelGap + 5;
+
+      // SEKCIJE
+      const section = (label: string, items: WorkItem[]) => {
+        pdf.setFontSize(14);
+        pdf.text(label, leftX, yRow);
+        yRow += 7.5;
         pdf.setFontSize(12);
         const filtered = items.filter(x => x.text.trim());
         if (filtered.length > 0) {
           filtered.forEach(item => {
             const lines = pdf.splitTextToSize("• " + item.text, 180);
-            pdf.text(lines, 18, y);
-            y += lines.length * 7;
+            pdf.text(lines, leftX + 3, yRow);
+            yRow += lines.length * 6.2;
           });
         } else {
-          pdf.text("• (nije uneseno)", 18, y);
-          y += 7;
+          pdf.text("• (nije uneseno)", leftX + 3, yRow);
+          yRow += 6.2;
         }
-        y += 7;
+        yRow += 4.5;
       };
 
       section("OPIS KVARA/PROBLEMA:", workOrder.description);
@@ -146,45 +142,45 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       // UTROŠENI MATERIJAL – kao lista
       pdf.setFontSize(14);
-      pdf.text("UTROŠENI MATERIJAL:", 15, y);
-      y += 8;
+      pdf.text("UTROŠENI MATERIJAL:", leftX, yRow);
+      yRow += 7.5;
       pdf.setFontSize(12);
       if (workOrder.materials && workOrder.materials.length > 0) {
         workOrder.materials.forEach((mat, i) => {
-          pdf.text(`${i+1}. ${mat.name} – ${mat.quantity} ${mat.unit}`, 18, y);
-          y += 7;
+          pdf.text(`${i+1}. ${mat.name} – ${mat.quantity} ${mat.unit}`, leftX + 3, yRow);
+          yRow += 6.2;
         });
       } else {
-        pdf.text("• (nije uneseno)", 18, y);
-        y += 7;
+        pdf.text("• (nije uneseno)", leftX + 3, yRow);
+        yRow += 6.2;
       }
-      y += 10;
+      yRow += 7;
 
-      // VRIJEME I PUT - side by side
+      // VRIJEME I PUT - side by side, uredno
       pdf.setFontSize(14);
-      pdf.text("VRIJEME:", 15, y);
-      pdf.text("PUT:", 120, y);
-      y += 8;
+      pdf.text("VRIJEME:", leftX, yRow);
+      pdf.text("PUT:", rightX, yRow);
+      yRow += 7.5;
       pdf.setFontSize(12);
-      pdf.text(`Datum: ${workOrder.date}`, 18, y);
-      pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}`, 123, y);
-      y += 7;
-      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, 18, y);
+      pdf.text(`Datum: ${workOrder.date}`, leftX + 3, yRow);
+      pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}`, rightX + 3, yRow);
+      yRow += 6.2;
+      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, leftX + 3, yRow);
       if (workOrder.fieldTrip)
-        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, 123, y);
-      y += 7;
-      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, 18, y);
-      y += 7;
-      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, 18, y);
-      y += 13;
+        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, rightX + 3, yRow);
+      yRow += 6.2;
+      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, leftX + 3, yRow);
+      yRow += 6.2;
+      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, leftX + 3, yRow);
+      yRow += 12;
 
-      // POTPISI (nema naslova, sve diše)
+      // POTPISI (bez naslova)
       pdf.setFontSize(12);
-      pdf.text("Potpis tehničara:", 18, y);
-      pdf.text("Potpis klijenta:", 115, y);
+      pdf.text("Potpis tehničara:", leftX + 3, yRow);
+      pdf.text("Potpis klijenta:", rightX + 3, yRow);
 
       // Signatures as images
-      let ySign = y + 2;
+      let ySign = yRow + 2;
       if (workOrder.technicianSignature) {
         const techImg = new Image();
         techImg.src = workOrder.technicianSignature;
@@ -195,8 +191,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           const ctx = canvas.getContext("2d");
           if (ctx) {
             ctx.drawImage(techImg, 0, 0);
-            pdf.addImage(canvas.toDataURL("image/png"), "PNG", 18, ySign, 40, 20);
-            pdf.text(workOrder.technicianName, 18, ySign + 25);
+            pdf.addImage(canvas.toDataURL("image/png"), "PNG", leftX + 3, ySign, 40, 20);
+            pdf.text(workOrder.technicianName, leftX + 3, ySign + 25);
 
             if (workOrder.customerSignature) {
               const custImg = new Image();
@@ -208,18 +204,18 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
                 const custCtx = custCanvas.getContext("2d");
                 if (custCtx) {
                   custCtx.drawImage(custImg, 0, 0);
-                  pdf.addImage(custCanvas.toDataURL("image/png"), "PNG", 115, ySign, 40, 20);
-                  pdf.text(workOrder.customerSignerName, 115, ySign + 25);
+                  pdf.addImage(custCanvas.toDataURL("image/png"), "PNG", rightX + 3, ySign, 40, 20);
+                  pdf.text(workOrder.customerSignerName, rightX + 3, ySign + 25);
 
                   // Meta
                   if (workOrder.signatureMetadata) {
                     pdf.setFontSize(9);
                     let metaY = ySign + 31;
-                    pdf.text(`Datum i vrijeme: ${workOrder.signatureMetadata.timestamp || ""}`, 115, metaY);
+                    pdf.text(`Datum i vrijeme: ${workOrder.signatureMetadata.timestamp || ""}`, rightX + 3, metaY);
                     metaY += 5;
                     if (workOrder.signatureMetadata.coordinates) {
                       const { latitude, longitude } = workOrder.signatureMetadata.coordinates;
-                      pdf.text(`Koordinate: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, 115, metaY);
+                      pdf.text(`Koordinate: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, rightX + 3, metaY);
                       metaY += 5;
                     }
                     if (workOrder.signatureMetadata.address) {
@@ -227,7 +223,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
                         `Adresa: ${workOrder.signatureMetadata.address}`,
                         60
                       );
-                      pdf.text(addressLines, 115, metaY);
+                      pdf.text(addressLines, rightX + 3, metaY);
                     }
                   }
                   pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);

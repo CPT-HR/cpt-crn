@@ -87,7 +87,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       y += 5.5;
       pdf.setFontSize(9.3);
 
-      // Naručitelj lijevo
+      // Naručitelj lijevo, korisnik desno
       let yL = y, yR = y;
       const colL = margin;
       const colR = pageWidth / 2 + 2;
@@ -254,12 +254,13 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text("Potpis tehničara:", margin, y);
       pdf.text("Potpis klijenta:", pageWidth / 2 + 10, y);
 
-      // Prikaz bitmap potpisa i metapodataka
+      // Prikaz bitmap potpisa, ime ispod slike
       const drawSignature = (
         imgSrc: string,
         x: number,
         y: number,
         name: string,
+        meta: boolean,
         metadata?: WorkOrder["signatureMetadata"],
         cb?: () => void
       ) => {
@@ -281,8 +282,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           }
           pdf.text(name || "", x, y + 25);
 
-          // Metapodaci
-          if (metadata) {
+          // Metapodaci (SAMO ako meta==true, tj. SAMO ispod klijenta)
+          if (meta && metadata) {
             pdf.setFontSize(7.2);
             let metaY = y + 29;
             if (metadata.timestamp) {
@@ -342,7 +343,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         margin,
         y,
         workOrder.technicianName,
-        workOrder.signatureMetadata,
+        false, // NEMA metapodataka ispod tehničara
+        undefined,
         tryFinish
       );
       drawSignature(
@@ -350,6 +352,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pageWidth / 2 + 10,
         y,
         workOrder.customerSignerName,
+        true, // DA, metapodaci ispod klijenta
         workOrder.signatureMetadata,
         tryFinish
       );

@@ -278,7 +278,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           }
           pdf.text(name || "", x, y + 25);
           if (meta && metadata) {
-            pdf.setFontSize(7.2);
+            pdf.setFontSize(6.1); // Koristi istu veličinu kao u footeru
             let metaY = y + 29;
             if (metadata.timestamp) {
               pdf.text(`Datum i vrijeme: ${metadata.timestamp}`, x, metaY);

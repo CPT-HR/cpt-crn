@@ -57,31 +57,32 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFont("Manrope-Regular", "normal");
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 17;
+      const margin = 18;
       let y = 18;
 
       // HEADER
-      pdf.setFontSize(10);
+      pdf.setFontSize(11);
       pdf.text("Centar pametne tehnologije d.o.o.", margin, y);
       pdf.text("Kovači 78c, Velika Mlaka", margin, y + 5);
       pdf.text("OIB: 75343882245", margin, y + 10);
-      pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 60, y);
-      pdf.text("+385 1 6525 100", pageWidth - margin - 60, y + 5);
+      pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, y);
+      pdf.text("+385 1 6525 100", pageWidth - margin - 65, y + 5);
 
       // Title & Nalog broj
-      pdf.setFontSize(15);
-      pdf.text("RADNI NALOG", margin, y + 19);
-      pdf.setFontSize(10);
-      pdf.text(`Broj: ${workOrder.id}`, pageWidth - margin, y + 19, { align: "right" });
-      pdf.text(`Datum: ${workOrder.date}`, pageWidth - margin, y + 25, { align: "right" });
+      pdf.setFontSize(16);
+      pdf.text("RADNI NALOG", margin, y + 22);
+      pdf.setFontSize(11);
+      pdf.text(`Broj: ${workOrder.id}`, pageWidth - margin, y + 22, { align: "right" });
+      pdf.text(`Datum: ${workOrder.date}`, pageWidth - margin, y + 28, { align: "right" });
 
-      y += 30;
+      y += 35;
 
       // NARUČITELJ
       pdf.setFontSize(12);
+      pdf.setTextColor(32, 32, 32);
       pdf.text("PODACI O NARUČITELJU", margin, y);
-      y += 6;
-      pdf.setFontSize(9);
+      y += 5.5;
+      pdf.setFontSize(9.3);
       pdf.text(`Ime tvrtke: ${workOrder.clientCompanyName}`, margin, y);
       y += 5;
       pdf.text(`Adresa: ${workOrder.clientCompanyAddress}`, margin, y);
@@ -98,8 +99,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y += 8;
         pdf.setFontSize(12);
         pdf.text("PODACI O KORISNIKU", margin, y);
-        y += 6;
-        pdf.setFontSize(9);
+        y += 5.5;
+        pdf.setFontSize(9.3);
         pdf.text(`Ime tvrtke: ${workOrder.customerCompanyName}`, margin, y);
         y += 5;
         pdf.text(`Adresa: ${workOrder.customerCompanyAddress}`, margin, y);
@@ -113,13 +114,15 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text(`Email: ${workOrder.customerEmail}`, margin, y);
       }
 
-      y += 10;
-      pdf.setLineWidth(0.3);
+      y += 11;
+      pdf.setLineWidth(0.35);
+      pdf.setDrawColor(120, 120, 120);
       pdf.line(margin, y, pageWidth - margin, y);
       y += 4;
 
       // Osnovni podaci o nalogu
       pdf.setFontSize(10);
+      pdf.setTextColor(60, 60, 60);
       pdf.text(
         `Vrijeme dolaska: ${workOrder.arrivalTime}   |   Vrijeme završetka: ${workOrder.completionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`,
         margin,
@@ -131,14 +134,15 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         margin,
         y
       );
+      pdf.setTextColor(32, 32, 32);
 
-      y += 10;
+      y += 11;
 
       // OPIS KVARA
       pdf.setFontSize(12);
       pdf.text("OPIS KVARA / PROBLEMA", margin, y);
-      y += 6;
-      pdf.setFontSize(9);
+      y += 5.3;
+      pdf.setFontSize(9.2);
       if (workOrder.description.length > 0 && workOrder.description.some(x => x.text.trim())) {
         workOrder.description.forEach((item, idx) => {
           if (item.text.trim()) {
@@ -151,13 +155,13 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y += 5;
       }
 
-      y += 7;
+      y += 7.3;
 
       // ZATEČENO STANJE
       pdf.setFontSize(12);
       pdf.text("ZATEČENO STANJE", margin, y);
-      y += 6;
-      pdf.setFontSize(9);
+      y += 5.3;
+      pdf.setFontSize(9.2);
       if (workOrder.foundCondition.length > 0 && workOrder.foundCondition.some(x => x.text.trim())) {
         workOrder.foundCondition.forEach((item, idx) => {
           if (item.text.trim()) {
@@ -170,13 +174,13 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y += 5;
       }
 
-      y += 7;
+      y += 7.3;
 
       // IZVRŠENI RADOVI
       pdf.setFontSize(12);
       pdf.text("IZVRŠENI RADOVI", margin, y);
-      y += 6;
-      pdf.setFontSize(9);
+      y += 5.3;
+      pdf.setFontSize(9.2);
       if (workOrder.performedWork.length > 0 && workOrder.performedWork.some(x => x.text.trim())) {
         workOrder.performedWork.forEach((item, idx) => {
           if (item.text.trim()) {
@@ -189,13 +193,13 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y += 5;
       }
 
-      y += 7;
+      y += 7.3;
 
       // KOMENTAR TEHNIČARA
       pdf.setFontSize(12);
       pdf.text("KOMENTAR TEHNIČARA", margin, y);
-      y += 6;
-      pdf.setFontSize(9);
+      y += 5.3;
+      pdf.setFontSize(9.2);
       if (workOrder.technicianComment.length > 0 && workOrder.technicianComment.some(x => x.text.trim())) {
         workOrder.technicianComment.forEach((item, idx) => {
           if (item.text.trim()) {
@@ -208,24 +212,26 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y += 5;
       }
 
-      y += 7;
+      y += 7.3;
 
       // UTROŠENI MATERIJAL (TABLICA)
       pdf.setFontSize(12);
       pdf.text("UTROŠENI MATERIJAL", margin, y);
-      y += 6;
-      pdf.setFontSize(9);
+      y += 5.3;
+      pdf.setFontSize(9.2);
 
       // Table header
-      pdf.setFillColor(220, 220, 220);
-      pdf.rect(margin, y - 4, pageWidth - 2 * margin, 7, "F");
+      pdf.setFillColor(230, 230, 230);
+      pdf.rect(margin, y - 4, pageWidth - 2 * margin, 6.5, "F");
+      pdf.setTextColor(32, 32, 32);
       pdf.text("Rb.", margin + 2, y);
       pdf.text("Naziv materijala", margin + 14, y);
       pdf.text("Količina", pageWidth - margin - 35, y);
       pdf.text("Jedinica", pageWidth - margin - 10, y);
 
-      y += 6;
+      y += 6.1;
 
+      pdf.setTextColor(40, 40, 40);
       if (workOrder.materials && workOrder.materials.length > 0) {
         workOrder.materials.forEach((mat, idx) => {
           pdf.text(`${idx + 1}.`, margin + 2, y);
@@ -239,25 +245,23 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y += 5;
       }
 
-      y += 12;
+      y += 13;
 
       // POTPISI
-      pdf.setFontSize(9);
+      pdf.setFontSize(9.3);
       pdf.text("Potpis tehničara:", margin, y);
       pdf.text("Potpis klijenta:", pageWidth / 2 + 10, y);
 
-      // Crte za potpise
       y += 2;
       pdf.line(margin, y + 7, margin + 40, y + 7);
       pdf.line(pageWidth / 2 + 10, y + 7, pageWidth / 2 + 50, y + 7);
 
-      // Imena ispod potpisa
       pdf.text(workOrder.technicianName || "", margin, y + 13);
       pdf.text(workOrder.customerSignerName || "", pageWidth / 2 + 10, y + 13);
 
       // FOOTER
       const drawFooter = () => {
-        pdf.setFontSize(7);
+        pdf.setFontSize(7.2);
         pdf.setTextColor(100);
         pdf.text(
           "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",

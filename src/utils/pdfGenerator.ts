@@ -72,10 +72,11 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, margin);
         pdf.text("+385 1 6525 100", pageWidth - margin - 65, margin + 5);
         pdf.setFontSize(16);
+        // VIŠE PRAZNOG PROSTORA IZNAD I ISPOD NASLOVA
         pdf.text(
           `RADNI NALOG  Broj: ${workOrder.id}`,
           pageWidth / 2,
-          margin + 22,
+          margin + 32,
           { align: "center" }
         );
       }
@@ -90,7 +91,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         );
       }
 
-      // DODATNI RAZMAK između drugog i trećeg reda (npr. 3.5mm)
       function drawFooter(currPage: number, allPages: number) {
         pdf.setFont("Manrope-Regular", "normal");
         pdf.setFontSize(6.1);
@@ -101,7 +101,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
         const yFooter1 = pageHeight - 10.1;
         const yFooter2 = pageHeight - 7.1;
-        // *** DODATNI razmak, treći red još NIŽE
         const yFooterPage = pageHeight - 2.6;
 
         pdf.text(line1, pageWidth / 2, yFooter1, { align: "center" });
@@ -115,10 +114,11 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.setTextColor(0);
       }
 
+      // VELIKI razmak ispod headera na svakoj idućoj stranici
       function maybeAddPage(nextBlockHeight: number, headerFnc?: () => void) {
         if (y + nextBlockHeight > usableHeight) {
           pdf.addPage();
-          y = margin + 9;
+          y = margin + 24;
           pageNumber++;
           headerFnc ? headerFnc() : drawSmallHeader();
         }
@@ -126,7 +126,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       // Start
       drawFirstHeader();
-      y += 35;
+      y += 46;
 
       pdf.setFontSize(12);
       pdf.setTextColor(32, 32, 32);

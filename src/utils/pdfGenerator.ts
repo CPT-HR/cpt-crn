@@ -300,7 +300,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const tryFinish = () => {
         signaturesDone++;
         if (signaturesDone === 2) {
-          totalPages = pdf.internal.getNumberOfPages();
+          totalPages = (pdf as any).internal.getNumberOfPages();
           for (let p = 1; p <= totalPages; p++) {
             pdf.setPage(p);
             drawFooter(p, totalPages);

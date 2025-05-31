@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -30,9 +31,9 @@ const EmployeeManagement: React.FC = () => {
           first_name, 
           last_name, 
           email, 
-          role,
+          user_role,
           location_id,
-          locations (name),
+          company_locations (name),
           signature_data,
           signature_created_at,
           signature_updated_at
@@ -49,8 +50,8 @@ const EmployeeManagement: React.FC = () => {
         first_name: employee.first_name,
         last_name: employee.last_name,
         email: employee.email,
-        role: employee.role,
-        location_name: employee.locations?.name,
+        role: employee.user_role,
+        location_name: employee.company_locations?.name,
         signature_data: employee.signature_data,
         signature_created_at: employee.signature_created_at,
         signature_updated_at: employee.signature_updated_at
@@ -62,7 +63,7 @@ const EmployeeManagement: React.FC = () => {
     queryKey: ['locations'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('locations')
+        .from('company_locations')
         .select('id, name')
         .order('name', { ascending: true });
 
@@ -85,7 +86,7 @@ const EmployeeManagement: React.FC = () => {
             first_name: firstName,
             last_name: lastName,
             email: email,
-            role: role,
+            user_role: role,
             location_id: locationId,
           },
         ]);

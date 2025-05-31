@@ -95,23 +95,22 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.setFontSize(6.1);
         pdf.setTextColor(100);
 
-        const yFirma = pageHeight - 15;
-        const yLegal = pageHeight - 10;
-        const yPage = pageHeight - 5;
+        const yFirma = pageHeight - 12.2;
+        const yLegal = pageHeight - 6.2;
+        const yPage = pageHeight - 2.5;
 
         pdf.text(
           "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
           pageWidth / 2,
           yFirma,
-          { align: "center", maxWidth: pageWidth - 2 * margin }
+          { align: "center" }
         );
         pdf.text(
           "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
           pageWidth / 2,
           yLegal,
-          { align: "center", maxWidth: pageWidth - 2 * margin }
+          { align: "center" }
         );
-        pdf.setFontSize(6.0);
         pdf.text(
           `Stranica ${currPage}/${allPages}`,
           pageWidth - margin,
@@ -278,7 +277,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           }
           pdf.text(name || "", x, y + 25);
           if (meta && metadata) {
-            pdf.setFontSize(6.1); // Koristi istu veličinu kao u footeru
+            pdf.setFontSize(6.1);
             let metaY = y + 29;
             if (metadata.timestamp) {
               pdf.text(`Datum i vrijeme: ${metadata.timestamp}`, x, metaY);

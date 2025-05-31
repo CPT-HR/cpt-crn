@@ -24,7 +24,7 @@ type WorkOrderWithProfile = {
   client_company_name: string;
   client_first_name: string;
   client_last_name: string;
-  employee_profile_id: string | null;
+  user_id: string;
   technician_signature: string | null;
   employee_profiles: {
     id: string;
@@ -36,39 +36,17 @@ type WorkOrderWithProfile = {
 const WorkOrders: React.FC = () => {
   const { user } = useAuth();
 
-  // Query to get current user's employee profile ID
-  const { data: currentUserProfile } = useQuery({
-    queryKey: ['current-user-profile', user?.id],
-    queryFn: async () => {
-      if (!user?.id) return null;
-      
-      const { data, error } = await supabase
-        .from('employee_profiles')
-        .select('id, user_role')
-        .eq('id', user.id)
-        .single();
-
-      if (error) {
-        console.error('Error fetching current user profile:', error);
-        return null;
-      }
-
-      return data;
-    },
-    enabled: !!user?.id
-  });
-
   const { data: workOrders, isLoading, error } = useQuery({
     queryKey: ['work-orders'],
     queryFn: async () => {
-      console.log('Fetching work orders using employee_profile_id FK...');
+      console.log('Fetching work orders with proper join...');
       
-      // Use the correct FK relationship for employee_profile_id
+      // Use proper Supabase join syntax with the existing foreign key constraint
       const { data, error } = await supabase
         .from('work_orders')
         .select(`
           *,
-          employee_profiles!work_orders_employee_profile_id_fkey(
+          employee_profiles!work_orders_user_id_fkey(
             id,
             first_name,
             last_name
@@ -77,11 +55,11 @@ const WorkOrders: React.FC = () => {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching work orders with employee_profile_id join:', error);
+        console.error('Error fetching work orders with join:', error);
         throw error;
       }
 
-      console.log('Fetched work orders with employee_profile_id join:', data);
+      console.log('Fetched work orders with proper join:', data);
       return data as WorkOrderWithProfile[];
     },
     enabled: !!user
@@ -170,7 +148,7 @@ const WorkOrders: React.FC = () => {
                         <button className="text-blue-600 hover:underline text-sm">
                           Pregled
                         </button>
-                        {(currentUserProfile?.user_role === 'admin' || order.employee_profile_id === currentUserProfile?.id) && (
+                        {(user?.role === 'admin' || order.user_id === user?.id) && (
                           <button className="text-green-600 hover:underline text-sm">
                             Uredi
                           </button>

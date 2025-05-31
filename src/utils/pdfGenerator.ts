@@ -73,7 +73,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text("RADNI NALOG", margin, y + 22);
       pdf.setFontSize(11);
       pdf.text(`Broj: ${workOrder.id}`, pageWidth - margin, y + 22, { align: "right" });
-      pdf.text(`Datum: ${workOrder.date}`, pageWidth - margin, y + 28, { align: "right" });
 
       y += 35;
 
@@ -122,14 +121,13 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.line(margin, y, pageWidth - margin, y);
       y += 4;
 
-      // Osnovni podaci o nalogu
+      // Osnovni podaci o nalogu -- DATUM INLINE
       pdf.setFontSize(10);
       pdf.setTextColor(60, 60, 60);
-      pdf.text(
-        `Vrijeme dolaska: ${workOrder.arrivalTime}   |   Vrijeme završetka: ${workOrder.completionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`,
-        margin,
-        y
-      );
+
+      let datumTekst = `Datum: ${workOrder.date}   |   Vrijeme dolaska: ${workOrder.arrivalTime}   |   Vrijeme završetka: ${workOrder.completionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`;
+      pdf.text(datumTekst, margin, y);
+
       y += 6;
       pdf.text(
         `Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}   |   Prijeđena udaljenost: ${workOrder.distance ? workOrder.distance + " km" : "-"}`,

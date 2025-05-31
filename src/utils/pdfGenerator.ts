@@ -58,61 +58,83 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFont("Manrope-Regular", "normal");
 
       // HEADER
-      pdf.setFontSize(20);
+      pdf.setFontSize(16);
       pdf.text("RADNI NALOG", 105, 22, { align: "center" });
-      pdf.setFontSize(11);
+
+      pdf.setFontSize(12);
       pdf.text(`Broj: ${workOrder.id}`, 15, 32);
       pdf.text(`Datum: ${workOrder.date}`, 170, 32, { align: "right" });
 
-      // NARUČITELJ & KORISNIK - side by side
+      // NARUČITELJ & KORISNIK - side by side (bez linija, s više razmaka)
       const client = [
-        ["Ime tvrtke", workOrder.clientCompanyName],
-        ["Adresa tvrtke", workOrder.clientCompanyAddress],
-        ["OIB", workOrder.clientOib],
-        ["Ime i prezime", `${workOrder.clientFirstName} ${workOrder.clientLastName}`],
-        ["Mobitel", workOrder.clientMobile],
-        ["Email", workOrder.clientEmail],
+        ["Ime tvrtke:", workOrder.clientCompanyName],
+        ["Adresa tvrtke:", workOrder.clientCompanyAddress],
+        ["OIB:", workOrder.clientOib],
+        ["Ime i prezime:", `${workOrder.clientFirstName} ${workOrder.clientLastName}`],
+        ["Mobitel:", workOrder.clientMobile],
+        ["Email:", workOrder.clientEmail],
       ];
       const customer = workOrder.orderForCustomer
         ? [
-            ["Ime tvrtke", workOrder.customerCompanyName],
-            ["Adresa tvrtke", workOrder.customerCompanyAddress],
-            ["OIB", workOrder.customerOib],
-            ["Ime i prezime", `${workOrder.customerFirstName} ${workOrder.customerLastName}`],
-            ["Mobitel", workOrder.customerMobile],
-            ["Email", workOrder.customerEmail],
+            ["Ime tvrtke:", workOrder.customerCompanyName],
+            ["Adresa tvrtke:", workOrder.customerCompanyAddress],
+            ["OIB:", workOrder.customerOib],
+            ["Ime i prezime:", `${workOrder.customerFirstName} ${workOrder.customerLastName}`],
+            ["Mobitel:", workOrder.customerMobile],
+            ["Email:", workOrder.customerEmail],
           ]
         : [["", ""], ["", ""], ["", ""], ["", ""], ["", ""], ["", ""]];
 
       autoTable(pdf, {
         startY: 38,
-        styles: { font: "Manrope-Regular", fontSize: 9, cellPadding: 1.8, overflow: 'linebreak' },
-        headStyles: { fillColor: [241,245,249], textColor: 30, fontStyle: "normal" },
-        columnStyles: { 0: { cellWidth: 36 }, 1: { cellWidth: 56 }, 2: { cellWidth: 36 }, 3: { cellWidth: 56 } },
+        styles: {
+          font: "Manrope-Regular",
+          fontSize: 12,
+          lineColor: [255,255,255], // bijela linija = nevidljivo
+          lineWidth: 0,
+          cellPadding: { top: 2.2, right: 2, bottom: 2.2, left: 2 },
+          overflow: 'linebreak'
+        },
+        headStyles: {
+          fillColor: [255,255,255],
+          textColor: 20,
+          fontStyle: "normal",
+          halign: 'left'
+        },
+        bodyStyles: {
+          fillColor: [255,255,255],
+          textColor: 30,
+        },
+        columnStyles: {
+          0: { cellWidth: 40 },
+          1: { cellWidth: 56 },
+          2: { cellWidth: 40 },
+          3: { cellWidth: 56 }
+        },
         head: [["PODACI O NARUČITELJU", "", "PODACI O KORISNIKU", ""]],
-        body: client.map((row, i) => [row[0]+":", row[1], customer[i][0] ? customer[i][0]+":" : "", customer[i][1] || ""])
+        body: client.map((row, i) => [row[0], row[1], customer[i][0], customer[i][1]])
       });
 
-      let y = (pdf as any).lastAutoTable.finalY + 5;
+      let y = (pdf as any).lastAutoTable.finalY + 10;
 
       // Helper
-      const section = (label: string, items: WorkItem[]) => {
-        pdf.setFontSize(11);
+      const section = (label: string, items: WorkItem[], fontSize = 14) => {
+        pdf.setFontSize(fontSize);
         pdf.text(label, 15, y);
-        y += 5.5;
-        pdf.setFontSize(9.5);
+        y += fontSize === 14 ? 8 : 6;
+        pdf.setFontSize(12);
         const filtered = items.filter(x => x.text.trim());
         if (filtered.length > 0) {
           filtered.forEach(item => {
             const lines = pdf.splitTextToSize("• " + item.text, 180);
             pdf.text(lines, 18, y);
-            y += lines.length * 4.5;
+            y += lines.length * 7;
           });
         } else {
           pdf.text("• (nije uneseno)", 18, y);
-          y += 4.5;
+          y += 7;
         }
-        y += 3.5;
+        y += 7;
       };
 
       section("OPIS KVARA/PROBLEMA:", workOrder.description);
@@ -123,41 +145,41 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       }
 
       // UTROŠENI MATERIJAL – kao lista
-      pdf.setFontSize(11);
+      pdf.setFontSize(14);
       pdf.text("UTROŠENI MATERIJAL:", 15, y);
-      y += 5.5;
-      pdf.setFontSize(9.5);
+      y += 8;
+      pdf.setFontSize(12);
       if (workOrder.materials && workOrder.materials.length > 0) {
         workOrder.materials.forEach((mat, i) => {
           pdf.text(`${i+1}. ${mat.name} – ${mat.quantity} ${mat.unit}`, 18, y);
-          y += 4.5;
+          y += 7;
         });
       } else {
         pdf.text("• (nije uneseno)", 18, y);
-        y += 4.5;
+        y += 7;
       }
-      y += 5.5;
+      y += 10;
 
       // VRIJEME I PUT - side by side
-      pdf.setFontSize(11);
+      pdf.setFontSize(14);
       pdf.text("VRIJEME:", 15, y);
       pdf.text("PUT:", 120, y);
-      y += 5.2;
-      pdf.setFontSize(9.5);
+      y += 8;
+      pdf.setFontSize(12);
       pdf.text(`Datum: ${workOrder.date}`, 18, y);
       pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}`, 123, y);
-      y += 4.5;
+      y += 7;
       pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, 18, y);
       if (workOrder.fieldTrip)
         pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, 123, y);
-      y += 4.5;
-      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, 18, y);
-      y += 4.5;
-      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, 18, y);
       y += 7;
+      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, 18, y);
+      y += 7;
+      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, 18, y);
+      y += 13;
 
-      // POTPISI
-      pdf.setFontSize(11);
+      // POTPISI (nema naslova, sve diše)
+      pdf.setFontSize(12);
       pdf.text("Potpis tehničara:", 18, y);
       pdf.text("Potpis klijenta:", 115, y);
 
@@ -191,14 +213,14 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
                   // Meta
                   if (workOrder.signatureMetadata) {
-                    pdf.setFontSize(7);
+                    pdf.setFontSize(9);
                     let metaY = ySign + 31;
                     pdf.text(`Datum i vrijeme: ${workOrder.signatureMetadata.timestamp || ""}`, 115, metaY);
-                    metaY += 3;
+                    metaY += 5;
                     if (workOrder.signatureMetadata.coordinates) {
                       const { latitude, longitude } = workOrder.signatureMetadata.coordinates;
                       pdf.text(`Koordinate: ${latitude.toFixed(6)}, ${longitude.toFixed(6)}`, 115, metaY);
-                      metaY += 3;
+                      metaY += 5;
                     }
                     if (workOrder.signatureMetadata.address) {
                       const addressLines = pdf.splitTextToSize(
@@ -207,7 +229,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
                       );
                       pdf.text(addressLines, 115, metaY);
                     }
-                    pdf.setFontSize(9.5);
                   }
                   pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
                   resolve();

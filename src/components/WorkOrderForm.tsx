@@ -69,6 +69,10 @@ interface WorkOrder {
   technicianName?: string;
 }
 
+interface WorkOrderFormProps {
+  initialData?: any;
+}
+
 const countries = [
   'Hrvatska', 'Srbija', 'Slovenija', 'Bosna i Hercegovina', 'Crna Gora', 
   'Makedonija', 'Austrija', 'Njemačka', 'Italija', 'Mađarska'
@@ -76,7 +80,7 @@ const countries = [
 
 let orderCounter = 1;
 
-const WorkOrderForm: React.FC = () => {
+const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   const { user } = useAuth();
   const { data: employeeProfile } = useEmployeeProfile();
   const { toast } = useToast();
@@ -85,44 +89,146 @@ const WorkOrderForm: React.FC = () => {
   const [companyLocations, setCompanyLocations] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [useMockData, setUseMockData] = useState(false);
+  const isEditMode = !!initialData;
   
-  const [workOrder, setWorkOrder] = useState<WorkOrder>({
-    id: '',
-    clientCompanyName: '',
-    clientStreetAddress: '',
-    clientCity: 'Zagreb',
-    clientCountry: 'Hrvatska',
-    clientOib: '',
-    clientFirstName: '',
-    clientLastName: '',
-    clientMobile: '',
-    clientEmail: '',
-    orderForCustomer: false,
-    customerCompanyName: '',
-    customerStreetAddress: '',
-    customerCity: 'Zagreb',
-    customerCountry: 'Hrvatska',
-    customerOib: '',
-    customerFirstName: '',
-    customerLastName: '',
-    customerMobile: '',
-    customerEmail: '',
-    description: [{ id: '1', text: '' }],
-    foundCondition: [{ id: '1', text: '' }],
-    performedWork: [{ id: '1', text: '' }],
-    technicianComment: [{ id: '1', text: '' }],
-    materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-    date: new Date(),
-    arrivalTime: '',
-    completionTime: '',
-    calculatedHours: '0h00min',
-    fieldTrip: false,
-    distance: '',
-    technicianSignature: user?.signature || '',
-    customerSignature: '',
-    customerSignerName: '',
-    technicianName: user?.name || '',
-  });
+  // Helper function to parse text fields into WorkItem arrays
+  const parseTextToWorkItems = (text: string | null): WorkItem[] => {
+    if (!text) return [{ id: '1', text: '' }];
+    
+    const lines = text.split('\n').filter(line => line.trim().length > 0);
+    if (lines.length === 0) return [{ id: '1', text: '' }];
+    
+    return lines.map((line, index) => ({
+      id: (index + 1).toString(),
+      text: line.replace(/^•\s*/, '').trim()
+    }));
+  };
+
+  // Helper function to parse materials from JSONB
+  const parseMaterials = (materialsData: any): Material[] => {
+    if (!materialsData || !Array.isArray(materialsData)) {
+      return [{ id: '1', name: '', quantity: '', unit: '' }];
+    }
+    
+    return materialsData.map((material, index) => ({
+      id: (index + 1).toString(),
+      name: material.name || '',
+      quantity: material.quantity?.toString() || '',
+      unit: material.unit || ''
+    }));
+  };
+
+  // Helper function to parse address from combined field
+  const parseAddress = (addressString: string) => {
+    if (!addressString) return { street: '', city: 'Zagreb', country: 'Hrvatska' };
+    
+    const parts = addressString.split(', ');
+    if (parts.length >= 3) {
+      return {
+        street: parts[0].trim(),
+        city: parts[1].trim(),
+        country: parts[2].trim()
+      };
+    } else if (parts.length === 2) {
+      return {
+        street: parts[0].trim(),
+        city: parts[1].trim(),
+        country: 'Hrvatska'
+      };
+    } else {
+      return {
+        street: addressString.trim(),
+        city: 'Zagreb',
+        country: 'Hrvatska'
+      };
+    }
+  };
+
+  // Initialize work order state based on initialData or defaults
+  const getInitialWorkOrderState = (): WorkOrder => {
+    if (initialData) {
+      const clientAddress = parseAddress(initialData.client_company_address || '');
+      const customerAddress = parseAddress(initialData.customer_company_address || '');
+      
+      return {
+        id: initialData.order_number || '',
+        clientCompanyName: initialData.client_company_name || '',
+        clientStreetAddress: clientAddress.street,
+        clientCity: clientAddress.city,
+        clientCountry: clientAddress.country,
+        clientOib: initialData.client_oib || '',
+        clientFirstName: initialData.client_first_name || '',
+        clientLastName: initialData.client_last_name || '',
+        clientMobile: initialData.client_mobile || '',
+        clientEmail: initialData.client_email || '',
+        orderForCustomer: initialData.order_for_customer || false,
+        customerCompanyName: initialData.customer_company_name || '',
+        customerStreetAddress: customerAddress.street,
+        customerCity: customerAddress.city,
+        customerCountry: customerAddress.country,
+        customerOib: initialData.customer_oib || '',
+        customerFirstName: initialData.customer_first_name || '',
+        customerLastName: initialData.customer_last_name || '',
+        customerMobile: initialData.customer_mobile || '',
+        customerEmail: initialData.customer_email || '',
+        description: parseTextToWorkItems(initialData.description),
+        foundCondition: parseTextToWorkItems(initialData.found_condition),
+        performedWork: parseTextToWorkItems(initialData.performed_work),
+        technicianComment: parseTextToWorkItems(initialData.technician_comment),
+        materials: parseMaterials(initialData.materials),
+        date: initialData.date ? new Date(initialData.date) : new Date(),
+        arrivalTime: '',
+        completionTime: '',
+        calculatedHours: initialData.hours ? `${initialData.hours}h00min` : '0h00min',
+        fieldTrip: (initialData.distance && parseFloat(initialData.distance) > 0) || false,
+        distance: initialData.distance ? initialData.distance.toString() : '',
+        technicianSignature: initialData.technician_signature || user?.signature || '',
+        customerSignature: initialData.customer_signature || '',
+        customerSignerName: '',
+        technicianName: user?.name || '',
+      };
+    }
+
+    return {
+      id: '',
+      clientCompanyName: '',
+      clientStreetAddress: '',
+      clientCity: 'Zagreb',
+      clientCountry: 'Hrvatska',
+      clientOib: '',
+      clientFirstName: '',
+      clientLastName: '',
+      clientMobile: '',
+      clientEmail: '',
+      orderForCustomer: false,
+      customerCompanyName: '',
+      customerStreetAddress: '',
+      customerCity: 'Zagreb',
+      customerCountry: 'Hrvatska',
+      customerOib: '',
+      customerFirstName: '',
+      customerLastName: '',
+      customerMobile: '',
+      customerEmail: '',
+      description: [{ id: '1', text: '' }],
+      foundCondition: [{ id: '1', text: '' }],
+      performedWork: [{ id: '1', text: '' }],
+      technicianComment: [{ id: '1', text: '' }],
+      materials: [{ id: '1', name: '', quantity: '', unit: '' }],
+      date: new Date(),
+      arrivalTime: '',
+      completionTime: '',
+      calculatedHours: '0h00min',
+      fieldTrip: false,
+      distance: '',
+      technicianSignature: user?.signature || '',
+      customerSignature: '',
+      customerSignerName: '',
+      technicianName: user?.name || '',
+    };
+  };
+
+  const [workOrder, setWorkOrder] = useState<WorkOrder>(getInitialWorkOrderState);
 
   // Mock data for work order
   const mockWorkOrderData = {
@@ -195,6 +301,11 @@ const WorkOrderForm: React.FC = () => {
     
     fetchData();
   }, []);
+
+  // Reset state when initialData changes
+  useEffect(() => {
+    setWorkOrder(getInitialWorkOrderState());
+  }, [initialData]);
 
   // Calculate billable hours based on arrival and completion time
   const calculateBillableHours = (arrival: string, completion: string) => {
@@ -510,18 +621,31 @@ const WorkOrderForm: React.FC = () => {
         signature_address: finalWorkOrder.signatureMetadata?.address,
         date: isoDate,
         employee_profile_id: employeeProfile.id,
-        user_id: user?.id,
       };
 
       console.log('Work order data to insert:', workOrderData);
       
-      const { error } = await supabase
-        .from('work_orders')
-        .insert(workOrderData);
-      
-      if (error) {
-        console.error('Supabase insertion error:', error);
-        throw error;
+      if (isEditMode && initialData?.id) {
+        // Update existing work order
+        const { error } = await supabase
+          .from('work_orders')
+          .update(workOrderData)
+          .eq('id', initialData.id);
+        
+        if (error) {
+          console.error('Supabase update error:', error);
+          throw error;
+        }
+      } else {
+        // Insert new work order
+        const { error } = await supabase
+          .from('work_orders')
+          .insert(workOrderData);
+        
+        if (error) {
+          console.error('Supabase insertion error:', error);
+          throw error;
+        }
       }
       
       console.log('Work order saved successfully');
@@ -566,7 +690,7 @@ const WorkOrderForm: React.FC = () => {
     
     try {
       const year = new Date().getFullYear().toString().slice(-2);
-      const generatedId = `${user.initials}${orderCounter++}/${year}`;
+      const generatedId = isEditMode ? workOrder.id : `${user.initials}${orderCounter++}/${year}`;
       
       const finalCustomerData = getFinalCustomerData();
       
@@ -593,48 +717,50 @@ const WorkOrderForm: React.FC = () => {
       await generatePDF(finalWorkOrderForPDF);
       
       toast({
-        title: "Radni nalog spremljen",
-        description: `Radni nalog ${generatedId} je uspješno kreiran i spreman za ispis`,
+        title: isEditMode ? "Radni nalog ažuriran" : "Radni nalog spremljen",
+        description: `Radni nalog ${generatedId} je uspješno ${isEditMode ? 'ažuriran' : 'kreiran'} i spreman za ispis`,
       });
       
-      // Reset form
-      setWorkOrder({
-        id: '',
-        clientCompanyName: '',
-        clientStreetAddress: '',
-        clientCity: 'Zagreb',
-        clientCountry: 'Hrvatska',
-        clientOib: '',
-        clientFirstName: '',
-        clientLastName: '',
-        clientMobile: '',
-        clientEmail: '',
-        orderForCustomer: false,
-        customerCompanyName: '',
-        customerStreetAddress: '',
-        customerCity: 'Zagreb',
-        customerCountry: 'Hrvatska',
-        customerOib: '',
-        customerFirstName: '',
-        customerLastName: '',
-        customerMobile: '',
-        customerEmail: '',
-        description: [{ id: '1', text: '' }],
-        foundCondition: [{ id: '1', text: '' }],
-        performedWork: [{ id: '1', text: '' }],
-        technicianComment: [{ id: '1', text: '' }],
-        materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-        date: new Date(),
-        arrivalTime: '',
-        completionTime: '',
-        calculatedHours: '0h00min',
-        fieldTrip: false,
-        distance: '',
-        technicianSignature: user?.signature || '',
-        customerSignature: '',
-        customerSignerName: '',
-        technicianName: user?.name || '',
-      });
+      if (!isEditMode) {
+        // Reset form only for new work orders
+        setWorkOrder({
+          id: '',
+          clientCompanyName: '',
+          clientStreetAddress: '',
+          clientCity: 'Zagreb',
+          clientCountry: 'Hrvatska',
+          clientOib: '',
+          clientFirstName: '',
+          clientLastName: '',
+          clientMobile: '',
+          clientEmail: '',
+          orderForCustomer: false,
+          customerCompanyName: '',
+          customerStreetAddress: '',
+          customerCity: 'Zagreb',
+          customerCountry: 'Hrvatska',
+          customerOib: '',
+          customerFirstName: '',
+          customerLastName: '',
+          customerMobile: '',
+          customerEmail: '',
+          description: [{ id: '1', text: '' }],
+          foundCondition: [{ id: '1', text: '' }],
+          performedWork: [{ id: '1', text: '' }],
+          technicianComment: [{ id: '1', text: '' }],
+          materials: [{ id: '1', name: '', quantity: '', unit: '' }],
+          date: new Date(),
+          arrivalTime: '',
+          completionTime: '',
+          calculatedHours: '0h00min',
+          fieldTrip: false,
+          distance: '',
+          technicianSignature: user?.signature || '',
+          customerSignature: '',
+          customerSignerName: '',
+          technicianName: user?.name || '',
+        });
+      }
     } catch (error: any) {
       console.error('Error submitting form:', error);
       
@@ -678,63 +804,29 @@ const WorkOrderForm: React.FC = () => {
       }));
     } else {
       // Reset to empty form (keep only basic data)
-      setWorkOrder({
-        id: '',
-        clientCompanyName: '',
-        clientStreetAddress: '',
-        clientCity: 'Zagreb',
-        clientCountry: 'Hrvatska',
-        clientOib: '',
-        clientFirstName: '',
-        clientLastName: '',
-        clientMobile: '',
-        clientEmail: '',
-        orderForCustomer: false,
-        customerCompanyName: '',
-        customerStreetAddress: '',
-        customerCity: 'Zagreb',
-        customerCountry: 'Hrvatska',
-        customerOib: '',
-        customerFirstName: '',
-        customerLastName: '',
-        customerMobile: '',
-        customerEmail: '',
-        description: [{ id: '1', text: '' }],
-        foundCondition: [{ id: '1', text: '' }],
-        performedWork: [{ id: '1', text: '' }],
-        technicianComment: [{ id: '1', text: '' }],
-        materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-        date: new Date(),
-        arrivalTime: '',
-        completionTime: '',
-        calculatedHours: '0h00min',
-        fieldTrip: false,
-        distance: '',
-        technicianSignature: user?.signature || '',
-        customerSignature: '',
-        customerSignerName: '',
-        technicianName: user?.name || '',
-      });
+      setWorkOrder(getInitialWorkOrderState());
     }
   };
 
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
-        <Card className="border-dashed border-amber-400 bg-amber-50">
-          <CardContent className="pt-6">
-            <div className="flex items-center space-x-2">
-              <Checkbox 
-                id="useMockData" 
-                checked={useMockData}
-                onCheckedChange={handleMockDataChange}
-              />
-              <Label htmlFor="useMockData" className="text-sm font-normal text-amber-800">
-                Koristi mock podatke (privremena funkcionalnost za testiranje)
-              </Label>
-            </div>
-          </CardContent>
-        </Card>
+        {!isEditMode && (
+          <Card className="border-dashed border-amber-400 bg-amber-50">
+            <CardContent className="pt-6">
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="useMockData" 
+                  checked={useMockData}
+                  onCheckedChange={handleMockDataChange}
+                />
+                <Label htmlFor="useMockData" className="text-sm font-normal text-amber-800">
+                  Koristi mock podatke (privremena funkcionalnost za testiranje)
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <ClientInfoSection
           data={{
@@ -826,7 +918,7 @@ const WorkOrderForm: React.FC = () => {
             className="relative"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Spremi i generiraj PDF
+            {isEditMode ? 'Ažuriraj radni nalog' : 'Spremi i generiraj PDF'}
           </Button>
         </div>
       </form>

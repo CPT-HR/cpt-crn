@@ -1,3 +1,4 @@
+
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -34,9 +35,20 @@ serve(async (req) => {
       try {
         console.log(`Processing employee: ${employee.email}`)
 
-        // STEP 1: Provjeri postoji li user s tim emailom u auth.users
+        // STEP 1: Check if user with this email already exists in auth.users
         const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-        console.log('ALL AUTH USERS:', existingUsers ? existingUsers.users.map(u => u.email) : [])
+        
+        if (listError) {
+          console.error(`Error listing users: ${listError.message}`)
+          results.push({
+            email: employee.email,
+            success: false,
+            error: `Error checking existing users: ${listError.message}`
+          })
+          continue
+        }
+
+        console.log('ALL AUTH USERS:', existingUsers ? existingUsers.users.map(u => `${u.email} (ID: ${u.id})`) : [])
         console.log('TRYING TO CREATE EMAIL:', employee.email)
 
         const existingAuthUser = existingUsers && existingUsers.users.find(user => user.email === employee.email)
@@ -51,9 +63,10 @@ serve(async (req) => {
             continue
         }
 
-        // STEP 2: Kreiraj auth usera
-        const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!"
-        console.log(`Attempting to create auth user for ${employee.email}`)
+        // STEP 2: Generate unique temporary password and create auth user
+        const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8) + "Aa1!"
+        console.log(`Attempting to create NEW auth user for ${employee.email} with password length: ${tempPassword.length}`)
+        
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
             email: employee.email,
             password: tempPassword,
@@ -64,23 +77,79 @@ serve(async (req) => {
                 role: employee.user_role
             }
         })
-        console.log(`Auth result for ${employee.email}:`, { authData, authError })
+
+        console.log(`Auth creation result for ${employee.email}:`)
+        console.log('AuthData:', JSON.stringify(authData, null, 2))
+        console.log('AuthError:', JSON.stringify(authError, null, 2))
 
         if (authError) {
             console.error(`Auth error for ${employee.email}:`, authError)
-            results.push({ email: employee.email, success: false, error: authError.message })
+            results.push({ 
+              email: employee.email, 
+              success: false, 
+              error: `Auth creation failed: ${authError.message}` 
+            })
             continue
         }
 
         if (!authData.user) {
-            console.error(`No user created for ${employee.email}`)
-            results.push({ email: employee.email, success: false, error: 'No user created' })
+            console.error(`No user created for ${employee.email} - authData.user is null/undefined`)
+            results.push({ 
+              email: employee.email, 
+              success: false, 
+              error: 'No user created - auth response missing user data' 
+            })
             continue
         }
 
-        // STEP 3: Kreiraj employee_profile s auth user ID-em
+        const newUserId = authData.user.id
+        console.log(`✅ NEW USER CREATED successfully for ${employee.email} with ID: ${newUserId}`)
+
+        // STEP 3: Check if employee_profile with this ID already exists
+        const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
+            .from('employee_profiles')
+            .select('id, email')
+            .eq('id', newUserId)
+            .maybeSingle()
+
+        if (profileCheckError) {
+            console.error(`Error checking existing profile for ${employee.email}:`, profileCheckError)
+            // Cleanup: delete auth user if profile check fails
+            try {
+                await supabaseAdmin.auth.admin.deleteUser(newUserId)
+                console.log(`Cleaned up auth user for ${employee.email} due to profile check error`)
+            } catch (cleanupError) {
+                console.error(`Cleanup error for ${employee.email}:`, cleanupError)
+            }
+            results.push({ 
+              email: employee.email, 
+              success: false, 
+              error: `Profile check failed: ${profileCheckError.message}` 
+            })
+            continue
+        }
+
+        if (existingProfile) {
+            console.log(`Employee profile already exists for ID ${newUserId} (email: ${existingProfile.email})`)
+            // Cleanup: delete auth user since profile already exists
+            try {
+                await supabaseAdmin.auth.admin.deleteUser(newUserId)
+                console.log(`Cleaned up auth user for ${employee.email} due to existing profile`)
+            } catch (cleanupError) {
+                console.error(`Cleanup error for ${employee.email}:`, cleanupError)
+            }
+            results.push({
+                email: employee.email,
+                success: false,
+                error: 'Employee profile već postoji',
+                isDuplicate: true
+            })
+            continue
+        }
+
+        // STEP 4: Create employee_profile with the new auth user ID
         const employeeData = {
-            id: authData.user.id,
+            id: newUserId,
             first_name: employee.first_name,
             last_name: employee.last_name,
             email: employee.email,
@@ -91,24 +160,32 @@ serve(async (req) => {
             active: true
         }
 
-        console.log(`Creating employee profile for ${employee.email}:`, employeeData)
+        console.log(`Creating employee profile for ${employee.email} with data:`, employeeData)
         const { error: profileError } = await supabaseAdmin
             .from('employee_profiles')
             .insert([employeeData])
 
         if (profileError) {
-            console.error(`Profile error for ${employee.email}:`, profileError)
+            console.error(`Profile creation error for ${employee.email}:`, profileError)
             // Cleanup: delete auth user if profile creation fails
             try {
-                await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+                await supabaseAdmin.auth.admin.deleteUser(newUserId)
                 console.log(`Cleaned up auth user for ${employee.email} due to profile creation error`)
             } catch (cleanupError) {
                 console.error(`Cleanup error for ${employee.email}:`, cleanupError)
             }
-            results.push({ email: employee.email, success: false, error: profileError.message })
+            results.push({ 
+              email: employee.email, 
+              success: false, 
+              error: `Profile creation failed: ${profileError.message}` 
+            })
         } else {
-            console.log(`Employee profile created successfully for ${employee.email}`)
-            results.push({ email: employee.email, success: true, userId: authData.user.id })
+            console.log(`✅ Employee profile created successfully for ${employee.email} with ID: ${newUserId}`)
+            results.push({ 
+              email: employee.email, 
+              success: true, 
+              userId: newUserId 
+            })
         }
 
       } catch (error) {

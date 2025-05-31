@@ -58,7 +58,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 18;
-      const usableHeight = pageHeight - margin - 30;
+      const usableHeight = pageHeight - margin - 32;
       let y = margin;
       let pageNumber = 1;
       let totalPages = 1;
@@ -95,25 +95,19 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.setFontSize(6.1);
         pdf.setTextColor(100);
 
-        const yBase = pageHeight - 4.0;
-        const lineHeight = 1.3;
+        const line1 = "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr";
+        const line2 = "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka";
 
-        pdf.text(
-          "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
-          pageWidth / 2,
-          yBase,
-          { align: "center" }
-        );
-        pdf.text(
-          "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
-          pageWidth / 2,
-          yBase + lineHeight,
-          { align: "center" }
-        );
+        const yFooter1 = pageHeight - 10.1; // prvi red
+        const yFooter2 = pageHeight - 7.1;  // drugi red (SINGLE-LINE razmak, NIJE ogroman NI zalijepljen)
+        const yFooterPage = pageHeight - 5.1; // Stranica X/Y, u kut
+
+        pdf.text(line1, pageWidth / 2, yFooter1, { align: "center" });
+        pdf.text(line2, pageWidth / 2, yFooter2, { align: "center" });
         pdf.text(
           `Stranica ${currPage}/${allPages}`,
           pageWidth - margin,
-          yBase + lineHeight * 2,
+          yFooterPage,
           { align: "right" }
         );
         pdf.setTextColor(0);

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,6 +20,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Users, UserCheck, Car, MapPin } from 'lucide-react';
+import EmployeeSignatureManagement from '@/components/EmployeeSignatureManagement';
 
 interface Employee {
   id: string;
@@ -32,6 +32,9 @@ interface Employee {
   vehicle_id: string | null;
   location_id: string | null;
   manager_id: string | null;
+  signature_data: string | null;
+  signature_created_at: string | null;
+  signature_updated_at: string | null;
 }
 
 interface Vehicle {
@@ -360,10 +363,17 @@ const EmployeeManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-3 gap-2">
-                  <div>Vozilo: {getVehicleName(employee.vehicle_id)}</div>
-                  <div>Lokacija: {getLocationName(employee.location_id)}</div>
-                  <div>Voditelj: {getManagerName(employee.manager_id)}</div>
+                <div className="space-y-3">
+                  <div className="text-sm text-muted-foreground grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>Vozilo: {getVehicleName(employee.vehicle_id)}</div>
+                    <div>Lokacija: {getLocationName(employee.location_id)}</div>
+                    <div>Voditelj: {getManagerName(employee.manager_id)}</div>
+                  </div>
+
+                  <div className="pt-2 border-t">
+                    <Label className="text-sm font-medium mb-2 block">Potpis tehničara:</Label>
+                    <EmployeeSignatureManagement employee={employee} />
+                  </div>
                 </div>
               </div>
             ))}

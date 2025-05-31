@@ -68,11 +68,14 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, y);
       pdf.text("+385 1 6525 100", pageWidth - margin - 65, y + 5);
 
-      // Title & Nalog broj
+      // Title & Nalog broj - centrirano
       pdf.setFontSize(16);
-      pdf.text("RADNI NALOG", margin, y + 22);
-      pdf.setFontSize(11);
-      pdf.text(`Broj: ${workOrder.id}`, pageWidth - margin, y + 22, { align: "right" });
+      pdf.text(
+        `RADNI NALOG  Broj: ${workOrder.id}`,
+        pageWidth / 2,
+        y + 22,
+        { align: "center" }
+      );
 
       y += 35;
 

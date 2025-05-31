@@ -63,10 +63,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       let pageNumber = 1;
       let totalPages = 1;
 
-      // Pratimo sve y koordinate gdje dodajemo page zbog naknadnog računanja stranica
-      const pageYs: number[] = [0];
-
-      // Zaglavlje početne stranice
       function drawFirstHeader() {
         pdf.setFont("Manrope-Regular", "normal");
         pdf.setFontSize(11);
@@ -83,7 +79,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           { align: "center" }
         );
       }
-      // Zaglavlje za svaku iduću stranicu
+
       function drawSmallHeader() {
         pdf.setFontSize(8.7);
         pdf.text(
@@ -94,37 +90,39 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         );
       }
 
-      // Footer
       function drawFooter(currPage: number, allPages: number) {
         pdf.setFont("Manrope-Regular", "normal");
         pdf.setFontSize(7.2);
         pdf.setTextColor(100);
+
+        const yFirma = pageHeight - 16;
+        const yLegal = pageHeight - 11;
+        const yPage = pageHeight - 6;
+
         pdf.text(
           "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
           pageWidth / 2,
-          pageHeight - 12,
+          yFirma,
           { align: "center" }
         );
         pdf.text(
           "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
           pageWidth / 2,
-          pageHeight - 7,
+          yLegal,
           { align: "center" }
         );
-        pdf.setFontSize(7.2);
+        pdf.setFontSize(7.1);
         pdf.text(
           `Stranica ${currPage}/${allPages}`,
           pageWidth - margin,
-          pageHeight - 7,
+          yPage,
           { align: "right" }
         );
         pdf.setTextColor(0);
       }
 
-      // Provjera prelaska na novu stranicu
       function maybeAddPage(nextBlockHeight: number, headerFnc?: () => void) {
         if (y + nextBlockHeight > usableHeight) {
-          pageYs.push(y);
           pdf.addPage();
           y = margin + 9;
           pageNumber++;
@@ -132,7 +130,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         }
       }
 
-      // Početak dokumenta
+      // Start
       drawFirstHeader();
       y += 35;
 
@@ -174,7 +172,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.line(margin, y, pageWidth - margin, y);
       y += 4;
 
-      // Osnovni podaci o nalogu -- DATUM INLINE
       pdf.setFontSize(10);
       pdf.setTextColor(60, 60, 60);
 
@@ -191,7 +188,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       y += 11;
 
-      // Sekcije
       function section(title: string, arr: WorkItem[], blockMinHeight = 13) {
         let est = blockMinHeight + arr.length * 6;
         maybeAddPage(est, drawSmallHeader);
@@ -314,7 +310,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const tryFinish = () => {
         signaturesDone++;
         if (signaturesDone === 2) {
-          // Ukupan broj stranica za footer
           totalPages = pdf.internal.getNumberOfPages();
           for (let p = 1; p <= totalPages; p++) {
             pdf.setPage(p);

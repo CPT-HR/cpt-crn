@@ -25,8 +25,12 @@ serve(async (req) => {
 
     for (const employee of employees) {
       try {
-        // 1. Provjeri postoji li user s tim emailom
+        // 1. LOG – Prikaži primljene podatke
+        console.log("=== PRIMLJENI PODACI ===", JSON.stringify(employee))
+
+        // 2. LOG – Provjera korisnika po emailu u auth.users
         const { data: usersList, error: usersListError } = await supabaseAdmin.auth.admin.listUsers({ email: employee.email })
+        console.log("=== USERS LIST ===", JSON.stringify(usersList))
         if (usersListError) {
           results.push({ email: employee.email, success: false, error: usersListError.message })
           continue
@@ -37,10 +41,12 @@ serve(async (req) => {
         if (usersList && usersList.users && usersList.users.length > 0) {
           // User već postoji!
           userId = usersList.users[0].id
+          console.log(`--- Auth user already exists for ${employee.email}:`, userId)
 
-          // Provjeri postoji li profile za taj auth user id
+          // LOG – Provjeri postoji li profile za taj auth user id
           const { data: existingProfile, error: profileCheckError } = await supabaseAdmin
             .from('employee_profiles').select('id').eq('id', userId).maybeSingle()
+          console.log(`--- employee_profiles SELECT for id=${userId}:`, JSON.stringify(existingProfile), "ERR:", profileCheckError)
           if (profileCheckError) {
             results.push({ email: employee.email, success: false, error: profileCheckError.message })
             continue
@@ -64,6 +70,7 @@ serve(async (req) => {
           }
           const { error: profileError } = await supabaseAdmin.from('employee_profiles').insert([employeeData])
           if (profileError) {
+            console.log("+++ GRESKA INSERT employee_profiles:", JSON.stringify(profileError))
             results.push({ email: employee.email, success: false, error: profileError.message })
           } else {
             results.push({ email: employee.email, success: true, info: 'Profile dodan postojećem korisniku', userId })
@@ -71,8 +78,9 @@ serve(async (req) => {
           continue
         }
 
-        // 2. Ako user ne postoji – stvori auth usera
+        // 3. Ako user ne postoji – stvori auth usera
         const tempPassword = Math.random().toString(36).slice(-8) + "Aa1!"
+        console.log(`--- Creating new auth user for ${employee.email}`)
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: employee.email,
           password: tempPassword,
@@ -84,6 +92,8 @@ serve(async (req) => {
           }
         })
 
+        console.log("+++ AUTH CREATE result:", JSON.stringify(authData), "ERR:", authError)
+
         if (authError) {
           results.push({ email: employee.email, success: false, error: authError.message })
           continue
@@ -94,7 +104,7 @@ serve(async (req) => {
         }
         userId = authData.user.id
 
-        // 3. Insert profile za novog korisnika
+        // LOG – Insert profile za novog korisnika
         const employeeData = {
           id: userId,
           first_name: employee.first_name,
@@ -107,8 +117,8 @@ serve(async (req) => {
           active: true
         }
         const { error: profileError } = await supabaseAdmin.from('employee_profiles').insert([employeeData])
+        console.log("+++ INSERT employee_profiles result:", profileError)
         if (profileError) {
-          // Cleanup, delete user if profile insert fails
           try { await supabaseAdmin.auth.admin.deleteUser(userId) } catch (e) {}
           results.push({ email: employee.email, success: false, error: profileError.message })
         } else {
@@ -116,10 +126,12 @@ serve(async (req) => {
         }
 
       } catch (error) {
+        console.log("!!! CATCH ERROR:", error)
         results.push({ email: employee.email, success: false, error: error.message })
       }
     }
 
+    console.log('=== FINAL RESULTS ===', JSON.stringify(results))
     return new Response(
       JSON.stringify({ success: true, results }),
       {
@@ -129,6 +141,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.log("=== GLOBAL ERROR ===", error)
     return new Response(
       JSON.stringify({ success: false, error: error.message }),
       {

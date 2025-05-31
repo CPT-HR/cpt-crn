@@ -25,7 +25,7 @@ serve(async (req) => {
 
     for (const employee of employees) {
       try {
-        // 1. Prvo provjeri postoji li user s tim emailom u auth.users
+        // 1. Provjeri postoji li user s tim emailom
         const { data: usersList, error: usersListError } = await supabaseAdmin.auth.admin.listUsers({ email: employee.email })
         if (usersListError) {
           results.push({ email: employee.email, success: false, error: usersListError.message })
@@ -35,7 +35,7 @@ serve(async (req) => {
         let userId = null
 
         if (usersList && usersList.users && usersList.users.length > 0) {
-          // Korisnik već postoji!
+          // User već postoji!
           userId = usersList.users[0].id
 
           // Provjeri postoji li profile za taj auth user id

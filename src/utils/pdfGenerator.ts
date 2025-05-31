@@ -77,44 +77,46 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       y += 35;
 
-      // NARUČITELJ
+      // NARUČITELJ I KORISNIK - DVA STUPCA
       pdf.setFontSize(12);
       pdf.setTextColor(32, 32, 32);
       pdf.text("PODACI O NARUČITELJU", margin, y);
+      if (workOrder.orderForCustomer) {
+        pdf.text("PODACI O KORISNIKU", pageWidth / 2 + 2, y);
+      }
       y += 5.5;
       pdf.setFontSize(9.3);
-      pdf.text(`Ime tvrtke: ${workOrder.clientCompanyName}`, margin, y);
-      y += 5;
-      pdf.text(`Adresa: ${workOrder.clientCompanyAddress}`, margin, y);
-      y += 5;
-      pdf.text(`OIB: ${workOrder.clientOib}`, margin, y);
-      y += 5;
-      pdf.text(`Ime i prezime: ${workOrder.clientFirstName} ${workOrder.clientLastName}`, margin, y);
-      y += 5;
-      pdf.text(`Mobitel: ${workOrder.clientMobile}`, margin, y);
-      y += 5;
-      pdf.text(`Email: ${workOrder.clientEmail}`, margin, y);
 
-      if (workOrder.orderForCustomer) {
-        y += 8;
-        pdf.setFontSize(12);
-        pdf.text("PODACI O KORISNIKU", margin, y);
-        y += 5.5;
-        pdf.setFontSize(9.3);
-        pdf.text(`Ime tvrtke: ${workOrder.customerCompanyName}`, margin, y);
-        y += 5;
-        pdf.text(`Adresa: ${workOrder.customerCompanyAddress}`, margin, y);
-        y += 5;
-        pdf.text(`OIB: ${workOrder.customerOib}`, margin, y);
-        y += 5;
-        pdf.text(`Ime i prezime: ${workOrder.customerFirstName} ${workOrder.customerLastName}`, margin, y);
-        y += 5;
-        pdf.text(`Mobitel: ${workOrder.customerMobile}`, margin, y);
-        y += 5;
-        pdf.text(`Email: ${workOrder.customerEmail}`, margin, y);
-      }
+      // Naručitelj lijevo
+      let yL = y, yR = y;
+      const colL = margin;
+      const colR = pageWidth / 2 + 2;
 
-      y += 11;
+      pdf.text(`Ime tvrtke: ${workOrder.clientCompanyName}`, colL, yL);
+      if (workOrder.orderForCustomer) pdf.text(`Ime tvrtke: ${workOrder.customerCompanyName}`, colR, yR);
+      yL += 5; yR += 5;
+
+      pdf.text(`Adresa: ${workOrder.clientCompanyAddress}`, colL, yL);
+      if (workOrder.orderForCustomer) pdf.text(`Adresa: ${workOrder.customerCompanyAddress}`, colR, yR);
+      yL += 5; yR += 5;
+
+      pdf.text(`OIB: ${workOrder.clientOib}`, colL, yL);
+      if (workOrder.orderForCustomer) pdf.text(`OIB: ${workOrder.customerOib}`, colR, yR);
+      yL += 5; yR += 5;
+
+      pdf.text(`Ime i prezime: ${workOrder.clientFirstName} ${workOrder.clientLastName}`, colL, yL);
+      if (workOrder.orderForCustomer) pdf.text(`Ime i prezime: ${workOrder.customerFirstName} ${workOrder.customerLastName}`, colR, yR);
+      yL += 5; yR += 5;
+
+      pdf.text(`Mobitel: ${workOrder.clientMobile}`, colL, yL);
+      if (workOrder.orderForCustomer) pdf.text(`Mobitel: ${workOrder.customerMobile}`, colR, yR);
+      yL += 5; yR += 5;
+
+      pdf.text(`Email: ${workOrder.clientEmail}`, colL, yL);
+      if (workOrder.orderForCustomer) pdf.text(`Email: ${workOrder.customerEmail}`, colR, yR);
+
+      y = Math.max(yL, yR) + 10;
+
       pdf.setLineWidth(0.35);
       pdf.setDrawColor(120, 120, 120);
       pdf.line(margin, y, pageWidth - margin, y);
@@ -247,41 +249,67 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       y += 13;
 
-      // POTPISI
+      // POTPISI - SLIKE I IMENA
       pdf.setFontSize(9.3);
       pdf.text("Potpis tehničara:", margin, y);
       pdf.text("Potpis klijenta:", pageWidth / 2 + 10, y);
 
-      y += 2;
-      pdf.line(margin, y + 7, margin + 40, y + 7);
-      pdf.line(pageWidth / 2 + 10, y + 7, pageWidth / 2 + 50, y + 7);
-
-      pdf.text(workOrder.technicianName || "", margin, y + 13);
-      pdf.text(workOrder.customerSignerName || "", pageWidth / 2 + 10, y + 13);
-
-      // FOOTER
-      const drawFooter = () => {
-        pdf.setFontSize(7.2);
-        pdf.setTextColor(100);
-        pdf.text(
-          "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
-          pageWidth / 2,
-          pageHeight - 12,
-          { align: "center" }
-        );
-        pdf.text(
-          "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
-          pageWidth / 2,
-          pageHeight - 7,
-          { align: "center" }
-        );
-        pdf.setTextColor(0);
+      // Prikaz bitmap potpisa
+      const drawSignature = (imgSrc: string, x: number, y: number, cb: () => void) => {
+        if (!imgSrc) {
+          cb();
+          return;
+        }
+        const img = new Image();
+        img.src = imgSrc;
+        img.onload = () => {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            const imgData = canvas.toDataURL("image/png");
+            pdf.addImage(imgData, "PNG", x, y, 40, 18);
+          }
+          cb();
+        };
+        img.onerror = () => cb();
       };
 
-      drawFooter();
+      let signaturesDone = 0;
+      const tryFinish = () => {
+        signaturesDone++;
+        if (signaturesDone === 2) {
+          // Imena ispod
+          pdf.text(workOrder.technicianName || "", margin, y + 25);
+          pdf.text(workOrder.customerSignerName || "", pageWidth / 2 + 10, y + 25);
 
-      pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
-      resolve();
+          // FOOTER
+          pdf.setFontSize(7.2);
+          pdf.setTextColor(100);
+          pdf.text(
+            "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr",
+            pageWidth / 2,
+            pageHeight - 12,
+            { align: "center" }
+          );
+          pdf.text(
+            "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka",
+            pageWidth / 2,
+            pageHeight - 7,
+            { align: "center" }
+          );
+          pdf.setTextColor(0);
+
+          pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
+          resolve();
+        }
+      };
+
+      drawSignature(workOrder.technicianSignature, margin, y + 3, tryFinish);
+      drawSignature(workOrder.customerSignature, pageWidth / 2 + 10, y + 3, tryFinish);
+
     } catch (error) {
       reject(error);
     }

@@ -11,10 +11,9 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { PenTool, Trash2, Eye } from 'lucide-react';
-import SignaturePad from '@/components/SignaturePad';
+import SignaturePad, { SignatureMetadata } from '@/components/SignaturePad';
 
 interface Employee {
   id: string;
@@ -34,7 +33,6 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
   const queryClient = useQueryClient();
   const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [signatureData, setSignatureData] = useState('');
 
   const updateSignatureMutation = useMutation({
     mutationFn: async ({ employeeId, signature }: { employeeId: string; signature: string | null }) => {
@@ -59,7 +57,6 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
       });
       queryClient.invalidateQueries({ queryKey: ['employees-management'] });
       setIsSignatureDialogOpen(false);
-      setSignatureData('');
     },
     onError: (error) => {
       console.error('Error in updateSignatureMutation:', error);
@@ -71,13 +68,11 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
     }
   });
 
-  const handleSaveSignature = () => {
-    if (signatureData) {
-      updateSignatureMutation.mutate({
-        employeeId: employee.id,
-        signature: signatureData
-      });
-    }
+  const handleSaveSignature = (signature: string, metadata: SignatureMetadata) => {
+    updateSignatureMutation.mutate({
+      employeeId: employee.id,
+      signature: signature
+    });
   };
 
   const handleDeleteSignature = () => {
@@ -135,42 +130,21 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
         <Badge variant="outline">Nema potpisa</Badge>
       )}
 
-      <Dialog open={isSignatureDialogOpen} onOpenChange={setIsSignatureDialogOpen}>
-        <DialogTrigger asChild>
-          <Button variant="outline" size="sm">
-            <PenTool className="h-4 w-4 mr-1" />
-            {employee.signature_data ? 'Promijeni' : 'Dodaj'} potpis
-          </Button>
-        </DialogTrigger>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>
-              {employee.signature_data ? 'Promijeni' : 'Dodaj'} potpis - {getEmployeeFullName()}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <Label>Potpis:</Label>
-            <SignaturePad
-              onSignatureChange={setSignatureData}
-              existingSignature={employee.signature_data}
-            />
-            <div className="flex gap-2 justify-end">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsSignatureDialogOpen(false)}
-              >
-                Odustani
-              </Button>
-              <Button 
-                onClick={handleSaveSignature}
-                disabled={!signatureData || updateSignatureMutation.isPending}
-              >
-                {updateSignatureMutation.isPending ? 'Spremanje...' : 'Spremi potpis'}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <Button 
+        variant="outline" 
+        size="sm" 
+        onClick={() => setIsSignatureDialogOpen(true)}
+      >
+        <PenTool className="h-4 w-4 mr-1" />
+        {employee.signature_data ? 'Promijeni' : 'Dodaj'} potpis
+      </Button>
+
+      <SignaturePad
+        isOpen={isSignatureDialogOpen}
+        onClose={() => setIsSignatureDialogOpen(false)}
+        onSave={handleSaveSignature}
+        title={`${employee.signature_data ? 'Promijeni' : 'Dodaj'} potpis - ${getEmployeeFullName()}`}
+      />
     </div>
   );
 };

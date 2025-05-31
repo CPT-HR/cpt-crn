@@ -26,7 +26,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { DatePicker } from './DatePicker';
+import DatePicker from './DatePicker';
 import SignaturePad from './SignaturePad';
 
 const formSchema = z.object({
@@ -98,13 +98,10 @@ const WorkOrderForm: React.FC = () => {
 
     console.log('Saving work order with employee_profile_id:', employeeProfile.id);
 
-    // Create the work order data with both employee_profile_id and user_id for now
-    // user_id will be deprecated but we include it to satisfy current type requirements
     const workOrderData = {
       order_number: data.orderNumber,
       date: format(data.date, 'yyyy-MM-dd'),
-      employee_profile_id: employeeProfile.id,
-      user_id: user?.id || employeeProfile.id, // Fallback to maintain compatibility
+      employee_profile_id: employeeProfile.id, // Using employee_profile_id instead of user_id
       client_company_name: data.clientCompanyName,
       client_company_address: data.clientCompanyAddress,
       client_oib: data.clientOib,
@@ -615,6 +612,7 @@ const WorkOrderForm: React.FC = () => {
             </CardHeader>
             <CardContent>
               <SignaturePad 
+                ref={signaturePadRef}
                 onSave={setTechnicianSignature}
               />
             </CardContent>

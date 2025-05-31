@@ -8,6 +8,8 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import WorkOrders from "./pages/WorkOrders";
+import WorkOrderView from "./pages/WorkOrderView";
+import WorkOrderEdit from "./pages/WorkOrderEdit";
 import Settings from "./pages/Settings";
 import Admin from "./pages/Admin";
 import Login from "./pages/Login";
@@ -48,6 +50,18 @@ const App = () => (
             <Route path="/work-orders" element={
               <ProtectedRoute>
                 <WorkOrders />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/work-orders/:id" element={
+              <ProtectedRoute>
+                <WorkOrderView />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="/work-orders/:id/edit" element={
+              <ProtectedRoute>
+                <WorkOrderEdit />
               </ProtectedRoute>
             } />
             

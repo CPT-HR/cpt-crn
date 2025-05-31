@@ -228,17 +228,28 @@ const WorkOrderView: React.FC = () => {
             <div>
               <h4 className="font-medium mb-2">Potpis klijenta</h4>
               {workOrder.customer_signature ? (
-                <div>
+                <div className="space-y-2">
                   <img 
                     src={workOrder.customer_signature} 
                     alt="Potpis klijenta" 
-                    className="max-h-32 border rounded mb-2"
+                    className="max-h-32 border rounded"
                   />
-                  {workOrder.signature_timestamp && (
-                    <div className="text-xs text-gray-500">
-                      <p>Datum i vrijeme: {format(new Date(workOrder.signature_timestamp), 'dd.MM.yyyy HH:mm:ss', { locale: hr })}</p>
+                  {(workOrder.signature_timestamp || workOrder.signature_coordinates || workOrder.signature_address) && (
+                    <div className="text-xs text-gray-500 space-y-1">
+                      {workOrder.signature_timestamp && (
+                        <p className="font-medium">
+                          Datum i vrijeme: {format(new Date(workOrder.signature_timestamp), 'dd.MM.yyyy HH:mm:ss', { locale: hr })}
+                        </p>
+                      )}
+                      {workOrder.signature_coordinates && (
+                        <p>
+                          Koordinate: {workOrder.signature_coordinates.x?.toFixed(6)}, {workOrder.signature_coordinates.y?.toFixed(6)}
+                        </p>
+                      )}
                       {workOrder.signature_address && (
-                        <p>Adresa: {workOrder.signature_address}</p>
+                        <p>
+                          Lokacija: {workOrder.signature_address}
+                        </p>
                       )}
                     </div>
                   )}

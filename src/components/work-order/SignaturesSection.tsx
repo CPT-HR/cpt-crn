@@ -76,23 +76,25 @@ const SignaturesSection: React.FC<SignaturesSectionProps> = ({
               onClick={onCustomerSignatureClick}
             >
               {customerSignature ? (
-                <div className="flex flex-col items-center">
+                <div className="flex flex-col items-center w-full">
                   <img 
                     src={customerSignature} 
                     alt="Potpis klijenta" 
                     className="max-h-20 mx-auto" 
                   />
                   {signatureMetadata && (
-                    <div className="text-[10px] text-gray-500 mt-2 text-center max-w-full">
-                      <p>Datum i vrijeme: {signatureMetadata.timestamp}</p>
+                    <div className="text-[10px] text-gray-500 mt-2 text-center w-full space-y-1">
+                      <p className="font-medium">
+                        Datum i vrijeme: {signatureMetadata.timestamp}
+                      </p>
                       {signatureMetadata.coordinates && (
-                        <p>
+                        <p className="break-all">
                           Koordinate: {signatureMetadata.coordinates.latitude.toFixed(6)}, {signatureMetadata.coordinates.longitude.toFixed(6)}
                         </p>
                       )}
                       {signatureMetadata.address && (
-                        <p className="truncate">
-                          Adresa: {signatureMetadata.address}
+                        <p className="break-words text-left max-w-full">
+                          Lokacija: {signatureMetadata.address}
                         </p>
                       )}
                     </div>

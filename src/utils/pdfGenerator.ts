@@ -60,9 +60,14 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const margin = 18;
       const usableHeight = pageHeight - margin - 30;
       let y = margin;
+      let pageNumber = 1;
+      let totalPages = 1;
 
-      // Zaglavlje
-      function drawHeader() {
+      // Pratimo sve y koordinate gdje dodajemo page zbog naknadnog računanja stranica
+      const pageYs: number[] = [0];
+
+      // Zaglavlje početne stranice
+      function drawFirstHeader() {
         pdf.setFont("Manrope-Regular", "normal");
         pdf.setFontSize(11);
         pdf.text("Centar pametne tehnologije d.o.o.", margin, margin);
@@ -70,7 +75,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text("OIB: 75343882245", margin, margin + 10);
         pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, margin);
         pdf.text("+385 1 6525 100", pageWidth - margin - 65, margin + 5);
-
         pdf.setFontSize(16);
         pdf.text(
           `RADNI NALOG  Broj: ${workOrder.id}`,
@@ -79,8 +83,19 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           { align: "center" }
         );
       }
+      // Zaglavlje za svaku iduću stranicu
+      function drawSmallHeader() {
+        pdf.setFontSize(8.7);
+        pdf.text(
+          `RADNI NALOG Broj: ${workOrder.id}`,
+          pageWidth - margin,
+          margin + 2,
+          { align: "right" }
+        );
+      }
+
       // Footer
-      function drawFooter() {
+      function drawFooter(currPage: number, allPages: number) {
         pdf.setFont("Manrope-Regular", "normal");
         pdf.setFontSize(7.2);
         pdf.setTextColor(100);
@@ -96,21 +111,29 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           pageHeight - 7,
           { align: "center" }
         );
+        pdf.setFontSize(7.2);
+        pdf.text(
+          `Stranica ${currPage}/${allPages}`,
+          pageWidth - margin,
+          pageHeight - 7,
+          { align: "right" }
+        );
         pdf.setTextColor(0);
       }
 
       // Provjera prelaska na novu stranicu
-      function maybeAddPage(nextBlockHeight: number) {
+      function maybeAddPage(nextBlockHeight: number, headerFnc?: () => void) {
         if (y + nextBlockHeight > usableHeight) {
-          drawFooter();
+          pageYs.push(y);
           pdf.addPage();
-          drawHeader();
-          y = margin + 30;
+          y = margin + 9;
+          pageNumber++;
+          headerFnc ? headerFnc() : drawSmallHeader();
         }
       }
 
       // Početak dokumenta
-      drawHeader();
+      drawFirstHeader();
       y += 35;
 
       // PODACI O NARUČITELJU I KORISNIKU
@@ -155,7 +178,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFontSize(10);
       pdf.setTextColor(60, 60, 60);
 
-      maybeAddPage(12);
+      maybeAddPage(12, drawSmallHeader);
       let datumTekst = `Datum: ${workOrder.date}   |   Vrijeme dolaska: ${workOrder.arrivalTime}   |   Vrijeme završetka: ${workOrder.completionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`;
       pdf.text(datumTekst, margin, y);
       y += 6;
@@ -168,10 +191,10 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       y += 11;
 
-      // Sekcije: (provjera mjesta za svaku)
+      // Sekcije
       function section(title: string, arr: WorkItem[], blockMinHeight = 13) {
         let est = blockMinHeight + arr.length * 6;
-        maybeAddPage(est);
+        maybeAddPage(est, drawSmallHeader);
         pdf.setFontSize(12);
         pdf.text(title, margin, y);
         y += 5.3;
@@ -190,15 +213,14 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y += 7.3;
       }
 
-      // OPIS KVARA / ZATEČENO STANJE / IZVRŠENI RADOVI / KOMENTAR TEHNIČARA / UTROŠENI MATERIJAL
       section("OPIS KVARA / PROBLEMA", workOrder.description);
       section("ZATEČENO STANJE", workOrder.foundCondition);
       section("IZVRŠENI RADOVI", workOrder.performedWork);
       section("KOMENTAR TEHNIČARA", workOrder.technicianComment);
 
-      // UTROŠENI MATERIJAL (provjera mjesta)
+      // UTROŠENI MATERIJAL
       let matBlockHeight = 16 + workOrder.materials.length * 6;
-      maybeAddPage(matBlockHeight);
+      maybeAddPage(matBlockHeight, drawSmallHeader);
       pdf.setFontSize(12);
       pdf.text("UTROŠENI MATERIJAL", margin, y);
       y += 5.3;
@@ -214,7 +236,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setTextColor(40, 40, 40);
       if (workOrder.materials && workOrder.materials.length > 0) {
         workOrder.materials.forEach((mat, idx) => {
-          maybeAddPage(7);
+          maybeAddPage(7, drawSmallHeader);
           pdf.text(`${idx + 1}.`, margin + 2, y);
           pdf.text(mat.name, margin + 14, y);
           pdf.text(mat.quantity, pageWidth - margin - 35, y);
@@ -228,12 +250,11 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       y += 13;
 
       // POTPISI - SLIKE, IMENA I METAPODACI
-      maybeAddPage(38);
+      maybeAddPage(38, drawSmallHeader);
       pdf.setFontSize(9.3);
       pdf.text("Potpis tehničara:", margin, y);
       pdf.text("Potpis klijenta:", pageWidth / 2 + 10, y);
 
-      // Prikaz bitmap potpisa, ime ispod slike
       const drawSignature = (
         imgSrc: string,
         x: number,
@@ -260,8 +281,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
             pdf.addImage(imgData, "PNG", x, y + 3, 40, 18);
           }
           pdf.text(name || "", x, y + 25);
-
-          // Metapodaci (SAMO ako meta==true, tj. SAMO ispod klijenta)
           if (meta && metadata) {
             pdf.setFontSize(7.2);
             let metaY = y + 29;
@@ -295,7 +314,15 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const tryFinish = () => {
         signaturesDone++;
         if (signaturesDone === 2) {
-          drawFooter();
+          // Ukupan broj stranica za footer
+          totalPages = pdf.internal.getNumberOfPages();
+          for (let p = 1; p <= totalPages; p++) {
+            pdf.setPage(p);
+            drawFooter(p, totalPages);
+            if (p > 1) {
+              drawSmallHeader();
+            }
+          }
           pdf.save(`Radni_nalog_${workOrder.id.replace("/", "-")}.pdf`);
           resolve();
         }

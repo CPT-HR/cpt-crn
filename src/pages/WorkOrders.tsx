@@ -16,6 +16,23 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 
+// Type definition for work order with employee profile
+type WorkOrderWithProfile = {
+  id: string;
+  order_number: string;
+  date: string;
+  client_company_name: string;
+  client_first_name: string;
+  client_last_name: string;
+  user_id: string;
+  technician_signature: string | null;
+  employee_profiles: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+} & Record<string, any>;
+
 const WorkOrders: React.FC = () => {
   const { user } = useAuth();
 
@@ -43,7 +60,7 @@ const WorkOrders: React.FC = () => {
       }
 
       console.log('Fetched work orders with proper join:', data);
-      return data;
+      return data as WorkOrderWithProfile[];
     },
     enabled: !!user
   });

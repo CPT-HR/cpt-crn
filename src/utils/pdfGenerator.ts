@@ -56,8 +56,11 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const pdf = new jsPDF('p', 'mm', 'a4');
       pdf.setFont("Manrope-Regular", "normal");
 
-      // --------- Helper za prijelaz stranice ---------
       let yRow = 22;
+      const leftX = 15;
+      const rightX = 110;
+
+      // Helper za page break
       const pageBreak = (step: number = 8) => {
         if (yRow > 270) {
           pdf.addPage();
@@ -67,12 +70,30 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       // HEADER
       pdf.setFontSize(13);
-      pdf.text("RADNI NALOG", 105, yRow, { align: "center" });
-      yRow += 8;
-
+      pdf.text(`RADNI NALOG  |  Broj: ${workOrder.id}`, 15, yRow);
       pdf.setFontSize(9);
-      pdf.text(`Broj: ${workOrder.id}`, 15, yRow);
       pdf.text(`Datum: ${workOrder.date}`, 170, yRow, { align: "right" });
+      yRow += 8;
+      pageBreak();
+
+      // VRIJEME I PUT - bez naslova, iznad svega ostalog
+      pdf.setFontSize(9);
+      pdf.text(`Datum: ${workOrder.date}`, leftX + 3, yRow);
+      pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}`, rightX + 3, yRow);
+      yRow += 5;
+      pageBreak();
+
+      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, leftX + 3, yRow);
+      if (workOrder.fieldTrip)
+        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, rightX + 3, yRow);
+      yRow += 5;
+      pageBreak();
+
+      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, leftX + 3, yRow);
+      yRow += 5;
+      pageBreak();
+
+      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, leftX + 3, yRow);
       yRow += 8;
       pageBreak();
 
@@ -85,8 +106,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       pdf.setFontSize(9);
       const labelGap = 5.2;
-      const leftX = 15;
-      const rightX = 110;
 
       const writePair = (label: string, left: string, right: string, rightVal: string) => {
         pdf.text(label, leftX, yRow);
@@ -152,35 +171,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         yRow += 5.5;
         pageBreak();
       }
-      yRow += 6.5;
-      pageBreak();
-
-      // VRIJEME I PUT - side by side
-      pdf.setFontSize(11);
-      pdf.text("VRIJEME:", leftX, yRow);
-      pdf.text("PUT:", rightX, yRow);
-      yRow += 5.5;
-      pageBreak();
-
-      pdf.setFontSize(9);
-      pdf.text(`Datum: ${workOrder.date}`, leftX + 3, yRow);
-      pdf.text(`Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}`, rightX + 3, yRow);
-      yRow += 5.5;
-      pageBreak();
-
-      pdf.text(`Vrijeme dolaska: ${workOrder.arrivalTime}`, leftX + 3, yRow);
-      if (workOrder.fieldTrip)
-        pdf.text(`Prijeđena udaljenost: ${workOrder.distance} km`, rightX + 3, yRow);
-      yRow += 5.5;
-      pageBreak();
-
-      pdf.text(`Vrijeme završetka: ${workOrder.completionTime}`, leftX + 3, yRow);
-      yRow += 5.5;
-      pageBreak();
-
-      pdf.text(`Obračunsko vrijeme: ${workOrder.calculatedHours}`, leftX + 3, yRow);
       yRow += 10;
-      pageBreak();
 
       // POTPISI
       pdf.setFontSize(9);

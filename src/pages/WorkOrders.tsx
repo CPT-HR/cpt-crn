@@ -3,6 +3,7 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
 import { 
   Table, 
   TableBody, 
@@ -16,7 +17,6 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 
-// Type definition for work order with employee profile
 type WorkOrderWithProfile = {
   id: string;
   order_number: string;
@@ -24,7 +24,7 @@ type WorkOrderWithProfile = {
   client_company_name: string;
   client_first_name: string;
   client_last_name: string;
-  user_id: string;
+  employee_profile_id: string;
   technician_signature: string | null;
   employee_profiles: {
     id: string;
@@ -35,18 +35,18 @@ type WorkOrderWithProfile = {
 
 const WorkOrders: React.FC = () => {
   const { user } = useAuth();
+  const { data: employeeProfile } = useEmployeeProfile();
 
   const { data: workOrders, isLoading, error } = useQuery({
     queryKey: ['work-orders'],
     queryFn: async () => {
-      console.log('Fetching work orders with proper join...');
+      console.log('Fetching work orders with employee_profile_id join...');
       
-      // Use proper Supabase join syntax with the existing foreign key constraint
       const { data, error } = await supabase
         .from('work_orders')
         .select(`
           *,
-          employee_profiles!work_orders_user_id_fkey(
+          employee_profiles!work_orders_employee_profile_id_fkey(
             id,
             first_name,
             last_name
@@ -59,7 +59,7 @@ const WorkOrders: React.FC = () => {
         throw error;
       }
 
-      console.log('Fetched work orders with proper join:', data);
+      console.log('Fetched work orders with employee_profile_id join:', data);
       return data as WorkOrderWithProfile[];
     },
     enabled: !!user
@@ -148,7 +148,7 @@ const WorkOrders: React.FC = () => {
                         <button className="text-blue-600 hover:underline text-sm">
                           Pregled
                         </button>
-                        {(user?.role === 'admin' || order.user_id === user?.id) && (
+                        {(user?.role === 'admin' || order.employee_profile_id === employeeProfile?.id) && (
                           <button className="text-green-600 hover:underline text-sm">
                             Uredi
                           </button>

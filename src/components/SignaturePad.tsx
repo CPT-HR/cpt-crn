@@ -23,9 +23,6 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
   const [isEmpty, setIsEmpty] = useState(true);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
-  const [locationMetadata, setLocationMetadata] = useState<SignatureMetadata>({
-    timestamp: new Date().toISOString(),
-  });
   
   const clear = () => {
     sigCanvas.current?.clear();
@@ -34,12 +31,8 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
   
   useEffect(() => {
     if (isOpen) {
-      // Reset states when opening
       setIsGettingLocation(false);
       setLocationError(null);
-      setLocationMetadata({
-        timestamp: new Date().toISOString(),
-      });
     }
   }, [isOpen]);
   
@@ -81,14 +74,11 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
       setLocationError(null);
       
       try {
-        // Get current location
         const position = await getLocation();
         const { latitude, longitude } = position.coords;
         
-        // Get address from coordinates
         const address = await getAddressFromCoordinates(latitude, longitude);
         
-        // Create timestamp in CET timezone (Zagreb)
         const timestamp = new Date().toLocaleString('hr-HR', {
           timeZone: 'Europe/Zagreb',
           day: '2-digit',
@@ -117,7 +107,6 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
             : 'Došlo je do greške prilikom dohvaćanja lokacije'
         );
         
-        // Allow saving without location if there's an error
         if (sigCanvas.current) {
           const dataURL = sigCanvas.current.toDataURL('image/png');
           onSave(dataURL, {

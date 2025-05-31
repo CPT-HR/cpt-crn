@@ -157,7 +157,11 @@ serve(async (req) => {
             location_id: employee.location_id || null,
             user_role: employee.user_role,
             vehicle_id: employee.vehicle_id || null,
-            active: true
+            active: true,
+            // Initialize signature fields as null - can be set later
+            signature_data: null,
+            signature_created_at: null,
+            signature_updated_at: null
         }
 
         console.log(`Creating employee profile for ${employee.email} with data:`, employeeData)

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { useToast } from "@/components/ui/use-toast";
@@ -38,14 +39,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const { toast } = useToast();
   const isMounted = useRef(true);
 
-  // Load user signature from database
+  // Load user signature from employee_profiles
   const loadUserSignature = async (userId: string): Promise<string | undefined> => {
     try {
-      const supabaseAny = supabase as any;
-      const { data, error } = await supabaseAny
-        .from('user_signatures')
+      const { data, error } = await supabase
+        .from('employee_profiles')
         .select('signature_data')
-        .eq('user_id', userId)
+        .eq('id', userId)
         .maybeSingle();
       
       if (error) {
@@ -99,7 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           .toUpperCase()
           .substring(0, 2);
         
-        // Load signature from database
+        // Load signature from employee_profiles
         const signature = await loadUserSignature(userId);
         
         // Load company address from localStorage
@@ -243,24 +243,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     
     try {
-      const supabaseAny = supabase as any;
+      console.log('Saving signature to employee_profiles for user:', user.id);
       
-      // Try to update existing signature first
-      const { error: updateError } = await supabaseAny
-        .from('user_signatures')
-        .update({ signature_data: signature })
-        .eq('user_id', user.id);
+      // Update signature in employee_profiles table
+      const { error } = await supabase
+        .from('employee_profiles')
+        .update({
+          signature_data: signature,
+          signature_updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
       
-      // If update fails (no existing record), insert new one
-      if (updateError) {
-        const { error: insertError } = await supabaseAny
-          .from('user_signatures')
-          .insert({
-            user_id: user.id,
-            signature_data: signature
-          });
-        
-        if (insertError) throw insertError;
+      if (error) {
+        console.error('Error saving signature to employee_profiles:', error);
+        throw error;
       }
       
       // Update local user state
@@ -272,7 +268,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       toast({
         title: "Potpis spremljen",
-        description: "Vaš potpis je uspješno ažuriran u bazi podataka",
+        description: "Vaš potpis je uspješno ažuriran",
       });
     } catch (error) {
       console.error('Error saving signature:', error);

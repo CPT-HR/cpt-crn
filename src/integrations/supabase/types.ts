@@ -49,6 +49,9 @@ export type Database = {
           last_name: string
           location_id: string | null
           phone: string | null
+          signature_created_at: string | null
+          signature_data: string | null
+          signature_updated_at: string | null
           updated_at: string
           user_role: string
           vehicle_id: string | null
@@ -62,6 +65,9 @@ export type Database = {
           last_name: string
           location_id?: string | null
           phone?: string | null
+          signature_created_at?: string | null
+          signature_data?: string | null
+          signature_updated_at?: string | null
           updated_at?: string
           user_role?: string
           vehicle_id?: string | null
@@ -75,6 +81,9 @@ export type Database = {
           last_name?: string
           location_id?: string | null
           phone?: string | null
+          signature_created_at?: string | null
+          signature_data?: string | null
+          signature_updated_at?: string | null
           updated_at?: string
           user_role?: string
           vehicle_id?: string | null
@@ -111,30 +120,6 @@ export type Database = {
           distance_matrix_api_key?: string | null
           id?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      user_signatures: {
-        Row: {
-          created_at: string
-          id: string
-          signature_data: string
-          updated_at: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          signature_data: string
-          updated_at?: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          signature_data?: string
-          updated_at?: string
-          user_id?: string
         }
         Relationships: []
       }

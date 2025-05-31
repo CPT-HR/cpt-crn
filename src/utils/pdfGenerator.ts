@@ -95,8 +95,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.setFontSize(6.1);
         pdf.setTextColor(100);
 
-        const yFirma = pageHeight - 12.2;
-        const yLegal = pageHeight - 6.2;
+        const yFirma = pageHeight - 7.1;
+        const yLegal = pageHeight - 5.2;
         const yPage = pageHeight - 2.5;
 
         pdf.text(

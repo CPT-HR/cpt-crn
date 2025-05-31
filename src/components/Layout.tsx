@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
@@ -29,6 +28,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             <nav className="hidden md:flex items-center gap-6">
               <NavLink to="/" currentPath={location.pathname}>
                 Novi nalog
+              </NavLink>
+              <NavLink to="/work-orders" currentPath={location.pathname}>
+                Radni nalozi
               </NavLink>
             </nav>
           </div>

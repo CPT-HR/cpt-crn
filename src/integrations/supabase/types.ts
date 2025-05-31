@@ -48,6 +48,7 @@ export type Database = {
           id: string
           last_name: string
           location_id: string | null
+          manager_id: string | null
           phone: string | null
           signature_created_at: string | null
           signature_data: string | null
@@ -64,6 +65,7 @@ export type Database = {
           id: string
           last_name: string
           location_id?: string | null
+          manager_id?: string | null
           phone?: string | null
           signature_created_at?: string | null
           signature_data?: string | null
@@ -80,6 +82,7 @@ export type Database = {
           id?: string
           last_name?: string
           location_id?: string | null
+          manager_id?: string | null
           phone?: string | null
           signature_created_at?: string | null
           signature_data?: string | null
@@ -94,6 +97,13 @@ export type Database = {
             columns: ["location_id"]
             isOneToOne: false
             referencedRelation: "company_locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "employee_profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "employee_profiles"
             referencedColumns: ["id"]
           },
           {

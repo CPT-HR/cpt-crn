@@ -23,24 +23,38 @@ const WorkOrders: React.FC = () => {
     queryKey: ['work-orders'],
     queryFn: async () => {
       console.log('Fetching work orders...');
-      const { data, error } = await supabase
+      
+      // First get work orders
+      const { data: workOrdersData, error: workOrdersError } = await supabase
         .from('work_orders')
-        .select(`
-          *,
-          employee_profiles!work_orders_user_id_fkey (
-            first_name,
-            last_name
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching work orders:', error);
-        throw error;
+      if (workOrdersError) {
+        console.error('Error fetching work orders:', workOrdersError);
+        throw workOrdersError;
       }
 
-      console.log('Fetched work orders:', data);
-      return data;
+      // Then get employee profiles for the user IDs
+      const userIds = [...new Set(workOrdersData.map(order => order.user_id))];
+      const { data: employeeProfiles, error: profilesError } = await supabase
+        .from('employee_profiles')
+        .select('id, first_name, last_name')
+        .in('id', userIds);
+
+      if (profilesError) {
+        console.error('Error fetching employee profiles:', profilesError);
+        throw profilesError;
+      }
+
+      // Combine the data
+      const workOrdersWithProfiles = workOrdersData.map(order => ({
+        ...order,
+        employee_profiles: employeeProfiles.find(profile => profile.id === order.user_id) || null
+      }));
+
+      console.log('Fetched work orders with profiles:', workOrdersWithProfiles);
+      return workOrdersWithProfiles;
     },
     enabled: !!user
   });
@@ -113,7 +127,10 @@ const WorkOrders: React.FC = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {order.employee_profiles?.first_name} {order.employee_profiles?.last_name}
+                      {order.employee_profiles 
+                        ? `${order.employee_profiles.first_name} ${order.employee_profiles.last_name}`
+                        : 'N/A'
+                      }
                     </TableCell>
                     <TableCell>
                       <Badge variant={order.technician_signature ? "default" : "secondary"}>

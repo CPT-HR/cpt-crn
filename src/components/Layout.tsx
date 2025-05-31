@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { Settings, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
 
 interface LayoutProps {
@@ -37,9 +37,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           
           <div className="flex items-center gap-4">
             <nav className="flex items-center gap-2">
-              <NavIconLink to="/settings" currentPath={location.pathname} title="Postavke">
-                <Settings size={20} />
-              </NavIconLink>
               {user.role === 'admin' && (
                 <NavIconLink to="/admin" currentPath={location.pathname} title="Administracija">
                   <Users size={20} />

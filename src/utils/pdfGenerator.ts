@@ -58,7 +58,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 18;
-      const usableHeight = pageHeight - margin - 32;
+      const footerMargin = 15; // minimalna zona za pisače
+      const usableHeight = pageHeight - margin - footerMargin - 5;
       let y = margin;
       let pageNumber = 1;
       let totalPages = 1;
@@ -72,7 +73,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, margin);
         pdf.text("+385 1 6525 100", pageWidth - margin - 65, margin + 5);
         pdf.setFontSize(16);
-        // VIŠE PRAZNOG PROSTORA IZNAD I ISPOD NASLOVA
         pdf.text(
           `RADNI NALOG  Broj: ${workOrder.id}`,
           pageWidth / 2,
@@ -99,9 +99,9 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         const line1 = "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr";
         const line2 = "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka";
 
-        const yFooter1 = pageHeight - 10.1;
-        const yFooter2 = pageHeight - 7.1;
-        const yFooterPage = pageHeight - 2.6;
+        const yFooter1 = pageHeight - footerMargin;
+        const yFooter2 = pageHeight - footerMargin + 3.5;
+        const yFooterPage = pageHeight - 5.3;
 
         pdf.text(line1, pageWidth / 2, yFooter1, { align: "center" });
         pdf.text(line2, pageWidth / 2, yFooter2, { align: "center" });
@@ -114,7 +114,6 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.setTextColor(0);
       }
 
-      // VELIKI razmak ispod headera na svakoj idućoj stranici
       function maybeAddPage(nextBlockHeight: number, headerFnc?: () => void) {
         if (y + nextBlockHeight > usableHeight) {
           pdf.addPage();

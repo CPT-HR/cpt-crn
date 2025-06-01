@@ -93,7 +93,7 @@ const SignaturesSection: React.FC<SignaturesSectionProps> = ({
                         </p>
                       )}
                       {signatureMetadata.address && (
-                        <p className="break-words text-left max-w-full">
+                        <p className="break-words text-center max-w-full">
                           Lokacija: {signatureMetadata.address}
                         </p>
                       )}

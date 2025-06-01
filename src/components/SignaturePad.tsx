@@ -57,7 +57,34 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`
       );
       const data = await response.json();
-      return data.display_name;
+      
+      // Izvuci relevantne dijelove adrese
+      const address = data.address || {};
+      
+      // Prioritet za ulicu: house_number + road, ili road, ili neighbourhood
+      let street = '';
+      if (address.house_number && address.road) {
+        street = `${address.house_number} ${address.road}`;
+      } else if (address.road) {
+        street = address.road;
+      } else if (address.neighbourhood) {
+        street = address.neighbourhood;
+      } else if (address.suburb) {
+        street = address.suburb;
+      }
+      
+      // Grad: town, city, village ili municipality
+      const city = address.town || address.city || address.village || address.municipality || 'Nepoznato';
+      
+      // Država
+      const country = address.country || 'Hrvatska';
+      
+      // Formatiranje kratke adrese
+      const shortAddress = [street, city, country]
+        .filter(part => part && part.trim().length > 0)
+        .join(', ');
+      
+      return shortAddress || 'Adresa nije dostupna';
     } catch (error) {
       console.error('Error getting address:', error);
       return 'Adresa nije dostupna';

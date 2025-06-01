@@ -299,7 +299,19 @@ export type Database = {
         Args: { user_initials: string }
         Returns: string
       }
+      get_user_role: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      is_active_employee: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      is_admin_or_lead: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }

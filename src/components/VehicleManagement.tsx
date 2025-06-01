@@ -21,13 +21,16 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Car, Plus, Edit, Trash2 } from 'lucide-react';
+import { DatePicker } from '@/components/DatePicker';
+import { format } from "date-fns";
+import { hr } from "date-fns/locale";
 
 interface Vehicle {
   id: string;
   name: string;
   model: string | null;
   license_plate: string | null;
-  year: number | null;
+  technical_inspection: string | null;
   created_at: string;
 }
 
@@ -48,7 +51,7 @@ const VehicleManagement: React.FC = () => {
     name: '',
     model: '',
     license_plate: '',
-    year: ''
+    technical_inspection: undefined as Date | undefined
   });
 
   const { data: vehicles, isLoading: vehiclesLoading } = useQuery({
@@ -92,7 +95,7 @@ const VehicleManagement: React.FC = () => {
           name: vehicleData.name,
           model: vehicleData.model || null,
           license_plate: vehicleData.license_plate || null,
-          year: vehicleData.year ? parseInt(vehicleData.year) : null
+          technical_inspection: vehicleData.technical_inspection ? vehicleData.technical_inspection.toISOString().split('T')[0] : null
         });
 
       if (error) {
@@ -107,7 +110,7 @@ const VehicleManagement: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       setIsAddDialogOpen(false);
-      setFormData({ name: '', model: '', license_plate: '', year: '' });
+      setFormData({ name: '', model: '', license_plate: '', technical_inspection: undefined });
     },
     onError: (error) => {
       console.error('Error in addVehicleMutation:', error);
@@ -128,7 +131,7 @@ const VehicleManagement: React.FC = () => {
           name: vehicleData.name,
           model: vehicleData.model || null,
           license_plate: vehicleData.license_plate || null,
-          year: vehicleData.year ? parseInt(vehicleData.year) : null
+          technical_inspection: vehicleData.technical_inspection ? vehicleData.technical_inspection.toISOString().split('T')[0] : null
         })
         .eq('id', id);
 
@@ -145,7 +148,7 @@ const VehicleManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       setIsEditDialogOpen(false);
       setEditingVehicle(null);
-      setFormData({ name: '', model: '', license_plate: '', year: '' });
+      setFormData({ name: '', model: '', license_plate: '', technical_inspection: undefined });
     },
     onError: (error) => {
       console.error('Error in updateVehicleMutation:', error);
@@ -197,7 +200,7 @@ const VehicleManagement: React.FC = () => {
       name: vehicle.name,
       model: vehicle.model || '',
       license_plate: vehicle.license_plate || '',
-      year: vehicle.year?.toString() || ''
+      technical_inspection: vehicle.technical_inspection ? new Date(vehicle.technical_inspection) : undefined
     });
     setIsEditDialogOpen(true);
   };
@@ -284,13 +287,12 @@ const VehicleManagement: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="year">Godina</Label>
-                    <Input
-                      id="year"
-                      type="number"
-                      value={formData.year}
-                      onChange={(e) => setFormData(prev => ({ ...prev, year: e.target.value }))}
-                      placeholder="Godina proizvodnje"
+                    <Label htmlFor="technical_inspection">Tehnički pregled</Label>
+                    <DatePicker
+                      date={formData.technical_inspection}
+                      onDateChange={(date) => setFormData(prev => ({ ...prev, technical_inspection: date }))}
+                      placeholder="Odaberite datum tehničkog pregleda"
+                      className="w-full"
                     />
                   </div>
                   <Button onClick={handleAdd} disabled={!formData.name || addVehicleMutation.isPending}>
@@ -310,7 +312,9 @@ const VehicleManagement: React.FC = () => {
                   <div className="text-sm text-muted-foreground space-y-1">
                     {vehicle.model && <div>Model: {vehicle.model}</div>}
                     {vehicle.license_plate && <div>Registracija: {vehicle.license_plate}</div>}
-                    {vehicle.year && <div>Godina: {vehicle.year}</div>}
+                    {vehicle.technical_inspection && (
+                      <div>Tehnički pregled: {format(new Date(vehicle.technical_inspection), "dd.MM.yyyy", { locale: hr })}</div>
+                    )}
                     {getVehicleAssignment(vehicle.id) && (
                       <div className="flex items-center gap-2">
                         <span>Dodijeljeno:</span>
@@ -377,13 +381,12 @@ const VehicleManagement: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="edit-year">Godina</Label>
-              <Input
-                id="edit-year"
-                type="number"
-                value={formData.year}
-                onChange={(e) => setFormData(prev => ({ ...prev, year: e.target.value }))}
-                placeholder="Godina proizvodnje"
+              <Label htmlFor="edit-technical_inspection">Tehnički pregled</Label>
+              <DatePicker
+                date={formData.technical_inspection}
+                onDateChange={(date) => setFormData(prev => ({ ...prev, technical_inspection: date }))}
+                placeholder="Odaberite datum tehničkog pregleda"
+                className="w-full"
               />
             </div>
             <Button onClick={handleUpdate} disabled={!formData.name || updateVehicleMutation.isPending}>

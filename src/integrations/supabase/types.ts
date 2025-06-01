@@ -140,8 +140,8 @@ export type Database = {
           license_plate: string | null
           model: string | null
           name: string
+          technical_inspection: string | null
           updated_at: string
-          year: number | null
         }
         Insert: {
           created_at?: string
@@ -149,8 +149,8 @@ export type Database = {
           license_plate?: string | null
           model?: string | null
           name: string
+          technical_inspection?: string | null
           updated_at?: string
-          year?: number | null
         }
         Update: {
           created_at?: string
@@ -158,8 +158,8 @@ export type Database = {
           license_plate?: string | null
           model?: string | null
           name?: string
+          technical_inspection?: string | null
           updated_at?: string
-          year?: number | null
         }
         Relationships: []
       }

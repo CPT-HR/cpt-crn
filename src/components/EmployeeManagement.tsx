@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,9 +40,8 @@ interface Employee {
 
 interface Vehicle {
   id: string;
-  name: string;
   model: string | null;
-  license_plate: string | null;
+  license_plate: string;
 }
 
 interface Location {
@@ -80,8 +80,8 @@ const EmployeeManagement: React.FC = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('vehicles')
-        .select('id, name, model, license_plate')
-        .order('name');
+        .select('id, model, license_plate')
+        .order('license_plate');
 
       if (error) throw error;
       return data as Vehicle[];
@@ -179,7 +179,7 @@ const EmployeeManagement: React.FC = () => {
   const getVehicleName = (vehicleId: string | null) => {
     if (!vehicleId || !vehicles) return 'Nema vozila';
     const vehicle = vehicles.find(v => v.id === vehicleId);
-    return vehicle ? `${vehicle.name}${vehicle.license_plate ? ` (${vehicle.license_plate})` : ''}` : 'Nepoznato vozilo';
+    return vehicle ? vehicle.license_plate : 'Nepoznato vozilo';
   };
 
   const getLocationName = (locationId: string | null) => {
@@ -307,7 +307,7 @@ const EmployeeManagement: React.FC = () => {
                         <SelectItem value="none">Nema vozila</SelectItem>
                         {vehicles?.map((vehicle) => (
                           <SelectItem key={vehicle.id} value={vehicle.id}>
-                            {vehicle.name}{vehicle.license_plate && ` (${vehicle.license_plate})`}
+                            {vehicle.license_plate}{vehicle.model && ` (${vehicle.model})`}
                           </SelectItem>
                         ))}
                       </SelectContent>

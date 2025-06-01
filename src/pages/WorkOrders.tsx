@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,6 +17,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
+import { Plus } from 'lucide-react';
 
 type WorkOrderWithProfile = {
   id: string;
@@ -90,9 +90,15 @@ const WorkOrders: React.FC = () => {
     <div className="container py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Radni nalozi</h1>
-        <Badge variant="secondary">
-          {workOrders?.length || 0} naloga
-        </Badge>
+        <div className="flex items-center gap-4">
+          <Badge variant="secondary">
+            {workOrders?.length || 0} naloga
+          </Badge>
+          <Button onClick={() => navigate('/')}>
+            <Plus className="mr-2 h-4 w-4" />
+            Novi nalog
+          </Button>
+        </div>
       </div>
 
       <Card>

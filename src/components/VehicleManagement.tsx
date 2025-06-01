@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,9 +26,8 @@ import { hr } from "date-fns/locale";
 
 interface Vehicle {
   id: string;
-  name: string;
   model: string | null;
-  license_plate: string | null;
+  license_plate: string;
   technical_inspection: string | null;
   created_at: string;
 }
@@ -48,9 +46,8 @@ const VehicleManagement: React.FC = () => {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [formData, setFormData] = useState({
-    name: '',
-    model: '',
     license_plate: '',
+    model: '',
     technical_inspection: undefined as Date | undefined
   });
 
@@ -61,7 +58,7 @@ const VehicleManagement: React.FC = () => {
       const { data, error } = await supabase
         .from('vehicles')
         .select('*')
-        .order('name');
+        .order('license_plate');
 
       if (error) {
         console.error('Error fetching vehicles:', error);
@@ -92,9 +89,8 @@ const VehicleManagement: React.FC = () => {
       const { error } = await supabase
         .from('vehicles')
         .insert({
-          name: vehicleData.name,
+          license_plate: vehicleData.license_plate,
           model: vehicleData.model || null,
-          license_plate: vehicleData.license_plate || null,
           technical_inspection: vehicleData.technical_inspection ? vehicleData.technical_inspection.toISOString().split('T')[0] : null
         });
 
@@ -110,7 +106,7 @@ const VehicleManagement: React.FC = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       setIsAddDialogOpen(false);
-      setFormData({ name: '', model: '', license_plate: '', technical_inspection: undefined });
+      setFormData({ license_plate: '', model: '', technical_inspection: undefined });
     },
     onError: (error) => {
       console.error('Error in addVehicleMutation:', error);
@@ -128,9 +124,8 @@ const VehicleManagement: React.FC = () => {
       const { error } = await supabase
         .from('vehicles')
         .update({
-          name: vehicleData.name,
+          license_plate: vehicleData.license_plate,
           model: vehicleData.model || null,
-          license_plate: vehicleData.license_plate || null,
           technical_inspection: vehicleData.technical_inspection ? vehicleData.technical_inspection.toISOString().split('T')[0] : null
         })
         .eq('id', id);
@@ -148,7 +143,7 @@ const VehicleManagement: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       setIsEditDialogOpen(false);
       setEditingVehicle(null);
-      setFormData({ name: '', model: '', license_plate: '', technical_inspection: undefined });
+      setFormData({ license_plate: '', model: '', technical_inspection: undefined });
     },
     onError: (error) => {
       console.error('Error in updateVehicleMutation:', error);
@@ -197,9 +192,8 @@ const VehicleManagement: React.FC = () => {
   const handleEdit = (vehicle: Vehicle) => {
     setEditingVehicle(vehicle);
     setFormData({
-      name: vehicle.name,
+      license_plate: vehicle.license_plate,
       model: vehicle.model || '',
-      license_plate: vehicle.license_plate || '',
       technical_inspection: vehicle.technical_inspection ? new Date(vehicle.technical_inspection) : undefined
     });
     setIsEditDialogOpen(true);
@@ -260,12 +254,12 @@ const VehicleManagement: React.FC = () => {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Naziv</Label>
+                    <Label htmlFor="license_plate">Registracija</Label>
                     <Input
-                      id="name"
-                      value={formData.name}
-                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                      placeholder="Naziv vozila"
+                      id="license_plate"
+                      value={formData.license_plate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value }))}
+                      placeholder="Registracija vozila"
                     />
                   </div>
                   <div>
@@ -278,15 +272,6 @@ const VehicleManagement: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="license_plate">Registracija</Label>
-                    <Input
-                      id="license_plate"
-                      value={formData.license_plate}
-                      onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value }))}
-                      placeholder="Registracija vozila"
-                    />
-                  </div>
-                  <div>
                     <Label htmlFor="technical_inspection">Tehnički pregled</Label>
                     <DatePicker
                       date={formData.technical_inspection}
@@ -295,7 +280,7 @@ const VehicleManagement: React.FC = () => {
                       className="w-full"
                     />
                   </div>
-                  <Button onClick={handleAdd} disabled={!formData.name || addVehicleMutation.isPending}>
+                  <Button onClick={handleAdd} disabled={!formData.license_plate || addVehicleMutation.isPending}>
                     {addVehicleMutation.isPending ? 'Dodavanje...' : 'Dodaj vozilo'}
                   </Button>
                 </div>
@@ -308,10 +293,9 @@ const VehicleManagement: React.FC = () => {
             {vehicles?.map((vehicle) => (
               <div key={vehicle.id} className="flex items-center justify-between p-3 border rounded-lg">
                 <div className="flex-1">
-                  <div className="font-medium">{vehicle.name}</div>
+                  <div className="font-medium">{vehicle.license_plate}</div>
                   <div className="text-sm text-muted-foreground space-y-1">
                     {vehicle.model && <div>Model: {vehicle.model}</div>}
-                    {vehicle.license_plate && <div>Registracija: {vehicle.license_plate}</div>}
                     {vehicle.technical_inspection && (
                       <div>Tehnički pregled: {format(new Date(vehicle.technical_inspection), "dd.MM.yyyy", { locale: hr })}</div>
                     )}
@@ -354,12 +338,12 @@ const VehicleManagement: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-name">Naziv</Label>
+              <Label htmlFor="edit-license_plate">Registracija</Label>
               <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                placeholder="Naziv vozila"
+                id="edit-license_plate"
+                value={formData.license_plate}
+                onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value }))}
+                placeholder="Registracija vozila"
               />
             </div>
             <div>
@@ -372,15 +356,6 @@ const VehicleManagement: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="edit-license_plate">Registracija</Label>
-              <Input
-                id="edit-license_plate"
-                value={formData.license_plate}
-                onChange={(e) => setFormData(prev => ({ ...prev, license_plate: e.target.value }))}
-                placeholder="Registracija vozila"
-              />
-            </div>
-            <div>
               <Label htmlFor="edit-technical_inspection">Tehnički pregled</Label>
               <DatePicker
                 date={formData.technical_inspection}
@@ -389,7 +364,7 @@ const VehicleManagement: React.FC = () => {
                 className="w-full"
               />
             </div>
-            <Button onClick={handleUpdate} disabled={!formData.name || updateVehicleMutation.isPending}>
+            <Button onClick={handleUpdate} disabled={!formData.license_plate || updateVehicleMutation.isPending}>
               {updateVehicleMutation.isPending ? 'Ažuriranje...' : 'Ažuriraj vozilo'}
             </Button>
           </div>

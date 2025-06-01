@@ -137,27 +137,24 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          license_plate: string | null
+          license_plate: string
           model: string | null
-          name: string
           technical_inspection: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           id?: string
-          license_plate?: string | null
+          license_plate: string
           model?: string | null
-          name: string
           technical_inspection?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           id?: string
-          license_plate?: string | null
+          license_plate?: string
           model?: string | null
-          name?: string
           technical_inspection?: string | null
           updated_at?: string
         }

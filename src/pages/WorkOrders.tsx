@@ -17,7 +17,9 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
-import { Plus } from 'lucide-react';
+import { Plus, Download } from 'lucide-react';
+import { generatePDF } from '@/utils/pdfGenerator';
+import { toast } from '@/components/ui/sonner';
 
 type WorkOrderWithProfile = {
   id: string;
@@ -26,7 +28,23 @@ type WorkOrderWithProfile = {
   client_company_name: string;
   client_first_name: string;
   client_last_name: string;
-  employee_profile_id: string;
+  client_company_address: string;
+  client_oib: string;
+  client_mobile: string;
+  client_email: string;
+  order_for_customer: boolean;
+  customer_company_name: string;
+  customer_company_address: string;
+  customer_oib: string;
+  customer_first_name: string;
+  customer_last_name: string;
+  customer_mobile: string;
+  customer_email: string;
+  description: string;
+  found_condition: string;
+  performed_work: string;
+  technician_comment: string;
+  materials: any[];
   technician_signature: string | null;
   employee_profiles: {
     id: string;
@@ -67,6 +85,61 @@ const WorkOrders: React.FC = () => {
     },
     enabled: !!user
   });
+
+  const handleDownloadPDF = async (order: WorkOrderWithProfile) => {
+    try {
+      // Transform the work order data to match the PDF generator interface
+      const pdfData = {
+        id: order.order_number,
+        clientCompanyName: order.client_company_name,
+        clientCompanyAddress: order.client_company_address,
+        clientOib: order.client_oib,
+        clientFirstName: order.client_first_name,
+        clientLastName: order.client_last_name,
+        clientMobile: order.client_mobile,
+        clientEmail: order.client_email,
+        orderForCustomer: order.order_for_customer || false,
+        customerCompanyName: order.customer_company_name || '',
+        customerCompanyAddress: order.customer_company_address || '',
+        customerOib: order.customer_oib || '',
+        customerFirstName: order.customer_first_name || '',
+        customerLastName: order.customer_last_name || '',
+        customerMobile: order.customer_mobile || '',
+        customerEmail: order.customer_email || '',
+        description: order.description ? [{ id: '1', text: order.description }] : [],
+        foundCondition: order.found_condition ? [{ id: '1', text: order.found_condition }] : [],
+        performedWork: order.performed_work ? [{ id: '1', text: order.performed_work }] : [],
+        technicianComment: order.technician_comment ? [{ id: '1', text: order.technician_comment }] : [],
+        materials: Array.isArray(order.materials) ? order.materials : [],
+        date: format(new Date(order.date), 'dd.MM.yyyy', { locale: hr }),
+        arrivalTime: '',
+        completionTime: '',
+        calculatedHours: order.hours ? order.hours.toString() : '',
+        fieldTrip: (order.distance && parseFloat(order.distance.toString()) > 0) || false,
+        distance: order.distance ? order.distance.toString() : '',
+        technicianSignature: order.technician_signature || '',
+        technicianName: order.employee_profiles 
+          ? `${order.employee_profiles.first_name} ${order.employee_profiles.last_name}`
+          : '',
+        customerSignature: order.customer_signature || '',
+        customerSignerName: '',
+        signatureMetadata: {
+          timestamp: order.signature_timestamp ? format(new Date(order.signature_timestamp), 'dd.MM.yyyy HH:mm:ss', { locale: hr }) : undefined,
+          coordinates: order.signature_coordinates ? {
+            latitude: (order.signature_coordinates as any).x || 0,
+            longitude: (order.signature_coordinates as any).y || 0
+          } : undefined,
+          address: order.signature_address || undefined
+        }
+      };
+
+      await generatePDF(pdfData);
+      toast("PDF je uspješno preuzet");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast("Greška pri generiranju PDF-a");
+    }
+  };
 
   if (isLoading) {
     return (
@@ -168,6 +241,16 @@ const WorkOrders: React.FC = () => {
                             onClick={() => navigate(`/work-orders/${order.id}/edit`)}
                           >
                             Uredi
+                          </Button>
+                        )}
+                        {order.technician_signature && (
+                          <Button 
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDownloadPDF(order)}
+                          >
+                            <Download className="h-4 w-4 mr-1" />
+                            PDF
                           </Button>
                         )}
                       </div>

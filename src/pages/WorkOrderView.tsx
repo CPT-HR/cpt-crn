@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
+import { formatMinutesToDisplay } from '@/utils/workOrderParsers';
 
 const WorkOrderView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -103,9 +104,19 @@ const WorkOrderView: React.FC = () => {
                 : 'N/A'
               }
             </div>
+            {workOrder.arrival_time && (
+              <div>
+                <span className="font-medium">Vrijeme dolaska:</span> {workOrder.arrival_time}
+              </div>
+            )}
+            {workOrder.completion_time && (
+              <div>
+                <span className="font-medium">Vrijeme završetka:</span> {workOrder.completion_time}
+              </div>
+            )}
             {workOrder.hours && (
               <div>
-                <span className="font-medium">Sati rada:</span> {workOrder.hours}h
+                <span className="font-medium">Obračunsko vrijeme:</span> {formatMinutesToDisplay(workOrder.hours)}
               </div>
             )}
             {workOrder.distance && (

@@ -162,6 +162,7 @@ export type Database = {
       }
       work_orders: {
         Row: {
+          arrival_time: string | null
           client_company_address: string
           client_company_name: string
           client_email: string
@@ -169,6 +170,7 @@ export type Database = {
           client_last_name: string
           client_mobile: string
           client_oib: string
+          completion_time: string | null
           created_at: string | null
           customer_company_address: string | null
           customer_company_name: string | null
@@ -198,6 +200,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          arrival_time?: string | null
           client_company_address: string
           client_company_name: string
           client_email: string
@@ -205,6 +208,7 @@ export type Database = {
           client_last_name: string
           client_mobile: string
           client_oib: string
+          completion_time?: string | null
           created_at?: string | null
           customer_company_address?: string | null
           customer_company_name?: string | null
@@ -234,6 +238,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          arrival_time?: string | null
           client_company_address?: string
           client_company_name?: string
           client_email?: string
@@ -241,6 +246,7 @@ export type Database = {
           client_last_name?: string
           client_mobile?: string
           client_oib?: string
+          completion_time?: string | null
           created_at?: string | null
           customer_company_address?: string | null
           customer_company_name?: string | null

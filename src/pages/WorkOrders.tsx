@@ -20,6 +20,7 @@ import { hr } from 'date-fns/locale';
 import { Plus, Download } from 'lucide-react';
 import { generatePDF } from '@/utils/pdfGenerator';
 import { toast } from '@/components/ui/sonner';
+import { formatMinutesToDisplay } from '@/utils/workOrderParsers';
 
 type WorkOrderWithProfile = {
   id: string;
@@ -112,9 +113,9 @@ const WorkOrders: React.FC = () => {
         technicianComment: order.technician_comment ? [{ id: '1', text: order.technician_comment }] : [],
         materials: Array.isArray(order.materials) ? order.materials : [],
         date: format(new Date(order.date), 'dd.MM.yyyy', { locale: hr }),
-        arrivalTime: '',
-        completionTime: '',
-        calculatedHours: order.hours ? order.hours.toString() : '',
+        arrivalTime: order.arrival_time || '',
+        completionTime: order.completion_time || '',
+        calculatedHours: formatMinutesToDisplay(order.hours),
         fieldTrip: (order.distance && parseFloat(order.distance.toString()) > 0) || false,
         distance: order.distance ? order.distance.toString() : '',
         technicianSignature: order.technician_signature || '',

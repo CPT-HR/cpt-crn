@@ -56,41 +56,23 @@ export const parseSignatureMetadata = (
   return metadata;
 };
 
-// Attempt to reconstruct arrival and completion times from hours
-export const reconstructTimesFromHours = (hours: number | null): ParsedTimes => {
-  if (!hours || hours <= 0) {
-    return { arrivalTime: '', completionTime: '' };
-  }
+// Format minutes to display format (Hhmmm)
+export const formatMinutesToDisplay = (minutes: number | null): string => {
+  if (!minutes || minutes <= 0) return '0h00min';
   
-  // Default assumption: work started at 9:00 AM
-  const defaultStartHour = 9;
-  const defaultStartMinute = 0;
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
   
-  const startTime = `${defaultStartHour.toString().padStart(2, '0')}:${defaultStartMinute.toString().padStart(2, '0')}`;
-  
-  // Calculate end time by adding the hours
-  const totalMinutes = Math.round(hours * 60);
-  const endHour = defaultStartHour + Math.floor(totalMinutes / 60);
-  const endMinute = defaultStartMinute + (totalMinutes % 60);
-  
-  // Handle minute overflow
-  const finalEndHour = endHour + Math.floor(endMinute / 60);
-  const finalEndMinute = endMinute % 60;
-  
-  const endTime = `${finalEndHour.toString().padStart(2, '0')}:${finalEndMinute.toString().padStart(2, '0')}`;
-  
-  return {
-    arrivalTime: startTime,
-    completionTime: endTime
-  };
+  return `${hours}h${remainingMinutes.toString().padStart(2, '0')}min`;
 };
 
-// Format hours number to display format
-export const formatHoursToDisplay = (hours: number | null): string => {
-  if (!hours || hours <= 0) return '0h00min';
+// Convert display format back to minutes
+export const parseDisplayToMinutes = (displayTime: string): number => {
+  const match = displayTime.match(/(\d+)h(\d+)min/);
+  if (!match) return 0;
   
-  const wholeHours = Math.floor(hours);
-  const minutes = Math.round((hours - wholeHours) * 60);
+  const hours = parseInt(match[1]);
+  const minutes = parseInt(match[2]);
   
-  return `${wholeHours}h${minutes.toString().padStart(2, '0')}min`;
+  return hours * 60 + minutes;
 };

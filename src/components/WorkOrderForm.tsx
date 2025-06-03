@@ -19,8 +19,8 @@ import TravelSection from './work-order/TravelSection';
 import SignaturesSection from './work-order/SignaturesSection';
 import { 
   parseSignatureMetadata, 
-  reconstructTimesFromHours, 
-  formatHoursToDisplay 
+  formatMinutesToDisplay,
+  parseDisplayToMinutes 
 } from '@/utils/workOrderParsers';
 
 interface Material {
@@ -160,9 +160,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         initialData.signature_address
       );
       
-      // Reconstruct times from hours if available
-      const reconstructedTimes = reconstructTimesFromHours(initialData.hours);
-      
       return {
         id: initialData.order_number || '',
         clientCompanyName: initialData.client_company_name || '',
@@ -190,9 +187,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         technicianComment: parseTextToWorkItems(initialData.technician_comment),
         materials: parseMaterials(initialData.materials),
         date: initialData.date ? new Date(initialData.date) : new Date(),
-        arrivalTime: reconstructedTimes.arrivalTime,
-        completionTime: reconstructedTimes.completionTime,
-        calculatedHours: formatHoursToDisplay(initialData.hours),
+        arrivalTime: initialData.arrival_time || '',
+        completionTime: initialData.completion_time || '',
+        calculatedHours: formatMinutesToDisplay(initialData.hours),
         fieldTrip: (initialData.distance && parseFloat(initialData.distance) > 0) || false,
         distance: initialData.distance ? initialData.distance.toString() : '',
         technicianSignature: initialData.technician_signature || user?.signature || '',
@@ -349,10 +346,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     const diffMinutes = completionMinutes - arrivalMinutes;
     const billableMinutes = Math.ceil(diffMinutes / 30) * 30;
     
-    const hours = Math.floor(billableMinutes / 60);
-    const minutes = billableMinutes % 60;
-    
-    return `${hours}h${minutes.toString().padStart(2, '0')}min`;
+    return formatMinutesToDisplay(billableMinutes);
   };
 
   // Calculate distance using distancematrix.ai API with rounding to whole number
@@ -645,6 +639,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       console.log('Signature timestamp (ISO):', isoSignatureTimestamp);
       
       const roundedDistance = finalWorkOrder.distance ? Math.round(parseFloat(finalWorkOrder.distance)) : 0;
+      const minutesFromCalculatedHours = parseDisplayToMinutes(finalWorkOrder.calculatedHours);
       
       const workOrderData = {
         order_number: finalWorkOrder.orderNumber,
@@ -668,7 +663,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         performed_work: performedWorkText,
         technician_comment: technicianCommentText,
         materials: finalWorkOrder.materials,
-        hours: parseFloat(finalWorkOrder.calculatedHours.replace(/[^\d.]/g, '')) || 0,
+        arrival_time: finalWorkOrder.arrivalTime || null,
+        completion_time: finalWorkOrder.completionTime || null,
+        hours: minutesFromCalculatedHours,
         distance: roundedDistance,
         technician_signature: finalWorkOrder.technicianSignature,
         customer_signature: finalWorkOrder.customerSignature,

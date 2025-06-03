@@ -1,4 +1,3 @@
-
 import { WorkItem, Material } from '@/types/workOrder';
 import { SignatureMetadata } from '@/components/SignaturePad';
 

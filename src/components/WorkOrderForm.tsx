@@ -18,7 +18,7 @@ import TravelSection from './work-order/TravelSection';
 import SignaturesSection from './work-order/SignaturesSection';
 import { useWorkOrderForm } from '@/hooks/useWorkOrderForm';
 import { WorkOrder, Material, WorkItem } from '@/types/workOrder';
-import { parseDisplayToMinutes, parseAddress } from '@/utils/workOrderParsers';
+import { parseDisplayToMinutes, parseAddress, formatAddress } from '@/utils/workOrderParsers';
 
 interface WorkOrderFormProps {
   initialData?: any;
@@ -48,20 +48,18 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   // Mock data for work order
   const mockWorkOrderData = {
     clientCompanyName: 'Informatika d.o.o.',
-    clientCompanyAddress: 'Ilica 42, Zagreb, Hrvatska',
-    clientOib: '12345678901',
     clientFirstName: 'Marija',
     clientLastName: 'Horvat',
     clientMobile: '+385 91 123 4567',
     clientEmail: 'marija.horvat@informatika.hr',
+    clientOib: '12345678901',
     orderForCustomer: true,
     customerCompanyName: 'Trgovina Sunce d.o.o.',
-    customerCompanyAddress: 'Maksimirska 15, Zagreb, Hrvatska',
-    customerOib: '98765432109',
     customerFirstName: 'Ivo',
     customerLastName: 'Perić',
     customerMobile: '+385 92 987 6543',
     customerEmail: 'ivo.peric@sunce.hr',
+    customerOib: '98765432109',
     description: [
       { id: '1', text: 'Računalo se ne pali' },
       { id: '2', text: 'Moguć problem s napajanjem' }
@@ -85,7 +83,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     completionTime: '11:30',
     fieldTrip: true,
     distance: '15',
-    customerSignerName: 'Ivo Perić'
+    customerSignerName: 'Ivo Perić',
+    clientStreetAddress: 'Ilica 42',
+    clientCity: 'Zagreb',
+    clientCountry: 'Hrvatska',
+    customerCompanyAddress: 'Maksimirska 15, Zagreb, Hrvatska'
   };
 
   // Calculate distance using distancematrix.ai API with rounding to whole number

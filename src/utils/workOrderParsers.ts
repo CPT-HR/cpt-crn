@@ -96,8 +96,10 @@ export const parseSignatureMetadata = (
   };
 };
 
-export const formatTimestampForSignature = (date: Date): string => {
-  return date.toLocaleString('hr-HR', {
+export const formatTimestampForSignature = (date: Date | string): string => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  
+  return dateObj.toLocaleString('hr-HR', {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',

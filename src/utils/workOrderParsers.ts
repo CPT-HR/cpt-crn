@@ -1,3 +1,4 @@
+
 import { WorkItem, Material } from '@/types/workOrder';
 import { SignatureMetadata } from '@/components/SignaturePad';
 
@@ -89,7 +90,7 @@ export const parseSignatureMetadata = (
   }
   
   return {
-    timestamp,
+    timestamp, // This is guaranteed to be a string since we check for null above
     coordinates: parsedCoordinates,
     address: address || undefined
   };

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -233,7 +232,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     }));
   };
 
-  // Save to Supabase function
   const saveToSupabase = async (finalWorkOrder: any) => {
     try {
       console.log('Saving work order to Supabase...', finalWorkOrder);

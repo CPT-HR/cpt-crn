@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
 import WorkOrderForm from '@/components/WorkOrderForm';
+import { canUserEditWorkOrder } from '@/utils/workOrderHelpers';
 
 const WorkOrderEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -52,7 +53,7 @@ const WorkOrderEdit: React.FC = () => {
     );
   }
 
-  const canEdit = user?.role === 'admin' || workOrder.employee_profile_id === employeeProfile?.id;
+  const canEdit = canUserEditWorkOrder(user?.role, workOrder.employee_profile_id, employeeProfile?.id);
 
   if (!canEdit) {
     return (

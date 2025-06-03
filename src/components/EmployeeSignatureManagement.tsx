@@ -15,15 +15,8 @@ import { Badge } from '@/components/ui/badge';
 import { PenTool, Trash2, Eye } from 'lucide-react';
 import SignaturePad, { SignatureMetadata } from '@/components/SignaturePad';
 import { formatTimestampForSignature } from '@/utils/workOrderParsers';
-
-interface Employee {
-  id: string;
-  first_name: string;
-  last_name: string;
-  signature_data: string | null;
-  signature_created_at: string | null;
-  signature_updated_at: string | null;
-}
+import { getEmployeeFullName } from '@/utils/workOrderHelpers';
+import { Employee } from '@/types/workOrder';
 
 interface EmployeeSignatureManagementProps {
   employee: Employee;
@@ -85,10 +78,6 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
     }
   };
 
-  const getEmployeeFullName = () => {
-    return `${employee.first_name} ${employee.last_name}`;
-  };
-
   return (
     <div className="flex items-center gap-2">
       {employee.signature_data ? (
@@ -105,7 +94,7 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Potpis - {getEmployeeFullName()}</DialogTitle>
+                <DialogTitle>Potpis - {getEmployeeFullName(employee)}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="border rounded-lg p-4 bg-gray-50">
@@ -144,7 +133,7 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
         isOpen={isSignatureDialogOpen}
         onClose={() => setIsSignatureDialogOpen(false)}
         onSave={handleSaveSignature}
-        title={`${employee.signature_data ? 'Promijeni' : 'Dodaj'} potpis - ${getEmployeeFullName()}`}
+        title={`${employee.signature_data ? 'Promijeni' : 'Dodaj'} potpis - ${getEmployeeFullName(employee)}`}
       />
     </div>
   );

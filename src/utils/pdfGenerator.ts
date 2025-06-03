@@ -1,54 +1,6 @@
 import { jsPDF } from "jspdf";
 import "../../src/fonts/Manrope-Regular-normal.js";
-
-interface Material {
-  id: string;
-  name: string;
-  quantity: string;
-  unit: string;
-}
-interface WorkItem {
-  id: string;
-  text: string;
-}
-interface WorkOrder {
-  id: string;
-  clientCompanyName: string;
-  clientCompanyAddress: string;
-  clientOib: string;
-  clientFirstName: string;
-  clientLastName: string;
-  clientMobile: string;
-  clientEmail: string;
-  orderForCustomer: boolean;
-  customerCompanyName: string;
-  customerCompanyAddress: string;
-  customerOib: string;
-  customerFirstName: string;
-  customerLastName: string;
-  customerMobile: string;
-  customerEmail: string;
-  description: WorkItem[];
-  foundCondition: WorkItem[];
-  performedWork: WorkItem[];
-  technicianComment: WorkItem[];
-  materials: Material[];
-  date: string;
-  arrivalTime: string;
-  completionTime: string;
-  calculatedHours: string;
-  fieldTrip: boolean;
-  distance: string;
-  technicianSignature: string;
-  technicianName: string;
-  customerSignature: string;
-  customerSignerName: string;
-  signatureMetadata?: {
-    timestamp?: string;
-    coordinates?: { latitude: number; longitude: number };
-    address?: string;
-  };
-}
+import { WorkOrder, Material, WorkItem } from '@/types/workOrder';
 
 export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
   return new Promise((resolve, reject) => {

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -20,39 +21,13 @@ import { hr } from 'date-fns/locale';
 import { Plus, Download } from 'lucide-react';
 import { generatePDF } from '@/utils/pdfGenerator';
 import { toast } from '@/components/ui/sonner';
-import { formatMinutesToDisplay, formatTimestampForSignature } from '@/utils/workOrderParsers';
-
-type WorkOrderWithProfile = {
-  id: string;
-  order_number: string;
-  date: string;
-  client_company_name: string;
-  client_first_name: string;
-  client_last_name: string;
-  client_company_address: string;
-  client_oib: string;
-  client_mobile: string;
-  client_email: string;
-  order_for_customer: boolean;
-  customer_company_name: string;
-  customer_company_address: string;
-  customer_oib: string;
-  customer_first_name: string;
-  customer_last_name: string;
-  customer_mobile: string;
-  customer_email: string;
-  description: string;
-  found_condition: string;
-  performed_work: string;
-  technician_comment: string;
-  materials: any[];
-  technician_signature: string | null;
-  employee_profiles: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  } | null;
-} & Record<string, any>;
+import { 
+  getEmployeeFullName, 
+  getWorkOrderStatus, 
+  canUserEditWorkOrder,
+  handleWorkOrderPDFDownload
+} from '@/utils/workOrderHelpers';
+import { WorkOrderRecord } from '@/types/workOrder';
 
 const WorkOrders: React.FC = () => {
   const { user } = useAuth();
@@ -82,64 +57,18 @@ const WorkOrders: React.FC = () => {
       }
 
       console.log('Fetched work orders with employee_profile_id join:', data);
-      return data as WorkOrderWithProfile[];
+      return data as WorkOrderRecord[];
     },
     enabled: !!user
   });
 
-  const handleDownloadPDF = async (order: WorkOrderWithProfile) => {
-    try {
-      // Transform the work order data to match the PDF generator interface
-      const pdfData = {
-        id: order.order_number,
-        clientCompanyName: order.client_company_name,
-        clientCompanyAddress: order.client_company_address,
-        clientOib: order.client_oib,
-        clientFirstName: order.client_first_name,
-        clientLastName: order.client_last_name,
-        clientMobile: order.client_mobile,
-        clientEmail: order.client_email,
-        orderForCustomer: order.order_for_customer || false,
-        customerCompanyName: order.customer_company_name || '',
-        customerCompanyAddress: order.customer_company_address || '',
-        customerOib: order.customer_oib || '',
-        customerFirstName: order.customer_first_name || '',
-        customerLastName: order.customer_last_name || '',
-        customerMobile: order.customer_mobile || '',
-        customerEmail: order.customer_email || '',
-        description: order.description ? [{ id: '1', text: order.description }] : [],
-        foundCondition: order.found_condition ? [{ id: '1', text: order.found_condition }] : [],
-        performedWork: order.performed_work ? [{ id: '1', text: order.performed_work }] : [],
-        technicianComment: order.technician_comment ? [{ id: '1', text: order.technician_comment }] : [],
-        materials: Array.isArray(order.materials) ? order.materials : [],
-        date: format(new Date(order.date), 'dd.MM.yyyy', { locale: hr }),
-        arrivalTime: order.arrival_time || '',
-        completionTime: order.completion_time || '',
-        calculatedHours: formatMinutesToDisplay(order.hours),
-        fieldTrip: (order.distance && parseFloat(order.distance.toString()) > 0) || false,
-        distance: order.distance ? order.distance.toString() : '',
-        technicianSignature: order.technician_signature || '',
-        technicianName: order.employee_profiles 
-          ? `${order.employee_profiles.first_name} ${order.employee_profiles.last_name}`
-          : '',
-        customerSignature: order.customer_signature || '',
-        customerSignerName: '',
-        signatureMetadata: {
-          timestamp: order.signature_timestamp ? formatTimestampForSignature(order.signature_timestamp) : undefined,
-          coordinates: order.signature_coordinates ? {
-            latitude: (order.signature_coordinates as any).x || 0,
-            longitude: (order.signature_coordinates as any).y || 0
-          } : undefined,
-          address: order.signature_address || undefined
-        }
-      };
-
-      await generatePDF(pdfData);
-      toast("PDF je uspješno preuzet");
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast("Greška pri generiranju PDF-a");
-    }
+  const handleDownloadPDF = async (order: WorkOrderRecord) => {
+    await handleWorkOrderPDFDownload(
+      order,
+      generatePDF,
+      (message) => toast(message),
+      (message) => toast(message)
+    );
   };
 
   if (isLoading) {
@@ -197,67 +126,72 @@ const WorkOrders: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {workOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-mono">
-                      {order.order_number}
-                    </TableCell>
-                    <TableCell>
-                      {format(new Date(order.date), 'dd.MM.yyyy', { locale: hr })}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <div className="font-medium">
-                          {order.client_company_name}
+                {workOrders.map((order) => {
+                  const status = getWorkOrderStatus(order);
+                  const canEdit = canUserEditWorkOrder(user?.role, order.employee_profile_id, employeeProfile?.id);
+                  
+                  return (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-mono">
+                        {order.order_number}
+                      </TableCell>
+                      <TableCell>
+                        {format(new Date(order.date), 'dd.MM.yyyy', { locale: hr })}
+                      </TableCell>
+                      <TableCell>
+                        <div>
+                          <div className="font-medium">
+                            {order.client_company_name}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {order.client_first_name} {order.client_last_name}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground">
-                          {order.client_first_name} {order.client_last_name}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {order.employee_profiles 
-                        ? `${order.employee_profiles.first_name} ${order.employee_profiles.last_name}`
-                        : 'N/A'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={order.technician_signature ? "default" : "secondary"}>
-                        {order.technician_signature ? "Završen" : "U tijeku"}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button 
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/work-orders/${order.id}`)}
-                        >
-                          Pregled
-                        </Button>
-                        {(user?.role === 'admin' || order.employee_profile_id === employeeProfile?.id) && (
+                      </TableCell>
+                      <TableCell>
+                        {order.employee_profiles 
+                          ? getEmployeeFullName(order.employee_profiles)
+                          : 'N/A'
+                        }
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={status.variant}>
+                          {status.label}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
                           <Button 
                             variant="outline"
                             size="sm"
-                            onClick={() => navigate(`/work-orders/${order.id}/edit`)}
+                            onClick={() => navigate(`/work-orders/${order.id}`)}
                           >
-                            Uredi
+                            Pregled
                           </Button>
-                        )}
-                        {order.technician_signature && (
-                          <Button 
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDownloadPDF(order)}
-                          >
-                            <Download className="h-4 w-4 mr-1" />
-                            PDF
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                          {canEdit && (
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => navigate(`/work-orders/${order.id}/edit`)}
+                            >
+                              Uredi
+                            </Button>
+                          )}
+                          {order.technician_signature && (
+                            <Button 
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDownloadPDF(order)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              PDF
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           )}

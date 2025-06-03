@@ -13,6 +13,13 @@ import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
 import { formatMinutesToDisplay, formatTimestampForSignature } from '@/utils/workOrderParsers';
 import { generatePDF } from '@/utils/pdfGenerator';
 import { toast } from '@/components/ui/sonner';
+import { 
+  getEmployeeFullName, 
+  getWorkOrderStatus, 
+  canUserEditWorkOrder,
+  handleWorkOrderPDFDownload
+} from '@/utils/workOrderHelpers';
+import { WorkOrderRecord } from '@/types/workOrder';
 
 const WorkOrderView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -39,7 +46,7 @@ const WorkOrderView: React.FC = () => {
         .single();
 
       if (error) throw error;
-      return data;
+      return data as WorkOrderRecord;
     },
     enabled: !!id
   });
@@ -47,58 +54,12 @@ const WorkOrderView: React.FC = () => {
   const handleDownloadPDF = async () => {
     if (!workOrder) return;
     
-    try {
-      // Transform the work order data to match the PDF generator interface
-      const pdfData = {
-        id: workOrder.order_number,
-        clientCompanyName: workOrder.client_company_name,
-        clientCompanyAddress: workOrder.client_company_address,
-        clientOib: workOrder.client_oib,
-        clientFirstName: workOrder.client_first_name,
-        clientLastName: workOrder.client_last_name,
-        clientMobile: workOrder.client_mobile,
-        clientEmail: workOrder.client_email,
-        orderForCustomer: workOrder.order_for_customer || false,
-        customerCompanyName: workOrder.customer_company_name || '',
-        customerCompanyAddress: workOrder.customer_company_address || '',
-        customerOib: workOrder.customer_oib || '',
-        customerFirstName: workOrder.customer_first_name || '',
-        customerLastName: workOrder.customer_last_name || '',
-        customerMobile: workOrder.customer_mobile || '',
-        customerEmail: workOrder.customer_email || '',
-        description: workOrder.description ? [{ id: '1', text: workOrder.description }] : [],
-        foundCondition: workOrder.found_condition ? [{ id: '1', text: workOrder.found_condition }] : [],
-        performedWork: workOrder.performed_work ? [{ id: '1', text: workOrder.performed_work }] : [],
-        technicianComment: workOrder.technician_comment ? [{ id: '1', text: workOrder.technician_comment }] : [],
-        materials: Array.isArray(workOrder.materials) ? workOrder.materials : [],
-        date: format(new Date(workOrder.date), 'dd.MM.yyyy', { locale: hr }),
-        arrivalTime: workOrder.arrival_time || '',
-        completionTime: workOrder.completion_time || '',
-        calculatedHours: formatMinutesToDisplay(workOrder.hours),
-        fieldTrip: (workOrder.distance && parseFloat(workOrder.distance.toString()) > 0) || false,
-        distance: workOrder.distance ? workOrder.distance.toString() : '',
-        technicianSignature: workOrder.technician_signature || '',
-        technicianName: workOrder.employee_profiles 
-          ? `${workOrder.employee_profiles.first_name} ${workOrder.employee_profiles.last_name}`
-          : '',
-        customerSignature: workOrder.customer_signature || '',
-        customerSignerName: '',
-        signatureMetadata: {
-          timestamp: workOrder.signature_timestamp ? formatTimestampForSignature(workOrder.signature_timestamp) : undefined,
-          coordinates: workOrder.signature_coordinates ? {
-            latitude: (workOrder.signature_coordinates as any).x || 0,
-            longitude: (workOrder.signature_coordinates as any).y || 0
-          } : undefined,
-          address: workOrder.signature_address || undefined
-        }
-      };
-
-      await generatePDF(pdfData);
-      toast("PDF je uspješno preuzet");
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast("Greška pri generiranju PDF-a");
-    }
+    await handleWorkOrderPDFDownload(
+      workOrder,
+      generatePDF,
+      (message) => toast(message),
+      (message) => toast(message)
+    );
   };
 
   if (isLoading) {
@@ -121,7 +82,8 @@ const WorkOrderView: React.FC = () => {
     );
   }
 
-  const canEdit = user?.role === 'admin' || workOrder.employee_profile_id === employeeProfile?.id;
+  const canEdit = canUserEditWorkOrder(user?.role, workOrder.employee_profile_id, employeeProfile?.id);
+  const status = getWorkOrderStatus(workOrder);
 
   return (
     <div className="container py-6 space-y-6">
@@ -160,13 +122,13 @@ const WorkOrderView: React.FC = () => {
             </div>
             <div>
               <span className="font-medium">Status:</span>
-              <Badge variant={workOrder.technician_signature ? "default" : "secondary"} className="ml-2">
-                {workOrder.technician_signature ? "Završen" : "U tijeku"}
+              <Badge variant={status.variant} className="ml-2">
+                {status.label}
               </Badge>
             </div>
             <div>
               <span className="font-medium">Tehničar:</span> {workOrder.employee_profiles 
-                ? `${workOrder.employee_profiles.first_name} ${workOrder.employee_profiles.last_name}`
+                ? getEmployeeFullName(workOrder.employee_profiles)
                 : 'N/A'
               }
             </div>

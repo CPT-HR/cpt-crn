@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 interface CustomerData {
   customerCompanyName: string;
-  customerCompanyAddress: string;
+  customerStreetAddress: string;
+  customerCity: string;
+  customerCountry: string;
   customerOib: string;
   customerFirstName: string;
   customerLastName: string;
@@ -49,14 +51,40 @@ const CustomerInfoSection: React.FC<CustomerInfoSectionProps> = ({ data, onChang
         
         <div className="space-y-4">
           <Label className="text-base font-medium">Adresa tvrtke</Label>
-          <div className="space-y-2">
-            <Label htmlFor="customerCompanyAddress">Puna adresa</Label>
-            <Input 
-              id="customerCompanyAddress"
-              value={data.customerCompanyAddress} 
-              onChange={(e) => onChange('customerCompanyAddress', e.target.value)} 
-              placeholder="Ulica broj, Grad, Država"
-            />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2 space-y-2">
+              <Label htmlFor="customerStreetAddress">Ulica i broj</Label>
+              <Input 
+                id="customerStreetAddress"
+                value={data.customerStreetAddress} 
+                onChange={(e) => onChange('customerStreetAddress', e.target.value)} 
+                placeholder="Ilica 1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customerCity">Grad</Label>
+              <Input 
+                id="customerCity"
+                value={data.customerCity} 
+                onChange={(e) => onChange('customerCity', e.target.value)} 
+                placeholder="Zagreb"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="customerCountry">Država</Label>
+              <Select value={data.customerCountry} onValueChange={(value) => onChange('customerCountry', value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {countries.map((country) => (
+                    <SelectItem key={country} value={country}>
+                      {country}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
         

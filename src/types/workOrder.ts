@@ -1,16 +1,14 @@
 
-import { SignatureMetadata } from '@/components/SignaturePad';
-
-export interface WorkItem {
-  id: string;
-  text: string;
-}
-
 export interface Material {
   id: string;
   name: string;
   quantity: string;
   unit: string;
+}
+
+export interface WorkItem {
+  id: string;
+  text: string;
 }
 
 export interface WorkOrder {
@@ -35,17 +33,21 @@ export interface WorkOrder {
   performedWork: WorkItem[];
   technicianComment: WorkItem[];
   materials: Material[];
-  date: Date; // Changed from string to Date
+  date: string;
   arrivalTime: string;
   completionTime: string;
   calculatedHours: string;
   fieldTrip: boolean;
   distance: string;
   technicianSignature: string;
+  technicianName: string;
   customerSignature: string;
   customerSignerName: string;
-  technicianName: string;
-  signatureMetadata?: SignatureMetadata;
+  signatureMetadata?: {
+    timestamp?: string;
+    coordinates?: { latitude: number; longitude: number };
+    address?: string;
+  };
 }
 
 export interface Employee {
@@ -91,9 +93,9 @@ export interface WorkOrderRecord {
   signature_coordinates: any;
   signature_address: string | null;
   employee_profile_id: string;
-  employee_profiles?: {
+  employee_profiles: {
     id: string;
     first_name: string;
     last_name: string;
-  };
+  } | null;
 }

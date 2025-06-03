@@ -101,13 +101,13 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
       setIsGettingLocation(true);
       setLocationError(null);
       
-      const timestamp = formatTimestampForSignature(new Date());
-      
       try {
         const position = await getLocation();
         const { latitude, longitude } = position.coords;
         
         const address = await getAddressFromCoordinates(latitude, longitude);
+        
+        const timestamp = formatTimestampForSignature(new Date());
         
         const metadata: SignatureMetadata = {
           timestamp,
@@ -126,13 +126,11 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
             : 'Došlo je do greške prilikom dohvaćanja lokacije'
         );
         
-        // Save with timestamp only if location fails
         if (sigCanvas.current) {
           const dataURL = sigCanvas.current.toDataURL('image/png');
-          const metadata: SignatureMetadata = {
-            timestamp
-          };
-          onSave(dataURL, metadata);
+          onSave(dataURL, {
+            timestamp: formatTimestampForSignature(new Date())
+          });
           onClose();
         }
       } finally {

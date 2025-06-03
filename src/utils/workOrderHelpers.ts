@@ -1,4 +1,3 @@
-
 import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 import { WorkOrder, WorkOrderRecord, Employee, Material, WorkItem } from '@/types/workOrder';
@@ -93,21 +92,4 @@ export const transformWorkOrderForPDF = (workOrder: WorkOrderRecord): WorkOrder 
       address: workOrder.signature_address || undefined
     }
   };
-};
-
-// Handle PDF download with error handling
-export const handleWorkOrderPDFDownload = async (
-  workOrder: WorkOrderRecord,
-  generatePDF: (data: WorkOrder) => Promise<void>,
-  onSuccess: (message: string) => void,
-  onError: (message: string) => void
-) => {
-  try {
-    const pdfData = transformWorkOrderForPDF(workOrder);
-    await generatePDF(pdfData);
-    onSuccess("PDF je uspješno preuzet");
-  } catch (error) {
-    console.error('Error generating PDF:', error);
-    onError("Greška pri generiranju PDF-a");
-  }
 };

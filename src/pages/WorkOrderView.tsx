@@ -17,7 +17,7 @@ import {
   getEmployeeFullName, 
   getWorkOrderStatus, 
   canUserEditWorkOrder,
-  handleWorkOrderPDFDownload
+  transformWorkOrderForPDF
 } from '@/utils/workOrderHelpers';
 import { WorkOrderRecord } from '@/types/workOrder';
 
@@ -54,12 +54,14 @@ const WorkOrderView: React.FC = () => {
   const handleDownloadPDF = async () => {
     if (!workOrder) return;
     
-    await handleWorkOrderPDFDownload(
-      workOrder,
-      generatePDF,
-      (message) => toast(message),
-      (message) => toast(message)
-    );
+    try {
+      const pdfData = transformWorkOrderForPDF(workOrder);
+      await generatePDF(pdfData);
+      toast("PDF je uspješno preuzet");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast("Greška pri generiranju PDF-a");
+    }
   };
 
   if (isLoading) {

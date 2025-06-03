@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +24,7 @@ import {
   getEmployeeFullName, 
   getWorkOrderStatus, 
   canUserEditWorkOrder,
-  handleWorkOrderPDFDownload
+  transformWorkOrderForPDF
 } from '@/utils/workOrderHelpers';
 import { WorkOrderRecord } from '@/types/workOrder';
 
@@ -63,12 +62,14 @@ const WorkOrders: React.FC = () => {
   });
 
   const handleDownloadPDF = async (order: WorkOrderRecord) => {
-    await handleWorkOrderPDFDownload(
-      order,
-      generatePDF,
-      (message) => toast(message),
-      (message) => toast(message)
-    );
+    try {
+      const pdfData = transformWorkOrderForPDF(order);
+      await generatePDF(pdfData);
+      toast("PDF je uspješno preuzet");
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast("Greška pri generiranju PDF-a");
+    }
   };
 
   if (isLoading) {

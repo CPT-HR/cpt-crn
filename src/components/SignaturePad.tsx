@@ -4,6 +4,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import { formatTimestampForSignature } from '@/utils/workOrderParsers';
 
 interface SignaturePadProps {
   isOpen: boolean;
@@ -106,16 +107,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
         
         const address = await getAddressFromCoordinates(latitude, longitude);
         
-        const timestamp = new Date().toLocaleString('hr-HR', {
-          timeZone: 'Europe/Zagreb',
-          day: '2-digit',
-          month: '2-digit',
-          year: 'numeric',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        });
+        const timestamp = formatTimestampForSignature(new Date());
         
         const metadata: SignatureMetadata = {
           timestamp,
@@ -137,10 +129,7 @@ const SignaturePad: React.FC<SignaturePadProps> = ({ isOpen, onClose, onSave, ti
         if (sigCanvas.current) {
           const dataURL = sigCanvas.current.toDataURL('image/png');
           onSave(dataURL, {
-            timestamp: new Date().toLocaleString('hr-HR', {
-              timeZone: 'Europe/Zagreb',
-              hour12: false
-            })
+            timestamp: formatTimestampForSignature(new Date())
           });
           onClose();
         }

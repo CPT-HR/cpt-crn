@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PenTool, Trash2, Eye } from 'lucide-react';
 import SignaturePad, { SignatureMetadata } from '@/components/SignaturePad';
+import { formatTimestampForSignature } from '@/utils/workOrderParsers';
 
 interface Employee {
   id: string;
@@ -116,7 +117,7 @@ const EmployeeSignatureManagement: React.FC<EmployeeSignatureManagementProps> = 
                 </div>
                 {employee.signature_updated_at && (
                   <div className="text-sm text-muted-foreground">
-                    Zadnji put ažuriran: {new Date(employee.signature_updated_at).toLocaleString('hr-HR')}
+                    Zadnji put ažuriran: {formatTimestampForSignature(employee.signature_updated_at)}
                   </div>
                 )}
               </div>

@@ -20,7 +20,7 @@ import { hr } from 'date-fns/locale';
 import { Plus, Download } from 'lucide-react';
 import { generatePDF } from '@/utils/pdfGenerator';
 import { toast } from '@/components/ui/sonner';
-import { formatMinutesToDisplay } from '@/utils/workOrderParsers';
+import { formatMinutesToDisplay, formatTimestampForSignature } from '@/utils/workOrderParsers';
 
 type WorkOrderWithProfile = {
   id: string;
@@ -125,7 +125,7 @@ const WorkOrders: React.FC = () => {
         customerSignature: order.customer_signature || '',
         customerSignerName: '',
         signatureMetadata: {
-          timestamp: order.signature_timestamp ? format(new Date(order.signature_timestamp), 'dd.MM.yyyy HH:mm:ss', { locale: hr }) : undefined,
+          timestamp: order.signature_timestamp ? formatTimestampForSignature(order.signature_timestamp) : undefined,
           coordinates: order.signature_coordinates ? {
             latitude: (order.signature_coordinates as any).x || 0,
             longitude: (order.signature_coordinates as any).y || 0

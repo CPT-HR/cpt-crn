@@ -90,7 +90,7 @@ export const parseSignatureMetadata = (
   }
   
   return {
-    timestamp, // This is guaranteed to be a string since we check for null above
+    timestamp: timestamp, // Guaranteed to be string since we checked for null above
     coordinates: parsedCoordinates,
     address: address || undefined
   };

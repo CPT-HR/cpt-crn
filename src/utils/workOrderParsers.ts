@@ -1,5 +1,6 @@
 
 import { SignatureMetadata } from '@/components/SignaturePad';
+import { WorkItem, Material } from '@/types/workOrder';
 
 export interface ParsedTimes {
   arrivalTime: string;
@@ -80,4 +81,75 @@ export const parseDisplayToMinutes = (displayTime: string): number => {
   const minutes = parseInt(match[2]);
   
   return hours * 60 + minutes;
+};
+
+// Parse text to work items
+export const parseTextToWorkItems = (text: string | null): WorkItem[] => {
+  if (!text) return [{ id: '1', text: '' }];
+  
+  const lines = text.split('\n').filter(line => line.trim().length > 0);
+  if (lines.length === 0) return [{ id: '1', text: '' }];
+  
+  return lines.map((line, index) => ({
+    id: (index + 1).toString(),
+    text: line.replace(/^•\s*/, '').trim()
+  }));
+};
+
+// Parse materials from JSONB
+export const parseMaterials = (materialsData: any): Material[] => {
+  if (!materialsData || !Array.isArray(materialsData)) {
+    return [{ id: '1', name: '', quantity: '', unit: '' }];
+  }
+  
+  return materialsData.map((material, index) => ({
+    id: (index + 1).toString(),
+    name: material.name || '',
+    quantity: material.quantity?.toString() || '',
+    unit: material.unit || ''
+  }));
+};
+
+// Parse address from combined field
+export const parseAddress = (addressString: string) => {
+  if (!addressString) return { street: '', city: 'Zagreb', country: 'Hrvatska' };
+  
+  const parts = addressString.split(', ');
+  if (parts.length >= 3) {
+    return {
+      street: parts[0].trim(),
+      city: parts[1].trim(),
+      country: parts[2].trim()
+    };
+  } else if (parts.length === 2) {
+    return {
+      street: parts[0].trim(),
+      city: parts[1].trim(),
+      country: 'Hrvatska'
+    };
+  } else {
+    return {
+      street: addressString.trim(),
+      city: 'Zagreb',
+      country: 'Hrvatska'
+    };
+  }
+};
+
+// Calculate billable hours based on arrival and completion time
+export const calculateBillableHours = (arrival: string, completion: string) => {
+  if (!arrival || !completion) return '0h00min';
+  
+  const [arrivalHour, arrivalMin] = arrival.split(':').map(Number);
+  const [completionHour, completionMin] = completion.split(':').map(Number);
+  
+  const arrivalMinutes = arrivalHour * 60 + arrivalMin;
+  const completionMinutes = completionHour * 60 + completionMin;
+  
+  if (completionMinutes <= arrivalMinutes) return '0h00min';
+  
+  const diffMinutes = completionMinutes - arrivalMinutes;
+  const billableMinutes = Math.ceil(diffMinutes / 30) * 30;
+  
+  return formatMinutesToDisplay(billableMinutes);
 };

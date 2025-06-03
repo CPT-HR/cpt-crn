@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,6 +26,7 @@ const EmployeeManagement: React.FC = () => {
     email: '',
     phone: '',
     user_role: 'technician',
+    active: true,
     location_id: '',
     vehicle_id: '',
     manager_id: '',
@@ -61,6 +63,7 @@ const EmployeeManagement: React.FC = () => {
       email: '',
       phone: '',
       user_role: 'technician',
+      active: true,
       location_id: '',
       vehicle_id: '',
       manager_id: '',
@@ -86,6 +89,7 @@ const EmployeeManagement: React.FC = () => {
       email: employee.email || '',
       phone: employee.phone || '',
       user_role: employee.user_role,
+      active: employee.active,
       location_id: employee.location_id || '',
       vehicle_id: employee.vehicle_id || '',
       manager_id: employee.manager_id || '',
@@ -171,6 +175,14 @@ const EmployeeManagement: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="active" className="text-right">Aktivan</Label>
+                  <Switch
+                    id="active"
+                    checked={formData.active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, active: checked })}
+                  />
+                </div>
                 <Button type="submit" disabled={isLoading}>
                   {editingEmployee ? 'Ažuriraj' : 'Spremi'}
                 </Button>
@@ -186,6 +198,7 @@ const EmployeeManagement: React.FC = () => {
               <TableHead>Ime i prezime</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Uloga</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="text-right">Akcije</TableHead>
             </TableRow>
           </TableHeader>
@@ -195,6 +208,11 @@ const EmployeeManagement: React.FC = () => {
                 <TableCell className="font-medium">{getEmployeeFullName(employee)}</TableCell>
                 <TableCell>{employee.email}</TableCell>
                 <TableCell>{getEmployeeRoleDisplay(employee.user_role)}</TableCell>
+                <TableCell>
+                  <Badge variant={employee.active ? "default" : "secondary"}>
+                    {employee.active ? "Aktivan" : "Neaktivan"}
+                  </Badge>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(employee)}>
                     <Edit className="mr-2 h-4 w-4" />

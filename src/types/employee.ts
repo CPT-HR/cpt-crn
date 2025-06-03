@@ -31,6 +31,7 @@ export interface EmployeeFormData {
   email: string;
   phone?: string;
   user_role: 'admin' | 'lead' | 'technician';
+  active: boolean;
   location_id?: string;
   vehicle_id?: string;
   manager_id?: string;

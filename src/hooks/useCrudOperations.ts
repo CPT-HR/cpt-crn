@@ -3,8 +3,10 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+type TableName = 'employee_profiles' | 'company_locations' | 'vehicles' | 'global_settings' | 'work_orders';
+
 interface CrudOptions<T> {
-  tableName: string;
+  tableName: TableName;
   onSuccess?: (action: 'create' | 'update' | 'delete', data?: T) => void;
   onError?: (error: Error, action: 'create' | 'update' | 'delete') => void;
 }

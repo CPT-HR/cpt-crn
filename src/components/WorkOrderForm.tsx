@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +22,25 @@ import { parseDisplayToMinutes } from '@/utils/workOrderParsers';
 
 interface WorkOrderFormProps {
   initialData?: any;
+}
+
+interface ClientData {
+  clientCompanyName: string;
+  clientFirstName: string;
+  clientLastName: string;
+  clientMobile: string;
+  clientEmail: string;
+  clientOib: string;
+  orderForCustomer: boolean;
+}
+
+interface CustomerData {
+  customerCompanyName: string;
+  customerFirstName: string;
+  customerLastName: string;
+  customerMobile: string;
+  customerEmail: string;
+  customerOib: string;
 }
 
 const countries = [
@@ -453,12 +473,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         <ClientInfoSection
           data={{
             clientCompanyName: workOrder.clientCompanyName,
-            clientCompanyAddress: workOrder.clientCompanyAddress,
-            clientOib: workOrder.clientOib,
             clientFirstName: workOrder.clientFirstName,
             clientLastName: workOrder.clientLastName,
             clientMobile: workOrder.clientMobile,
             clientEmail: workOrder.clientEmail,
+            clientOib: workOrder.clientOib,
             orderForCustomer: workOrder.orderForCustomer,
           }}
           onChange={handleClientInfoChange}
@@ -469,12 +488,11 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
           <CustomerInfoSection
             data={{
               customerCompanyName: workOrder.customerCompanyName,
-              customerCompanyAddress: workOrder.customerCompanyAddress,
-              customerOib: workOrder.customerOib,
               customerFirstName: workOrder.customerFirstName,
               customerLastName: workOrder.customerLastName,
               customerMobile: workOrder.customerMobile,
               customerEmail: workOrder.customerEmail,
+              customerOib: workOrder.customerOib,
             }}
             onChange={handleCustomerInfoChange}
             countries={countries}

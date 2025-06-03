@@ -155,7 +155,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   };
 
   const handleDateChange = (date: Date | undefined) => {
-    setWorkOrder(prev => ({ ...prev, date: date ? date.toLocaleDateString('hr-HR') : new Date().toLocaleDateString('hr-HR') }));
+    setWorkOrder(prev => ({ ...prev, date: date || new Date() }));
   };
 
   const handleTimeChange = (field: 'arrivalTime' | 'completionTime', value: string) => {
@@ -508,7 +508,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         />
 
         <TimeSection
-          date={new Date(workOrder.date)}
+          date={workOrder.date}
           arrivalTime={workOrder.arrivalTime}
           completionTime={workOrder.completionTime}
           calculatedHours={workOrder.calculatedHours}

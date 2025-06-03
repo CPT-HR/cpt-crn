@@ -27,6 +27,22 @@ export const useWorkOrderForm = (initialData?: any) => {
     }
   };
 
+  // Helper function to parse date safely
+  const parseDate = (dateString?: string): Date => {
+    if (!dateString) return new Date();
+    
+    try {
+      const date = new Date(dateString);
+      // Check if the date is valid
+      if (isNaN(date.getTime())) {
+        return new Date();
+      }
+      return date;
+    } catch {
+      return new Date();
+    }
+  };
+
   // Initialize work order state based on initialData or defaults
   const getInitialWorkOrderState = (): WorkOrder => {
     if (initialData) {
@@ -59,7 +75,7 @@ export const useWorkOrderForm = (initialData?: any) => {
         performedWork: parseTextToWorkItems(initialData.performed_work),
         technicianComment: parseTextToWorkItems(initialData.technician_comment),
         materials: parseMaterials(initialData.materials),
-        date: initialData.date ? new Date(initialData.date).toLocaleDateString('hr-HR') : new Date().toLocaleDateString('hr-HR'),
+        date: parseDate(initialData.date),
         arrivalTime: initialData.arrival_time || '',
         completionTime: initialData.completion_time || '',
         calculatedHours: formatMinutesToDisplay(initialData.hours),
@@ -95,7 +111,7 @@ export const useWorkOrderForm = (initialData?: any) => {
       performedWork: [{ id: '1', text: '' }],
       technicianComment: [{ id: '1', text: '' }],
       materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-      date: new Date().toLocaleDateString('hr-HR'),
+      date: new Date(),
       arrivalTime: '',
       completionTime: '',
       calculatedHours: '0h00min',

@@ -11,7 +11,7 @@ import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
-import { formatMinutesToDisplay } from '@/utils/workOrderParsers';
+import { formatMinutesToDisplay, formatTimestampForSignature } from '@/utils/workOrderParsers';
 
 const WorkOrderView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -249,7 +249,7 @@ const WorkOrderView: React.FC = () => {
                     <div className="text-xs text-gray-500 space-y-1">
                       {workOrder.signature_timestamp && (
                         <p className="font-medium">
-                          Datum i vrijeme: {format(new Date(workOrder.signature_timestamp), 'dd.MM.yyyy HH:mm:ss', { locale: hr })}
+                          Datum i vrijeme: {formatTimestampForSignature(workOrder.signature_timestamp)}
                         </p>
                       )}
                       {workOrder.signature_coordinates && typeof workOrder.signature_coordinates === 'object' && workOrder.signature_coordinates !== null && (

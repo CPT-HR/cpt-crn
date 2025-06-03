@@ -1,104 +1,25 @@
 
-import { SignatureMetadata } from '@/components/SignaturePad';
 import { WorkItem, Material } from '@/types/workOrder';
+import { SignatureMetadata } from '@/components/SignaturePad';
 
-export interface ParsedTimes {
-  arrivalTime: string;
-  completionTime: string;
-}
-
-// Parse PostgreSQL point format: (longitude,latitude) to coordinates object
-export const parseCoordinatesFromPoint = (pointString: string | null): { latitude: number; longitude: number } | undefined => {
-  if (!pointString) return undefined;
-  
-  try {
-    // Remove parentheses and split by comma
-    const cleanPoint = pointString.replace(/[()]/g, '');
-    const [longitude, latitude] = cleanPoint.split(',').map(coord => parseFloat(coord.trim()));
-    
-    if (isNaN(longitude) || isNaN(latitude)) return undefined;
-    
-    return { latitude, longitude };
-  } catch (error) {
-    console.error('Error parsing coordinates:', error);
-    return undefined;
-  }
-};
-
-// Format timestamp for signature metadata display
-export const formatTimestampForSignature = (timestamp: string | Date): string => {
-  const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
-  
-  const day = date.getDate().toString().padStart(2, '0');
-  const month = (date.getMonth() + 1).toString().padStart(2, '0');
-  const year = date.getFullYear();
-  const hours = date.getHours().toString().padStart(2, '0');
-  const minutes = date.getMinutes().toString().padStart(2, '0');
-  const seconds = date.getSeconds().toString().padStart(2, '0');
-  
-  return `${day}-${month}-${year} u ${hours}:${minutes}:${seconds}`;
-};
-
-// Parse signature metadata from database fields
-export const parseSignatureMetadata = (
-  timestamp: string | null,
-  coordinates: any,
-  address: string | null
-): SignatureMetadata | undefined => {
-  if (!timestamp && !coordinates && !address) return undefined;
-  
-  const metadata: SignatureMetadata = {
-    timestamp: timestamp ? formatTimestampForSignature(timestamp) : formatTimestampForSignature(new Date())
-  };
-  
-  if (coordinates) {
-    metadata.coordinates = parseCoordinatesFromPoint(coordinates);
-  }
-  
-  if (address) {
-    metadata.address = address;
-  }
-  
-  return metadata;
-};
-
-// Format minutes to display format (Hhmmm)
-export const formatMinutesToDisplay = (minutes: number | null): string => {
-  if (!minutes || minutes <= 0) return '0h00min';
-  
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  
-  return `${hours}h${remainingMinutes.toString().padStart(2, '0')}min`;
-};
-
-// Convert display format back to minutes
-export const parseDisplayToMinutes = (displayTime: string): number => {
-  const match = displayTime.match(/(\d+)h(\d+)min/);
-  if (!match) return 0;
-  
-  const hours = parseInt(match[1]);
-  const minutes = parseInt(match[2]);
-  
-  return hours * 60 + minutes;
-};
-
-// Parse text to work items
-export const parseTextToWorkItems = (text: string | null): WorkItem[] => {
+export const parseTextToWorkItems = (text: string | null | undefined): WorkItem[] => {
   if (!text) return [{ id: '1', text: '' }];
   
-  const lines = text.split('\n').filter(line => line.trim().length > 0);
-  if (lines.length === 0) return [{ id: '1', text: '' }];
+  const items = text.split('\n').map(line => line.replace(/^•\s*/, '')).filter(line => line.trim().length > 0);
+  if (items.length === 0) return [{ id: '1', text: '' }];
   
-  return lines.map((line, index) => ({
+  return items.map((item, index) => ({
     id: (index + 1).toString(),
-    text: line.replace(/^•\s*/, '').trim()
+    text: item.trim()
   }));
 };
 
-// Parse materials from JSONB
 export const parseMaterials = (materialsData: any): Material[] => {
   if (!materialsData || !Array.isArray(materialsData)) {
+    return [{ id: '1', name: '', quantity: '', unit: '' }];
+  }
+  
+  if (materialsData.length === 0) {
     return [{ id: '1', name: '', quantity: '', unit: '' }];
   }
   
@@ -110,46 +31,117 @@ export const parseMaterials = (materialsData: any): Material[] => {
   }));
 };
 
-// Parse address from combined field
-export const parseAddress = (addressString: string) => {
-  if (!addressString) return { street: '', city: 'Zagreb', country: 'Hrvatska' };
+export interface ParsedAddress {
+  street: string;
+  city: string;
+  country: string;
+}
+
+export const parseAddress = (fullAddress: string): ParsedAddress => {
+  if (!fullAddress) {
+    return { street: '', city: '', country: 'Hrvatska' };
+  }
   
-  const parts = addressString.split(', ');
+  const parts = fullAddress.split(',').map(part => part.trim());
+  
   if (parts.length >= 3) {
     return {
-      street: parts[0].trim(),
-      city: parts[1].trim(),
-      country: parts[2].trim()
+      street: parts[0],
+      city: parts[1],
+      country: parts[2]
     };
   } else if (parts.length === 2) {
     return {
-      street: parts[0].trim(),
-      city: parts[1].trim(),
+      street: parts[0],
+      city: parts[1],
       country: 'Hrvatska'
     };
   } else {
     return {
-      street: addressString.trim(),
-      city: 'Zagreb',
+      street: parts[0] || '',
+      city: '',
       country: 'Hrvatska'
     };
   }
 };
 
-// Calculate billable hours based on arrival and completion time
-export const calculateBillableHours = (arrival: string, completion: string) => {
-  if (!arrival || !completion) return '0h00min';
+export const formatAddress = (street: string, city: string, country: string): string => {
+  const parts = [street, city, country].filter(part => part && part.trim().length > 0);
+  return parts.join(', ');
+};
+
+export const parseSignatureMetadata = (
+  timestamp: string | null,
+  coordinates: any,
+  address: string | null
+): SignatureMetadata | undefined => {
+  if (!timestamp) return undefined;
   
-  const [arrivalHour, arrivalMin] = arrival.split(':').map(Number);
-  const [completionHour, completionMin] = completion.split(':').map(Number);
+  let parsedCoordinates;
+  if (coordinates && typeof coordinates === 'string') {
+    // Parse PostgreSQL point format: (longitude,latitude)
+    const match = coordinates.match(/\(([^,]+),([^)]+)\)/);
+    if (match) {
+      parsedCoordinates = {
+        longitude: parseFloat(match[1]),
+        latitude: parseFloat(match[2])
+      };
+    }
+  }
   
-  const arrivalMinutes = arrivalHour * 60 + arrivalMin;
-  const completionMinutes = completionHour * 60 + completionMin;
+  return {
+    timestamp,
+    coordinates: parsedCoordinates,
+    address: address || undefined
+  };
+};
+
+export const formatTimestampForSignature = (date: Date): string => {
+  return date.toLocaleString('hr-HR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+};
+
+export const formatMinutesToDisplay = (minutes: number | null | undefined): string => {
+  if (!minutes || minutes === 0) return '0h00min';
   
-  if (completionMinutes <= arrivalMinutes) return '0h00min';
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
   
-  const diffMinutes = completionMinutes - arrivalMinutes;
-  const billableMinutes = Math.ceil(diffMinutes / 30) * 30;
+  return `${hours}h${remainingMinutes.toString().padStart(2, '0')}min`;
+};
+
+export const parseDisplayToMinutes = (displayTime: string): number => {
+  if (!displayTime || displayTime === '0h00min') return 0;
   
-  return formatMinutesToDisplay(billableMinutes);
+  const match = displayTime.match(/(\d+)h(\d+)min/);
+  if (!match) return 0;
+  
+  const hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  
+  return hours * 60 + minutes;
+};
+
+export const calculateBillableHours = (arrivalTime: string, completionTime: string): string => {
+  if (!arrivalTime || !completionTime) return '0h00min';
+  
+  const arrival = new Date(`2000-01-01T${arrivalTime}`);
+  const completion = new Date(`2000-01-01T${completionTime}`);
+  
+  let diffMs = completion.getTime() - arrival.getTime();
+  
+  // Handle case where completion time is next day
+  if (diffMs < 0) {
+    diffMs += 24 * 60 * 60 * 1000; // Add 24 hours
+  }
+  
+  const totalMinutes = Math.round(diffMs / (1000 * 60));
+  
+  return formatMinutesToDisplay(totalMinutes);
 };

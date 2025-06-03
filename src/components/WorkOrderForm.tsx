@@ -18,29 +18,10 @@ import TravelSection from './work-order/TravelSection';
 import SignaturesSection from './work-order/SignaturesSection';
 import { useWorkOrderForm } from '@/hooks/useWorkOrderForm';
 import { WorkOrder, Material, WorkItem } from '@/types/workOrder';
-import { parseDisplayToMinutes } from '@/utils/workOrderParsers';
+import { parseDisplayToMinutes, parseAddress } from '@/utils/workOrderParsers';
 
 interface WorkOrderFormProps {
   initialData?: any;
-}
-
-interface ClientData {
-  clientCompanyName: string;
-  clientFirstName: string;
-  clientLastName: string;
-  clientMobile: string;
-  clientEmail: string;
-  clientOib: string;
-  orderForCustomer: boolean;
-}
-
-interface CustomerData {
-  customerCompanyName: string;
-  customerFirstName: string;
-  customerLastName: string;
-  customerMobile: string;
-  customerEmail: string;
-  customerOib: string;
 }
 
 const countries = [
@@ -450,6 +431,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     }
   };
 
+  // Parse client address for ClientInfoSection
+  const clientAddress = parseAddress(workOrder.clientCompanyAddress || '');
+  const customerAddress = parseAddress(workOrder.customerCompanyAddress || '');
+
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
@@ -473,6 +458,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         <ClientInfoSection
           data={{
             clientCompanyName: workOrder.clientCompanyName,
+            clientStreetAddress: clientAddress.street,
+            clientCity: clientAddress.city,
+            clientCountry: clientAddress.country,
             clientFirstName: workOrder.clientFirstName,
             clientLastName: workOrder.clientLastName,
             clientMobile: workOrder.clientMobile,
@@ -488,6 +476,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
           <CustomerInfoSection
             data={{
               customerCompanyName: workOrder.customerCompanyName,
+              customerCompanyAddress: workOrder.customerCompanyAddress,
               customerFirstName: workOrder.customerFirstName,
               customerLastName: workOrder.customerLastName,
               customerMobile: workOrder.customerMobile,

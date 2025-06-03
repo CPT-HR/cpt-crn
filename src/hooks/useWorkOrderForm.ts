@@ -5,7 +5,7 @@ import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { WorkOrder, Material, WorkItem } from '@/types/workOrder';
 import { parseSignatureMetadata, formatMinutesToDisplay, parseDisplayToMinutes } from '@/utils/workOrderParsers';
-import { parseTextToWorkItems, parseMaterials, parseAddress, calculateBillableHours } from '@/utils/workOrderParsers';
+import { parseTextToWorkItems, parseMaterials, parseAddress, calculateBillableHours, formatAddress } from '@/utils/workOrderParsers';
 
 export const useWorkOrderForm = (initialData?: any) => {
   const { user } = useAuth();
@@ -30,9 +30,6 @@ export const useWorkOrderForm = (initialData?: any) => {
   // Initialize work order state based on initialData or defaults
   const getInitialWorkOrderState = (): WorkOrder => {
     if (initialData) {
-      const clientAddress = parseAddress(initialData.client_company_address || '');
-      const customerAddress = parseAddress(initialData.customer_company_address || '');
-      
       // Parse existing signature metadata
       const existingSignatureMetadata = parseSignatureMetadata(
         initialData.signature_timestamp,
@@ -113,6 +110,26 @@ export const useWorkOrderForm = (initialData?: any) => {
 
   const [workOrder, setWorkOrder] = useState<WorkOrder>(getInitialWorkOrderState);
 
+  // Custom setter that handles client address updates
+  const setWorkOrderWithAddressHandling = (updater: (prev: WorkOrder) => WorkOrder | Partial<WorkOrder>) => {
+    setWorkOrder(prev => {
+      const updated = typeof updater === 'function' ? updater(prev) : updater;
+      const newState = { ...prev, ...updated };
+      
+      // Handle client address fields - combine them into clientCompanyAddress when individual fields change
+      if ('clientStreetAddress' in updated || 'clientCity' in updated || 'clientCountry' in updated) {
+        const clientAddress = parseAddress(newState.clientCompanyAddress || '');
+        const street = (updated as any).clientStreetAddress || clientAddress.street;
+        const city = (updated as any).clientCity || clientAddress.city;
+        const country = (updated as any).clientCountry || clientAddress.country;
+        
+        newState.clientCompanyAddress = formatAddress(street, city, country);
+      }
+      
+      return newState;
+    });
+  };
+
   // Load company locations and global settings
   useEffect(() => {
     const fetchData = async () => {
@@ -151,7 +168,7 @@ export const useWorkOrderForm = (initialData?: any) => {
 
   return {
     workOrder,
-    setWorkOrder,
+    setWorkOrder: setWorkOrderWithAddressHandling,
     companyLocations,
     globalSettings,
     isEditMode,

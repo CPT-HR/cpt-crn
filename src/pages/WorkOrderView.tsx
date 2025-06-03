@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -5,14 +6,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Edit, Download } from 'lucide-react';
+import { ArrowLeft, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
 import { formatMinutesToDisplay, formatTimestampForSignature } from '@/utils/workOrderParsers';
-import { generatePDF } from '@/utils/pdfGenerator';
-import { toast } from '@/components/ui/sonner';
 
 const WorkOrderView: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -43,63 +42,6 @@ const WorkOrderView: React.FC = () => {
     },
     enabled: !!id
   });
-
-  const handleDownloadPDF = async () => {
-    if (!workOrder) return;
-
-    try {
-      // Transform the work order data to match the PDF generator interface
-      const pdfData = {
-        id: workOrder.order_number,
-        clientCompanyName: workOrder.client_company_name,
-        clientCompanyAddress: workOrder.client_company_address,
-        clientOib: workOrder.client_oib,
-        clientFirstName: workOrder.client_first_name,
-        clientLastName: workOrder.client_last_name,
-        clientMobile: workOrder.client_mobile,
-        clientEmail: workOrder.client_email,
-        orderForCustomer: workOrder.order_for_customer || false,
-        customerCompanyName: workOrder.customer_company_name || '',
-        customerCompanyAddress: workOrder.customer_company_address || '',
-        customerOib: workOrder.customer_oib || '',
-        customerFirstName: workOrder.customer_first_name || '',
-        customerLastName: workOrder.customer_last_name || '',
-        customerMobile: workOrder.customer_mobile || '',
-        customerEmail: workOrder.customer_email || '',
-        description: workOrder.description ? [{ id: '1', text: workOrder.description }] : [],
-        foundCondition: workOrder.found_condition ? [{ id: '1', text: workOrder.found_condition }] : [],
-        performedWork: workOrder.performed_work ? [{ id: '1', text: workOrder.performed_work }] : [],
-        technicianComment: workOrder.technician_comment ? [{ id: '1', text: workOrder.technician_comment }] : [],
-        materials: Array.isArray(workOrder.materials) ? workOrder.materials : [],
-        date: format(new Date(workOrder.date), 'dd.MM.yyyy', { locale: hr }),
-        arrivalTime: workOrder.arrival_time || '',
-        completionTime: workOrder.completion_time || '',
-        calculatedHours: formatMinutesToDisplay(workOrder.hours),
-        fieldTrip: (workOrder.distance && parseFloat(workOrder.distance.toString()) > 0) || false,
-        distance: workOrder.distance ? workOrder.distance.toString() : '',
-        technicianSignature: workOrder.technician_signature || '',
-        technicianName: workOrder.employee_profiles 
-          ? `${workOrder.employee_profiles.first_name} ${workOrder.employee_profiles.last_name}`
-          : '',
-        customerSignature: workOrder.customer_signature || '',
-        customerSignerName: '',
-        signatureMetadata: {
-          timestamp: workOrder.signature_timestamp ? formatTimestampForSignature(workOrder.signature_timestamp) : undefined,
-          coordinates: workOrder.signature_coordinates ? {
-            latitude: (workOrder.signature_coordinates as any).x || 0,
-            longitude: (workOrder.signature_coordinates as any).y || 0
-          } : undefined,
-          address: workOrder.signature_address || undefined
-        }
-      };
-
-      await generatePDF(pdfData);
-      toast("PDF je uspješno preuzet");
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      toast("Greška pri generiranju PDF-a");
-    }
-  };
 
   if (isLoading) {
     return (
@@ -133,20 +75,12 @@ const WorkOrderView: React.FC = () => {
           </Button>
           <h1 className="text-3xl font-bold">Radni nalog {workOrder.order_number}</h1>
         </div>
-        <div className="flex items-center gap-2">
-          {canEdit && (
-            <Button onClick={() => navigate(`/work-orders/${id}/edit`)}>
-              <Edit className="h-4 w-4 mr-2" />
-              Uredi
-            </Button>
-          )}
-          {workOrder.technician_signature && (
-            <Button variant="outline" onClick={handleDownloadPDF}>
-              <Download className="h-4 w-4 mr-2" />
-              PDF
-            </Button>
-          )}
-        </div>
+        {canEdit && (
+          <Button onClick={() => navigate(`/work-orders/${id}/edit`)}>
+            <Edit className="h-4 w-4 mr-2" />
+            Uredi
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

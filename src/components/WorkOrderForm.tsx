@@ -17,6 +17,11 @@ import MaterialsSection from './work-order/MaterialsSection';
 import TimeSection from './work-order/TimeSection';
 import TravelSection from './work-order/TravelSection';
 import SignaturesSection from './work-order/SignaturesSection';
+import { 
+  parseSignatureMetadata, 
+  reconstructTimesFromHours, 
+  formatHoursToDisplay 
+} from '@/utils/workOrderParsers';
 
 interface Material {
   id: string;
@@ -148,8 +153,18 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       const clientAddress = parseAddress(initialData.client_company_address || '');
       const customerAddress = parseAddress(initialData.customer_company_address || '');
       
+      // Parse existing signature metadata
+      const existingSignatureMetadata = parseSignatureMetadata(
+        initialData.signature_timestamp,
+        initialData.signature_coordinates,
+        initialData.signature_address
+      );
+      
+      // Reconstruct times from hours if available
+      const reconstructedTimes = reconstructTimesFromHours(initialData.hours);
+      
       return {
-        id: initialData.order_number || '', // Za edit mode prikazuj order_number kao id
+        id: initialData.order_number || '',
         clientCompanyName: initialData.client_company_name || '',
         clientStreetAddress: clientAddress.street,
         clientCity: clientAddress.city,
@@ -175,20 +190,21 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         technicianComment: parseTextToWorkItems(initialData.technician_comment),
         materials: parseMaterials(initialData.materials),
         date: initialData.date ? new Date(initialData.date) : new Date(),
-        arrivalTime: '',
-        completionTime: '',
-        calculatedHours: initialData.hours ? `${initialData.hours}h00min` : '0h00min',
+        arrivalTime: reconstructedTimes.arrivalTime,
+        completionTime: reconstructedTimes.completionTime,
+        calculatedHours: formatHoursToDisplay(initialData.hours),
         fieldTrip: (initialData.distance && parseFloat(initialData.distance) > 0) || false,
         distance: initialData.distance ? initialData.distance.toString() : '',
         technicianSignature: initialData.technician_signature || user?.signature || '',
         customerSignature: initialData.customer_signature || '',
-        customerSignerName: '',
+        customerSignerName: getCustomerSignerNameFromInitialData(initialData),
+        signatureMetadata: existingSignatureMetadata,
         technicianName: user?.name || '',
       };
     }
 
     return {
-      id: '', // Prazan za nove naloge - prikazat će se nakon generiranja
+      id: '',
       clientCompanyName: '',
       clientStreetAddress: '',
       clientCity: 'Zagreb',
@@ -224,6 +240,19 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       customerSignerName: '',
       technicianName: user?.name || '',
     };
+  };
+
+  // Helper function to get customer signer name from initial data
+  const getCustomerSignerNameFromInitialData = (data: any): string => {
+    if (data.order_for_customer) {
+      const firstName = data.customer_first_name || data.client_first_name;
+      const lastName = data.customer_last_name || data.client_last_name;
+      return firstName && lastName ? `${firstName} ${lastName}` : '';
+    } else {
+      return data.client_first_name && data.client_last_name 
+        ? `${data.client_first_name} ${data.client_last_name}` 
+        : '';
+    }
   };
 
   const [workOrder, setWorkOrder] = useState<WorkOrder>(getInitialWorkOrderState);
@@ -580,10 +609,16 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         ? finalWorkOrder.date.toISOString().split('T')[0] 
         : new Date(finalWorkOrder.date).toISOString().split('T')[0];
       
+      // Handle signature timestamp preservation for edit mode
       let isoSignatureTimestamp;
-      if (finalWorkOrder.signatureMetadata?.timestamp) {
+      if (isEditMode && initialData?.signature_timestamp && !finalWorkOrder.newSignatureCreated) {
+        // Preserve existing timestamp if in edit mode and no new signature was created
+        isoSignatureTimestamp = initialData.signature_timestamp;
+        console.log('Preserving existing signature timestamp:', isoSignatureTimestamp);
+      } else if (finalWorkOrder.signatureMetadata?.timestamp) {
+        // Use new signature timestamp
         const timestamp = finalWorkOrder.signatureMetadata.timestamp;
-        console.log('Original signature timestamp:', timestamp);
+        console.log('Using new signature timestamp:', timestamp);
         
         if (timestamp.includes('T') && timestamp.includes('Z')) {
           isoSignatureTimestamp = timestamp;
@@ -612,7 +647,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       const roundedDistance = finalWorkOrder.distance ? Math.round(parseFloat(finalWorkOrder.distance)) : 0;
       
       const workOrderData = {
-        order_number: finalWorkOrder.orderNumber, // Koristi generirani order_number
+        order_number: finalWorkOrder.orderNumber,
         client_company_name: finalWorkOrder.clientCompanyName,
         client_company_address: `${finalWorkOrder.clientStreetAddress}, ${finalWorkOrder.clientCity}, ${finalWorkOrder.clientCountry}`,
         client_oib: finalWorkOrder.clientOib,
@@ -639,7 +674,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         customer_signature: finalWorkOrder.customerSignature,
         signature_timestamp: isoSignatureTimestamp,
         signature_coordinates: signatureCoordinates,
-        signature_address: finalWorkOrder.signatureMetadata?.address,
+        signature_address: finalWorkOrder.signatureMetadata?.address || (isEditMode ? initialData?.signature_address : null),
         date: isoDate,
         employee_profile_id: employeeProfile.id,
         user_id: user.id,
@@ -659,7 +694,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
           throw error;
         }
       } else {
-        // Insert new work order - UUID ID će se automatski generirati na backendu
+        // Insert new work order
         const { error } = await supabase
           .from('work_orders')
           .insert(workOrderData);
@@ -711,8 +746,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     setIsSubmitting(true);
     
     try {
-      // Generiraj order_number samo za nove naloge
-      let orderNumber = workOrder.id; // Za edit mode koristi postojeći
+      // Generate order_number only for new orders
+      let orderNumber = workOrder.id;
       
       if (!isEditMode) {
         if (!user.initials) {
@@ -724,25 +759,30 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       
       const finalCustomerData = getFinalCustomerData();
       
+      // Check if a new signature was created (different from initial)
+      const newSignatureCreated = isEditMode && 
+        initialData?.customer_signature !== workOrder.customerSignature;
+      
       const finalWorkOrder = {
         ...workOrder,
-        orderNumber, // Dodijeli generirani order_number
+        orderNumber,
         technicianSignature: user.signature || '',
         technicianName: user.name || '',
         date: workOrder.date,
         finalCustomerData,
         clientCompanyAddress: `${workOrder.clientStreetAddress}, ${workOrder.clientCity}, ${workOrder.clientCountry}`,
-        customerCompanyAddress: `${finalCustomerData.street_address}, ${finalCustomerData.city}, ${finalCustomerData.country}`
+        customerCompanyAddress: `${finalCustomerData.street_address}, ${finalCustomerData.city}, ${finalCustomerData.country}`,
+        newSignatureCreated
       };
       
       console.log('Final work order before saving:', finalWorkOrder);
       
       await saveToSupabase(finalWorkOrder);
       
-      // Za PDF koristi order_number kao id
+      // For PDF use order_number as id
       const finalWorkOrderForPDF = {
         ...finalWorkOrder,
-        id: orderNumber, // PDF koristi order_number kao ID
+        id: orderNumber,
         date: workOrder.date.toLocaleDateString('hr-HR')
       };
       
@@ -754,7 +794,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       });
       
       if (!isEditMode) {
-        // Reset form only for new work orders and set the new order number as id for display
+        // Reset form only for new work orders
         setWorkOrder({
           id: '',
           clientCompanyName: '',

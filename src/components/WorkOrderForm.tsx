@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import SignaturePad, { SignatureMetadata } from './SignaturePad';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
-import { generatePDF } from '@/utils/pdfGenerator';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
@@ -22,8 +21,6 @@ import {
   formatMinutesToDisplay,
   parseDisplayToMinutes 
 } from '@/utils/workOrderParsers';
-import { transformWorkOrderForPDF } from '@/utils/workOrderHelpers';
-import { WorkOrderRecord } from '@/types/workOrder';
 
 interface Material {
   id: string;
@@ -778,58 +775,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       
       await saveToSupabase(finalWorkOrder);
       
-      // Create WorkOrderRecord for PDF transformation
-      const workOrderRecord: WorkOrderRecord = {
-        id: initialData?.id || '',
-        order_number: orderNumber,
-        date: workOrder.date.toISOString().split('T')[0],
-        client_company_name: workOrder.clientCompanyName,
-        client_first_name: workOrder.clientFirstName,
-        client_last_name: workOrder.clientLastName,
-        client_company_address: `${workOrder.clientStreetAddress}, ${workOrder.clientCity}, ${workOrder.clientCountry}`,
-        client_oib: workOrder.clientOib,
-        client_mobile: workOrder.clientMobile,
-        client_email: workOrder.clientEmail,
-        order_for_customer: workOrder.orderForCustomer,
-        customer_company_name: finalCustomerData.company_name,
-        customer_company_address: `${finalCustomerData.street_address}, ${finalCustomerData.city}, ${finalCustomerData.country}`,
-        customer_oib: finalCustomerData.oib,
-        customer_first_name: finalCustomerData.first_name,
-        customer_last_name: finalCustomerData.last_name,
-        customer_mobile: finalCustomerData.mobile,
-        customer_email: finalCustomerData.email,
-        description: workOrder.description.map(item => `• ${item.text}`).filter(text => text.length > 2).join('\n'),
-        found_condition: workOrder.foundCondition.map(item => `• ${item.text}`).filter(text => text.length > 2).join('\n'),
-        performed_work: workOrder.performedWork.map(item => `• ${item.text}`).filter(text => text.length > 2).join('\n'),
-        technician_comment: workOrder.technicianComment.map(item => `• ${item.text}`).filter(text => text.length > 2).join('\n'),
-        materials: workOrder.materials,
-        arrival_time: workOrder.arrivalTime,
-        completion_time: workOrder.completionTime,
-        hours: parseDisplayToMinutes(workOrder.calculatedHours),
-        distance: workOrder.distance ? parseFloat(workOrder.distance) : 0,
-        technician_signature: user.signature || '',
-        customer_signature: workOrder.customerSignature,
-        signature_timestamp: workOrder.signatureMetadata?.timestamp || new Date().toISOString(),
-        signature_coordinates: workOrder.signatureMetadata?.coordinates ? {
-          x: workOrder.signatureMetadata.coordinates.longitude,
-          y: workOrder.signatureMetadata.coordinates.latitude
-        } : null,
-        signature_address: workOrder.signatureMetadata?.address || null,
-        employee_profile_id: employeeProfile.id,
-        employee_profiles: {
-          id: employeeProfile.id,
-          first_name: employeeProfile.first_name,
-          last_name: employeeProfile.last_name
-        }
-      };
-      
-      // Use centralized transformation function for consistent PDF output
-      const pdfData = transformWorkOrderForPDF(workOrderRecord);
-      await generatePDF(pdfData);
-      
       toast({
         title: isEditMode ? "Radni nalog ažuriran" : "Radni nalog spremljen",
-        description: `Radni nalog ${orderNumber} je uspješno ${isEditMode ? 'ažuriran' : 'kreiran'} i spreman za ispis`,
+        description: `Radni nalog ${orderNumber} je uspješno ${isEditMode ? 'ažuriran' : 'kreiran'}`,
       });
       
       if (!isEditMode) {
@@ -1029,7 +977,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
             className="relative"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isEditMode ? 'Ažuriraj radni nalog' : 'Spremi i generiraj PDF'}
+            {isEditMode ? 'Ažuriraj radni nalog' : 'Spremi radni nalog'}
           </Button>
         </div>
       </form>

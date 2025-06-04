@@ -89,6 +89,7 @@ export interface WorkOrderRecord {
   distance: number;
   technician_signature: string | null;
   customer_signature: string | null;
+  customer_signer_name: string | null;
   signature_timestamp: string | null;
   signature_coordinates: any;
   signature_address: string | null;

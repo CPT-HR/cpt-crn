@@ -48,12 +48,32 @@ export const parseTextToWorkItems = (text: string | null): WorkItem[] => {
   return [{ id: '1', text }];
 };
 
+// Get auto signer name - same logic as in WorkOrderForm
+export const getAutoSignerName = (workOrder: WorkOrderRecord): string => {
+  if (workOrder.order_for_customer) {
+    // If it's for customer, try customer data first, then fallback to client
+    const customerName = workOrder.customer_first_name && workOrder.customer_last_name
+      ? `${workOrder.customer_first_name} ${workOrder.customer_last_name}`.trim()
+      : '';
+    
+    if (customerName) {
+      return customerName;
+    }
+  }
+  
+  // Default to client data
+  return `${workOrder.client_first_name} ${workOrder.client_last_name}`.trim();
+};
+
 // Transform work order from database format to PDF format
 export const transformWorkOrderForPDF = (workOrder: WorkOrderRecord): WorkOrder => {
   // Parse coordinates properly using the parseCoordinatesFromPoint function
   const coordinates = workOrder.signature_coordinates 
     ? parseCoordinatesFromPoint(workOrder.signature_coordinates.toString())
     : undefined;
+
+  // Use saved customer_signer_name or generate it using the same logic as the form
+  const customerSignerName = workOrder.customer_signer_name || getAutoSignerName(workOrder);
 
   return {
     id: workOrder.order_number,
@@ -88,7 +108,7 @@ export const transformWorkOrderForPDF = (workOrder: WorkOrderRecord): WorkOrder 
       ? getEmployeeFullName(workOrder.employee_profiles)
       : '',
     customerSignature: workOrder.customer_signature || '',
-    customerSignerName: '',
+    customerSignerName: customerSignerName,
     signatureMetadata: {
       timestamp: workOrder.signature_timestamp ? formatTimestampForSignature(workOrder.signature_timestamp) : undefined,
       coordinates: coordinates,

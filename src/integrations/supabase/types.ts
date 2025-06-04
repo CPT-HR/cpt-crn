@@ -180,6 +180,7 @@ export type Database = {
           customer_mobile: string | null
           customer_oib: string | null
           customer_signature: string | null
+          customer_signer_name: string | null
           date: string
           description: string | null
           distance: number | null
@@ -218,6 +219,7 @@ export type Database = {
           customer_mobile?: string | null
           customer_oib?: string | null
           customer_signature?: string | null
+          customer_signer_name?: string | null
           date: string
           description?: string | null
           distance?: number | null
@@ -256,6 +258,7 @@ export type Database = {
           customer_mobile?: string | null
           customer_oib?: string | null
           customer_signature?: string | null
+          customer_signer_name?: string | null
           date?: string
           description?: string | null
           distance?: number | null

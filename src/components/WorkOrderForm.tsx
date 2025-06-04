@@ -242,6 +242,12 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
 
   // Helper function to get customer signer name from initial data
   const getCustomerSignerNameFromInitialData = (data: any): string => {
+    // First priority: use saved customer_signer_name from database if it exists
+    if (data.customer_signer_name) {
+      return data.customer_signer_name;
+    }
+    
+    // Fallback: reconstruct name from client/customer data (for old work orders without saved signer name)
     if (data.order_for_customer) {
       const firstName = data.customer_first_name || data.client_first_name;
       const lastName = data.customer_last_name || data.client_last_name;

@@ -2,13 +2,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { FileText, List, Users, Car, MapPin } from 'lucide-react';
+import { FileText, List, Users, Car, MapPin, Plus } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Home: React.FC = () => {
   const { user } = useAuth();
 
   const menuItems = [
+    {
+      title: 'Novi radni nalog',
+      description: 'Kreiranje novog radnog naloga',
+      icon: Plus,
+      path: '/new-work-order',
+      roles: ['admin', 'lead', 'technician']
+    },
     {
       title: 'Radni nalozi',
       description: 'Upravljanje radnim nalozima',

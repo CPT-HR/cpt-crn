@@ -95,7 +95,7 @@ const WorkOrders: React.FC = () => {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Radni nalozi</h1>
         <div className="flex items-center gap-4">
-          <Badge variant="secondary">
+          <Badge variant="accent">
             {workOrders?.length || 0} naloga
           </Badge>
           <Button onClick={() => navigate('/new-work-order')}>

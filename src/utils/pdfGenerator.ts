@@ -1,6 +1,8 @@
+
 import { jsPDF } from "jspdf";
 import "../../src/fonts/Manrope-Regular-normal.js";
 import { WorkOrder, Material, WorkItem } from '@/types/workOrder';
+import { formatTimeToHHMM } from './workOrderParsers';
 
 export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
   return new Promise((resolve, reject) => {
@@ -120,7 +122,10 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setTextColor(60, 60, 60);
 
       maybeAddPage(12, drawSmallHeader);
-      let datumTekst = `Datum: ${workOrder.date}   |   Vrijeme dolaska: ${workOrder.arrivalTime}   |   Vrijeme završetka: ${workOrder.completionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`;
+      // Format times to HH:mm format before displaying
+      const formattedArrivalTime = formatTimeToHHMM(workOrder.arrivalTime);
+      const formattedCompletionTime = formatTimeToHHMM(workOrder.completionTime);
+      let datumTekst = `Datum: ${workOrder.date}   |   Vrijeme dolaska: ${formattedArrivalTime}   |   Vrijeme završetka: ${formattedCompletionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`;
       pdf.text(datumTekst, margin, y);
       y += 6;
       pdf.text(

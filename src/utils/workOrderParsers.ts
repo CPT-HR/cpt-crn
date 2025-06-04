@@ -24,6 +24,23 @@ export const parseCoordinatesFromPoint = (pointString: string | null): { latitud
   }
 };
 
+// Format time from HH:mm:ss to HH:mm
+export const formatTimeToHHMM = (time: string | null): string => {
+  if (!time) return '';
+  
+  // If already in HH:mm format, return as is
+  if (time.length === 5 && time.includes(':')) {
+    return time;
+  }
+  
+  // If in HH:mm:ss format, remove seconds
+  if (time.length === 8 && time.split(':').length === 3) {
+    return time.substring(0, 5);
+  }
+  
+  return time;
+};
+
 // Format timestamp for signature metadata display
 export const formatTimestampForSignature = (timestamp: string | Date): string => {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;

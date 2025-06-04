@@ -1,7 +1,8 @@
+
 import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 import { WorkOrder, WorkOrderRecord, Employee, Material, WorkItem } from '@/types/workOrder';
-import { formatMinutesToDisplay, formatTimestampForSignature } from './workOrderParsers';
+import { formatMinutesToDisplay, formatTimestampForSignature, parseCoordinatesFromPoint } from './workOrderParsers';
 
 // Employee name formatting
 export const getEmployeeFullName = (employee: Employee | { first_name: string; last_name: string }): string => {
@@ -49,6 +50,11 @@ export const parseTextToWorkItems = (text: string | null): WorkItem[] => {
 
 // Transform work order from database format to PDF format
 export const transformWorkOrderForPDF = (workOrder: WorkOrderRecord): WorkOrder => {
+  // Parse coordinates properly using the parseCoordinatesFromPoint function
+  const coordinates = workOrder.signature_coordinates 
+    ? parseCoordinatesFromPoint(workOrder.signature_coordinates.toString())
+    : undefined;
+
   return {
     id: workOrder.order_number,
     clientCompanyName: workOrder.client_company_name,
@@ -85,10 +91,7 @@ export const transformWorkOrderForPDF = (workOrder: WorkOrderRecord): WorkOrder 
     customerSignerName: '',
     signatureMetadata: {
       timestamp: workOrder.signature_timestamp ? formatTimestampForSignature(workOrder.signature_timestamp) : undefined,
-      coordinates: workOrder.signature_coordinates ? {
-        latitude: (workOrder.signature_coordinates as any).x || 0,
-        longitude: (workOrder.signature_coordinates as any).y || 0
-      } : undefined,
+      coordinates: coordinates,
       address: workOrder.signature_address || undefined
     }
   };

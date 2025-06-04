@@ -670,6 +670,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         distance: roundedDistance,
         technician_signature: finalWorkOrder.technicianSignature,
         customer_signature: finalWorkOrder.customerSignature,
+        customer_signer_name: finalWorkOrder.customerSignerName,
         signature_timestamp: isoSignatureTimestamp,
         signature_coordinates: signatureCoordinates,
         signature_address: finalWorkOrder.signatureMetadata?.address || (isEditMode ? initialData?.signature_address : null),

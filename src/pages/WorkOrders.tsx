@@ -98,7 +98,7 @@ const WorkOrders: React.FC = () => {
           <Badge variant="secondary">
             {workOrders?.length || 0} naloga
           </Badge>
-          <Button onClick={() => navigate('/')}>
+          <Button onClick={() => navigate('/new-work-order')}>
             <Plus className="mr-2 h-4 w-4" />
             Novi nalog
           </Button>

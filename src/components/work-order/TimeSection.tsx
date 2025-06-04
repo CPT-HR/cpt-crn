@@ -43,8 +43,10 @@ const TimeSection: React.FC<TimeSectionProps> = ({
             <Input 
               id="arrivalTime"
               type="time"
+              step="60"
               value={arrivalTime}
               onChange={(e) => onTimeChange('arrivalTime', e.target.value)}
+              placeholder="HH:mm"
               required 
             />
           </div>
@@ -55,8 +57,10 @@ const TimeSection: React.FC<TimeSectionProps> = ({
             <Input 
               id="completionTime"
               type="time"
+              step="60"
               value={completionTime}
               onChange={(e) => onTimeChange('completionTime', e.target.value)}
+              placeholder="HH:mm"
               required 
             />
           </div>

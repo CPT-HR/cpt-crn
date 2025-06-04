@@ -10,15 +10,8 @@ const Home: React.FC = () => {
 
   const menuItems = [
     {
-      title: 'Novi radni nalog',
-      description: 'Upravljanje radnim nalozima',
-      icon: FileText,
-      path: '/new-work-order',
-      roles: ['admin', 'lead', 'technician']
-    },
-    {
       title: 'Radni nalozi',
-      description: 'Pregled svih radnih naloga',
+      description: 'Upravljanje radnim nalozima',
       icon: List,
       path: '/work-orders',
       roles: ['admin', 'lead', 'technician']

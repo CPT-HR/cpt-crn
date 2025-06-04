@@ -22,7 +22,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <div className="container flex items-center justify-between h-16">
           <div className="flex items-center gap-8">
             <Link to="/" className="font-bold text-xl text-brand">
-              Radni nalozi
+              CPT - CRN
             </Link>
             
             <nav className="hidden md:flex items-center gap-6">

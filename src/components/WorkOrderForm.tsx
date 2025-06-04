@@ -9,6 +9,7 @@ import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2 } from "lucide-react";
+import { useNavigate } from 'react-router-dom';
 import ClientInfoSection from './work-order/ClientInfoSection';
 import CustomerInfoSection from './work-order/CustomerInfoSection';
 import WorkDetailsSection from './work-order/WorkDetailsSection';
@@ -86,6 +87,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   const { user } = useAuth();
   const { data: employeeProfile } = useEmployeeProfile();
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isCustomerSignatureModalOpen, setIsCustomerSignatureModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companyLocations, setCompanyLocations] = useState<any[]>([]);
@@ -780,46 +782,9 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         description: `Radni nalog ${orderNumber} je uspješno ${isEditMode ? 'ažuriran' : 'kreiran'}`,
       });
       
-      if (!isEditMode) {
-        // Reset form only for new work orders
-        setWorkOrder({
-          id: '',
-          clientCompanyName: '',
-          clientStreetAddress: '',
-          clientCity: 'Zagreb',
-          clientCountry: 'Hrvatska',
-          clientOib: '',
-          clientFirstName: '',
-          clientLastName: '',
-          clientMobile: '',
-          clientEmail: '',
-          orderForCustomer: false,
-          customerCompanyName: '',
-          customerStreetAddress: '',
-          customerCity: 'Zagreb',
-          customerCountry: 'Hrvatska',
-          customerOib: '',
-          customerFirstName: '',
-          customerLastName: '',
-          customerMobile: '',
-          customerEmail: '',
-          description: [{ id: '1', text: '' }],
-          foundCondition: [{ id: '1', text: '' }],
-          performedWork: [{ id: '1', text: '' }],
-          technicianComment: [{ id: '1', text: '' }],
-          materials: [{ id: '1', name: '', quantity: '', unit: '' }],
-          date: new Date(),
-          arrivalTime: '',
-          completionTime: '',
-          calculatedHours: '0h00min',
-          fieldTrip: false,
-          distance: '',
-          technicianSignature: user?.signature || '',
-          customerSignature: '',
-          customerSignerName: '',
-          technicianName: user?.name || '',
-        });
-      }
+      // Navigate to work orders list after successful save/update
+      navigate('/work-orders');
+      
     } catch (error: any) {
       console.error('Error submitting form:', error);
       

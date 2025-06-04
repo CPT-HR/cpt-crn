@@ -723,20 +723,14 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       return;
     }
     
-    if (!workOrder.customerSignature) {
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Potreban je potpis korisnika",
-      });
-      return;
-    }
-
-    if (!workOrder.customerSignerName) {
+    // Remove customer signature validation for new work orders
+    // Customer signature is optional during creation but will determine status
+    
+    if (!workOrder.customerSignerName && workOrder.customerSignature) {
       toast({
         variant: "destructive", 
         title: "Greška", 
-        description: "Potrebno je ime i prezime potpisnika",
+        description: "Potrebno je ime i prezime potpisnika kad je potpis dodan",
       });
       return;
     }
@@ -938,7 +932,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
         <div className="flex justify-end gap-4">
           <Button 
             type="submit" 
-            disabled={isSubmitting || !workOrder.customerSignature || !user?.signature || !workOrder.customerSignerName}
+            disabled={isSubmitting || !user?.signature || (workOrder.customerSignature && !workOrder.customerSignerName)}
             className="relative"
           >
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

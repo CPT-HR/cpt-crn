@@ -12,11 +12,11 @@ export const getEmployeeFullName = (employee: Employee | { first_name: string; l
 // Work order status logic - based on customer signature
 export const getWorkOrderStatus = (workOrder: { customer_signature: string | null }): { 
   label: string; 
-  variant: "default" | "secondary" 
+  variant: "default" | "accent" 
 } => {
   return workOrder.customer_signature 
     ? { label: "Završen", variant: "default" }
-    : { label: "U tijeku", variant: "secondary" };
+    : { label: "U tijeku", variant: "accent" };
 };
 
 // Permission check for editing work orders

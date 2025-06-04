@@ -24,7 +24,7 @@ export const parseCoordinatesFromPoint = (pointString: string | null): { latitud
   }
 };
 
-// Format timestamp for signature metadata display (with seconds for precision)
+// Format timestamp for signature metadata display
 export const formatTimestampForSignature = (timestamp: string | Date): string => {
   const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
   
@@ -80,21 +80,4 @@ export const parseDisplayToMinutes = (displayTime: string): number => {
   const minutes = parseInt(match[2]);
   
   return hours * 60 + minutes;
-};
-
-// Ensure time values are in HH:mm format (without seconds)
-export const formatTimeToHHMM = (timeString: string): string => {
-  if (!timeString) return '';
-  
-  // If time already in HH:mm format, return as is
-  if (/^\d{2}:\d{2}$/.test(timeString)) {
-    return timeString;
-  }
-  
-  // If time has seconds (HH:mm:ss), remove them
-  if (/^\d{2}:\d{2}:\d{2}$/.test(timeString)) {
-    return timeString.substring(0, 5);
-  }
-  
-  return timeString;
 };

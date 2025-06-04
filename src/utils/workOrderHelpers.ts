@@ -9,12 +9,12 @@ export const getEmployeeFullName = (employee: Employee | { first_name: string; l
   return `${employee.first_name} ${employee.last_name}`;
 };
 
-// Work order status logic
-export const getWorkOrderStatus = (workOrder: { technician_signature: string | null }): { 
+// Work order status logic - based on customer signature
+export const getWorkOrderStatus = (workOrder: { customer_signature: string | null }): { 
   label: string; 
   variant: "default" | "secondary" 
 } => {
-  return workOrder.technician_signature 
+  return workOrder.customer_signature 
     ? { label: "Završen", variant: "default" }
     : { label: "U tijeku", variant: "secondary" };
 };

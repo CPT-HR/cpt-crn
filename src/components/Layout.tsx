@@ -57,7 +57,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       
       <footer className="bg-white border-t py-4">
         <div className="container text-center text-sm text-muted-foreground">
-          &copy; {new Date().getFullYear()} Sustav za radne naloge
+          &copy; {new Date().getFullYear()} Centar pametne tehnologije d.o.o.
         </div>
       </footer>
     </div>

@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
@@ -10,7 +11,7 @@ import { format } from 'date-fns';
 import { hr } from 'date-fns/locale';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEmployeeProfile } from '@/hooks/useEmployeeProfile';
-import { formatMinutesToDisplay, formatTimestampForSignature } from '@/utils/workOrderParsers';
+import { formatMinutesToDisplay, parseSignatureMetadata } from '@/utils/workOrderParsers';
 import { generatePDF } from '@/utils/pdfGenerator';
 import { toast } from '@/components/ui/sonner';
 import { 
@@ -86,6 +87,13 @@ const WorkOrderView: React.FC = () => {
 
   const canEdit = canUserEditWorkOrder(user?.role, workOrder.employee_profile_id, employeeProfile?.id);
   const status = getWorkOrderStatus(workOrder);
+
+  // Parse signature metadata using the same function as in SignaturesSection
+  const signatureMetadata = parseSignatureMetadata(
+    workOrder.signature_timestamp,
+    workOrder.signature_coordinates,
+    workOrder.signature_address
+  );
 
   return (
     <div className="container py-6 space-y-6">
@@ -275,21 +283,19 @@ const WorkOrderView: React.FC = () => {
                     alt="Potpis klijenta" 
                     className="max-h-32 border rounded"
                   />
-                  {(workOrder.signature_timestamp || workOrder.signature_coordinates || workOrder.signature_address) && (
-                    <div className="text-xs text-gray-500 space-y-1">
-                      {workOrder.signature_timestamp && (
-                        <p className="font-medium">
-                          Datum i vrijeme: {formatTimestampForSignature(workOrder.signature_timestamp)}
+                  {signatureMetadata && (
+                    <div className="text-[10px] text-gray-500 mt-2 text-center w-full space-y-1">
+                      <p className="font-medium">
+                        Datum i vrijeme: {signatureMetadata.timestamp}
+                      </p>
+                      {signatureMetadata.coordinates && (
+                        <p className="break-all">
+                          Koordinate: {signatureMetadata.coordinates.latitude.toFixed(6)}, {signatureMetadata.coordinates.longitude.toFixed(6)}
                         </p>
                       )}
-                      {workOrder.signature_coordinates && typeof workOrder.signature_coordinates === 'object' && workOrder.signature_coordinates !== null && (
-                        <p>
-                          Koordinate: {(workOrder.signature_coordinates as any).x?.toFixed(6)}, {(workOrder.signature_coordinates as any).y?.toFixed(6)}
-                        </p>
-                      )}
-                      {workOrder.signature_address && (
-                        <p>
-                          Lokacija: {workOrder.signature_address}
+                      {signatureMetadata.address && (
+                        <p className="break-words text-center max-w-full">
+                          Lokacija: {signatureMetadata.address}
                         </p>
                       )}
                     </div>

@@ -3,6 +3,7 @@ import { Link, useLocation, Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Settings } from "lucide-react";
 import { useAuth } from '@/contexts/AuthContext';
+import { useScrollToTop } from '@/hooks/useScrollToTop';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -11,6 +12,9 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
+  
+  // Apply scroll to top on route changes
+  useScrollToTop();
   
   if (!user) {
     return <Navigate to="/login" replace />;

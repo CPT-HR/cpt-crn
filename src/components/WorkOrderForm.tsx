@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -468,6 +469,12 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   }, [workOrder.fieldTrip, workOrder.clientStreetAddress, workOrder.clientCity, workOrder.clientCountry, workOrder.customerStreetAddress, workOrder.customerCity, workOrder.customerCountry, workOrder.orderForCustomer, companyLocations, globalSettings]);
 
   useEffect(() => {
+    // Skip automatic name generation when editing an existing work order
+    // This prevents overwriting the saved customer_signer_name from the database
+    if (isEditMode) {
+      return;
+    }
+    
     const autoSignerName = getAutoSignerName();
     if (autoSignerName && autoSignerName !== workOrder.customerSignerName) {
       setWorkOrder(prev => ({ ...prev, customerSignerName: autoSignerName }));
@@ -477,7 +484,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     workOrder.clientFirstName,
     workOrder.clientLastName,
     workOrder.customerFirstName,
-    workOrder.customerLastName
+    workOrder.customerLastName,
+    isEditMode
   ]);
 
   // Funkcija za dobivanje sljedećeg broja radnog naloga koristeći Supabase RPC

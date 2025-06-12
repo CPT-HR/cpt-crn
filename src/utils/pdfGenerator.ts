@@ -170,7 +170,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFontSize(10);
       pdf.setTextColor(60, 60, 60);
 
-      const dateTimeHeight = 15; // Increased to account for separator line
+      const dateTimeHeight = 13; // Adjusted to match upper line spacing
       smartPageBreak(dateTimeHeight, drawSmallHeader);
       
       const formattedArrivalTime = formatTimeToHHMM(workOrder.arrivalTime);
@@ -184,12 +184,12 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y
       );
       
-      // Add separator line below date/time section
-      y += 5;
+      // Add separator line below date/time section with same spacing as upper line
+      y += 3; // Same spacing as upper line
       pdf.setLineWidth(0.35);
       pdf.setDrawColor(120, 120, 120);
       pdf.line(margin, y, pageWidth - margin, y);
-      y += 3;
+      y += 3; // Same spacing as upper line
       
       pdf.setTextColor(32, 32, 32);
 
@@ -200,7 +200,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         height += 6 * 4; // 6 lines with reduced spacing
         height += 6; // Bottom margin
         height += 3; // Line
-        height += 15; // Date/time section with separator
+        height += 13; // Date/time section with separator - adjusted
         return height;
       }
 

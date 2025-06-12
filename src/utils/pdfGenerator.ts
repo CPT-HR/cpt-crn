@@ -96,8 +96,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         
         // Add logo on the left side with preserved aspect ratio
         const logoPath = "/Pametna-Tehnologija-logo.png";
-        const logoHeight = 15; // Height to match company data (3 lines * 5mm)
-        const logoWidth = logoHeight * (4/3); // Assuming logo aspect ratio is 4:3, adjust if needed
+        const logoHeight = 20; // Height to match company data (3 lines * 5mm)
+        const logoWidth = logoHeight * (357142857/100000000); // Assuming logo aspect ratio is 4:3, adjust if needed
         const logoX = margin;
         const logoY = margin;
         

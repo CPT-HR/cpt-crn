@@ -38,7 +38,9 @@ const WorkDetailsSection: React.FC<WorkDetailsSectionProps> = ({
     required: boolean = false
   ) => (
     <div className="space-y-4">
-      <Label className="text-base font-medium">{title}</Label>
+      <Label className="text-base font-medium">
+        {title} {required && <span className="text-red-500">*</span>}
+      </Label>
       {data[section].map((item, index) => (
         <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
           <div className="col-span-10 space-y-2">

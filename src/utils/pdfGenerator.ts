@@ -93,7 +93,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       function drawFirstHeader() {
         pdf.setFont("Manrope-Regular", "normal");
-        pdf.setFontSize(11);
+        pdf.setFontSize(9.3);
         pdf.text("Centar pametne tehnologije d.o.o.", margin, margin);
         pdf.text("Kovači 78c, Velika Mlaka", margin, margin + 5);
         pdf.text("OIB: 75343882245", margin, margin + 10);

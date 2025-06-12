@@ -19,6 +19,10 @@ const MaterialsSection: React.FC<MaterialsSectionProps> = ({
   onAddMaterial, 
   onRemoveMaterial 
 }) => {
+  const handleAddMaterial = () => {
+    onAddMaterial();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -32,7 +36,8 @@ const MaterialsSection: React.FC<MaterialsSectionProps> = ({
               <Input 
                 id={`material-name-${material.id}`}
                 value={material.name} 
-                onChange={(e) => onMaterialChange(material.id, 'name', e.target.value)} 
+                onChange={(e) => onMaterialChange(material.id, 'name', e.target.value)}
+                placeholder="Bez potrošenog materijala"
               />
             </div>
             <div className="col-span-2 space-y-2">
@@ -44,6 +49,7 @@ const MaterialsSection: React.FC<MaterialsSectionProps> = ({
                 type="number" 
                 min="0" 
                 step="0.01"
+                placeholder="1"
               />
             </div>
             <div className="col-span-2 space-y-2">
@@ -69,7 +75,7 @@ const MaterialsSection: React.FC<MaterialsSectionProps> = ({
             </div>
           </div>
         ))}
-        <Button type="button" onClick={onAddMaterial} variant="outline" className="w-full">
+        <Button type="button" onClick={handleAddMaterial} variant="outline" className="w-full">
           Dodaj stavku
         </Button>
       </CardContent>

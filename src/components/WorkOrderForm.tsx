@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -570,7 +569,12 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       ...prev,
       materials: [
         ...prev.materials,
-        { id: newId, name: '', quantity: '', unit: '' }
+        { 
+          id: newId, 
+          name: 'Bez potrošenog materijala', 
+          quantity: '1', 
+          unit: 'kom' 
+        }
       ]
     }));
   };

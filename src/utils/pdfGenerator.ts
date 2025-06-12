@@ -62,6 +62,11 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         return height;
       }
 
+      // Helper function to check if section has content
+      function hasContent(items: WorkItem[]): boolean {
+        return items.length > 0 && items.some(item => item.text.trim().length > 0);
+      }
+
       function drawFirstHeader() {
         pdf.setFont("Manrope-Regular", "normal");
         pdf.setFontSize(11);
@@ -235,10 +240,19 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         y += 4; // Reduced bottom spacing
       }
 
+      // Mandatory sections - always display
       section("OPIS KVARA / PROBLEMA", workOrder.description);
-      section("ZATEČENO STANJE", workOrder.foundCondition);
+      
+      // Conditional sections - only display if they have content
+      if (hasContent(workOrder.foundCondition)) {
+        section("ZATEČENO STANJE", workOrder.foundCondition);
+      }
+      
       section("IZVRŠENI RADOVI", workOrder.performedWork);
-      section("KOMENTAR TEHNIČARA", workOrder.technicianComment);
+      
+      if (hasContent(workOrder.technicianComment)) {
+        section("KOMENTAR TEHNIČARA", workOrder.technicianComment);
+      }
 
       // Materials section with optimized table (keep numbering here)
       let matBlockHeight = calculateSectionHeight("UTROŠENI MATERIJAL", [], true);

@@ -487,10 +487,25 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     isEditMode
   ]);
 
+  // Funkcija za generiranje inicijala iz imena i prezimena
+  const generateInitials = (firstName: string, lastName: string): string => {
+    const firstInitial = firstName?.charAt(0)?.toUpperCase() || '';
+    const lastInitial = lastName?.charAt(0)?.toUpperCase() || '';
+    return firstInitial + lastInitial;
+  };
+
   // Funkcija za dobivanje sljedećeg broja radnog naloga koristeći Supabase RPC
-  const getNextOrderNumber = async (userInitials: string): Promise<string> => {
+  const getNextOrderNumber = async (): Promise<string> => {
     try {
-      console.log('Getting next order number for user initials:', userInitials);
+      if (!employeeProfile?.first_name || !employeeProfile?.last_name) {
+        throw new Error("Employee profile data nisu pronađeni");
+      }
+
+      const userInitials = generateInitials(employeeProfile.first_name, employeeProfile.last_name);
+      console.log('Generated initials from employee profile:', userInitials, {
+        firstName: employeeProfile.first_name,
+        lastName: employeeProfile.last_name
+      });
       
       const { data, error } = await supabase.rpc('get_next_order_number', {
         user_initials: userInitials
@@ -761,10 +776,10 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       let orderNumber = workOrder.id;
       
       if (!isEditMode) {
-        if (!user.initials) {
-          throw new Error("User initials nisu pronađeni");
+        if (!employeeProfile.first_name || !employeeProfile.last_name) {
+          throw new Error("Employee profile podaci nisu pronađeni");
         }
-        orderNumber = await getNextOrderNumber(user.initials);
+        orderNumber = await getNextOrderNumber();
         console.log('Generated new order number:', orderNumber);
       }
       

@@ -93,6 +93,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   const [companyLocations, setCompanyLocations] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [useMockData, setUseMockData] = useState(false);
+  const [showValidation, setShowValidation] = useState(false);
   const isEditMode = !!initialData;
   
   // Helper function to parse text fields into WorkItem arrays
@@ -306,6 +307,30 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     fieldTrip: true,
     distance: '15',
     customerSignerName: 'Ivo Perić'
+  };
+
+  // Validation function to check required fields
+  const validateRequiredFields = () => {
+    const requiredFields = [
+      workOrder.clientCompanyName,
+      workOrder.clientStreetAddress,
+      workOrder.clientCity,
+      workOrder.clientOib,
+      workOrder.clientFirstName,
+      workOrder.clientLastName,
+      workOrder.clientMobile,
+      workOrder.clientEmail
+    ];
+
+    // Check if description has content
+    const hasDescription = workOrder.description.some(item => item.text.trim().length > 0);
+    
+    // Check if performed work has content
+    const hasPerformedWork = workOrder.performedWork.some(item => item.text.trim().length > 0);
+
+    const allFieldsFilled = requiredFields.every(field => field.trim().length > 0);
+    
+    return allFieldsFilled && hasDescription && hasPerformedWork;
   };
 
   // Load company locations and global settings
@@ -741,6 +766,17 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       });
       return;
     }
+
+    // Validate required fields
+    if (!validateRequiredFields()) {
+      setShowValidation(true);
+      toast({
+        variant: "destructive",
+        title: "Greška",
+        description: "Molimo ispunite sva obvezna polja označena crvenim borderom",
+      });
+      return;
+    }
     
     // Remove customer signature validation for new work orders
     // Customer signature is optional during creation but will determine status
@@ -880,6 +916,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
           }}
           onChange={handleClientInfoChange}
           countries={countries}
+          showValidation={showValidation}
         />
 
         {workOrder.orderForCustomer && (
@@ -910,6 +947,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
           onWorkItemChange={handleWorkItemChange}
           onAddWorkItem={addWorkItem}
           onRemoveWorkItem={removeWorkItem}
+          showValidation={showValidation}
         />
 
         <MaterialsSection

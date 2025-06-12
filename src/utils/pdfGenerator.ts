@@ -75,7 +75,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text(
           `RADNI NALOG  Broj: ${workOrder.id}`,
           pageWidth / 2,
-          margin + 25, // Reduced from 32
+          margin + 32, // Reduced from 32
           { align: "center" }
         );
       }

@@ -34,15 +34,21 @@ const WorkDetailsSection: React.FC<WorkDetailsSectionProps> = ({
   onRemoveWorkItem,
   showValidation = false
 }) => {
-  const getFieldClassName = (value: string, isRequired: boolean = false) => {
-    return cn(
-      "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
-      showValidation && isRequired && !value.trim() && "border-red-500 border-2"
-    );
-  };
-
   const hasContent = (items: WorkItem[]): boolean => {
     return items.some(item => item.text.trim().length > 0);
+  };
+
+  const getFieldClassName = (value: string, isRequired: boolean = false, section?: keyof WorkDetailsData) => {
+    const baseClassName = "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
+    
+    if (showValidation && isRequired && section) {
+      const sectionHasContent = hasContent(data[section]);
+      if (!sectionHasContent) {
+        return cn(baseClassName, "border-red-500 border-2");
+      }
+    }
+    
+    return cn(baseClassName, "border-input");
   };
 
   const renderWorkItemsSection = (
@@ -61,7 +67,7 @@ const WorkDetailsSection: React.FC<WorkDetailsSectionProps> = ({
               onChange={(e) => onWorkItemChange(section, item.id, e.target.value)} 
               placeholder={placeholder}
               required={required && index === 0}
-              className={getFieldClassName(item.text, required && index === 0 && !hasContent(data[section]))}
+              className={getFieldClassName(item.text, required, section)}
             />
           </div>
           <div className="col-span-2">

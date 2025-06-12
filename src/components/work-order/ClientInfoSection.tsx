@@ -57,7 +57,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
               value={data.clientCompanyName} 
               onChange={(e) => onChange('clientCompanyName', e.target.value)} 
               required 
-              className={getFieldClassName(data.clientCompanyName)}
+              className={getFieldClassName(data.clientCompanyName, true)}
             />
           </div>
           <div className="space-y-2">
@@ -67,7 +67,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
               value={data.clientOib} 
               onChange={(e) => onChange('clientOib', e.target.value)} 
               required 
-              className={getFieldClassName(data.clientOib)}
+              className={getFieldClassName(data.clientOib, true)}
             />
           </div>
         </div>
@@ -83,7 +83,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
                 onChange={(e) => onChange('clientStreetAddress', e.target.value)} 
                 placeholder="Ilica 1"
                 required 
-                className={getFieldClassName(data.clientStreetAddress)}
+                className={getFieldClassName(data.clientStreetAddress, true)}
               />
             </div>
             <div className="space-y-2">
@@ -94,7 +94,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
                 onChange={(e) => onChange('clientCity', e.target.value)} 
                 placeholder="Zagreb"
                 required 
-                className={getFieldClassName(data.clientCity)}
+                className={getFieldClassName(data.clientCity, true)}
               />
             </div>
             <div className="space-y-2">
@@ -123,7 +123,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
               value={data.clientFirstName} 
               onChange={(e) => onChange('clientFirstName', e.target.value)} 
               required 
-              className={getFieldClassName(data.clientFirstName)}
+              className={getFieldClassName(data.clientFirstName, true)}
             />
           </div>
           <div className="space-y-2">
@@ -133,7 +133,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
               value={data.clientLastName} 
               onChange={(e) => onChange('clientLastName', e.target.value)} 
               required 
-              className={getFieldClassName(data.clientLastName)}
+              className={getFieldClassName(data.clientLastName, true)}
             />
           </div>
         </div>
@@ -145,7 +145,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
               value={data.clientMobile} 
               onChange={(e) => onChange('clientMobile', e.target.value)} 
               required 
-              className={getFieldClassName(data.clientMobile)}
+              className={getFieldClassName(data.clientMobile, true)}
             />
           </div>
           <div className="space-y-2">
@@ -156,7 +156,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({
               value={data.clientEmail} 
               onChange={(e) => onChange('clientEmail', e.target.value)} 
               required 
-              className={getFieldClassName(data.clientEmail)}
+              className={getFieldClassName(data.clientEmail, true)}
             />
           </div>
         </div>

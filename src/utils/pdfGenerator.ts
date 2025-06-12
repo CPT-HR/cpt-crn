@@ -1,4 +1,3 @@
-
 import { jsPDF } from "jspdf";
 import "../../src/fonts/Manrope-Regular-normal.js";
 import { WorkOrder, Material, WorkItem } from '@/types/workOrder';
@@ -50,8 +49,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           if (items.length > 0 && items.some(x => x.text.trim())) {
             items.forEach(item => {
               if (item.text.trim()) {
-                const itemText = `${items.indexOf(item) + 1}. ${item.text}`;
-                height += getTextHeight(itemText, 9.2, pageWidth - 2 * margin - 5) + 1; // Reduced spacing
+                // Removed numbering from height calculation
+                height += getTextHeight(item.text, 9.2, pageWidth - 2 * margin - 5) + 1; // Reduced spacing
               }
             });
           } else {
@@ -171,7 +170,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFontSize(10);
       pdf.setTextColor(60, 60, 60);
 
-      const dateTimeHeight = 12;
+      const dateTimeHeight = 15; // Increased to account for separator line
       smartPageBreak(dateTimeHeight, drawSmallHeader);
       
       const formattedArrivalTime = formatTimeToHHMM(workOrder.arrivalTime);
@@ -184,16 +183,24 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         margin,
         y
       );
+      
+      // Add separator line below date/time section
+      y += 5;
+      pdf.setLineWidth(0.35);
+      pdf.setDrawColor(120, 120, 120);
+      pdf.line(margin, y, pageWidth - margin, y);
+      y += 3;
+      
       pdf.setTextColor(32, 32, 32);
 
-      y += 8; // Reduced from 11
+      y += 5; // Reduced from 11
 
       function calculateClientInfoHeight(): number {
         let height = 12; // Title
         height += 6 * 4; // 6 lines with reduced spacing
         height += 6; // Bottom margin
         height += 3; // Line
-        height += 12; // Date/time section
+        height += 15; // Date/time section with separator
         return height;
       }
 
@@ -209,7 +216,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         if (arr.length > 0 && arr.some(x => x.text.trim())) {
           arr.forEach((item, idx) => {
             if (item.text.trim()) {
-              const itemText = `${idx + 1}. ${item.text}`;
+              // Removed automatic numbering - just use the text directly
+              const itemText = item.text;
               const lines = pdf.splitTextToSize(itemText, pageWidth - 2 * margin - 5);
               
               // Check if we need a page break for this item
@@ -232,7 +240,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       section("IZVRŠENI RADOVI", workOrder.performedWork);
       section("KOMENTAR TEHNIČARA", workOrder.technicianComment);
 
-      // Materials section with optimized table
+      // Materials section with optimized table (keep numbering here)
       let matBlockHeight = calculateSectionHeight("UTROŠENI MATERIJAL", [], true);
       if (workOrder.materials && workOrder.materials.length > 0) {
         matBlockHeight += workOrder.materials.length * 4;
@@ -256,7 +264,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       if (workOrder.materials && workOrder.materials.length > 0) {
         workOrder.materials.forEach((mat, idx) => {
           smartPageBreak(5, drawSmallHeader);
-          pdf.text(`${idx + 1}.`, margin + 2, y);
+          pdf.text(`${idx + 1}.`, margin + 2, y); // Keep numbering for materials
           
           // Handle long material names with text wrapping
           const materialName = mat.name;

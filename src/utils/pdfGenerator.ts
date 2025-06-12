@@ -5,7 +5,7 @@ import { WorkOrder, Material, WorkItem } from '@/types/workOrder';
 import { formatTimeToHHMM } from './workOrderParsers';
 
 export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
       // Enable compression for smaller file size
       const pdf = new jsPDF({

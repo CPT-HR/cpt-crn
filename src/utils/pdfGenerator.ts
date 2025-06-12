@@ -36,7 +36,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         let height = 0;
         
         // Title height with spacing above and below
-        height += getTextHeight(title, 12, pageWidth - 2 * margin) + 6; // 4mm above + 2mm below title (reduced from 8)
+        height += getTextHeight(title, 12, pageWidth - 2 * margin) + 4; // 4mm above + 2mm below title (reduced from 8)
         
         if (includeTable) {
           // Table header
@@ -67,7 +67,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         let height = 0;
         
         // Title with spacing
-        height += getTextHeight("UTROŠENI MATERIJAL", 12, pageWidth - 2 * margin) + 6; // reduced from 8
+        height += getTextHeight("UTROŠENI MATERIJAL", 12, pageWidth - 2 * margin) + 4; // reduced from 8
         
         // Table header
         height += 6;
@@ -241,7 +241,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         
         pdf.setFontSize(12);
         pdf.text(title, margin, y);
-        y += 6; // Reduced from 8 to 6
+        y += 4; // Reduced from 8 to 6
         pdf.setFontSize(9.2);
         
         if (arr.length > 0 && arr.some(x => x.text.trim())) {
@@ -284,7 +284,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       smartPageBreak(matBlockHeight, drawSmallHeader);
       pdf.setFontSize(12);
       pdf.text("UTROŠENI MATERIJAL", margin, y);
-      y += 6; // Reduced from 8 to 6
+      y += 4; // Reduced from 8 to 6
       pdf.setFontSize(9.2);
       pdf.setFillColor(230, 230, 230);
       pdf.rect(margin, y - 3, pageWidth - 2 * margin, 5.5, "F");

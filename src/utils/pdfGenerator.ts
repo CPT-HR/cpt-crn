@@ -17,7 +17,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.setFont("Manrope-Regular", "normal");
       const pageWidth = 210;
       const pageHeight = 297;
-      const margin = 15; // Reduced from 18
+      const margin = 15;
       const footerMargin = 15;
       const usableHeight = pageHeight - margin - footerMargin - 5;
       let y = margin;
@@ -35,30 +35,54 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       function calculateSectionHeight(title: string, items: WorkItem[], includeTable = false): number {
         let height = 0;
         
-        // Title height
-        height += getTextHeight(title, 12, pageWidth - 2 * margin) + 3; // Reduced spacing
+        // Title height with spacing above and below
+        height += getTextHeight(title, 12, pageWidth - 2 * margin) + 8; // 4mm above + 4mm below title
         
         if (includeTable) {
           // Table header
           height += 6;
-          // Table rows
-          height += Math.max(1, items.length) * 4; // Reduced row height
+          // Table rows - more accurate calculation
+          const materialCount = Math.max(1, items.length);
+          height += materialCount * 4;
           height += 8; // Bottom spacing
         } else {
           // Regular items
           if (items.length > 0 && items.some(x => x.text.trim())) {
             items.forEach(item => {
               if (item.text.trim()) {
-                // Removed numbering from height calculation
-                height += getTextHeight(item.text, 9.2, pageWidth - 2 * margin - 5) + 1; // Reduced spacing
+                height += getTextHeight(item.text, 9.2, pageWidth - 2 * margin - 5) + 1;
               }
             });
           } else {
             height += getTextHeight("Nije uneseno.", 9.2, pageWidth - 2 * margin) + 1;
           }
-          height += 4; // Bottom spacing - reduced from 7.3
+          height += 8; // Bottom spacing between sections - increased from 4
         }
         
+        return height;
+      }
+
+      // Special function to calculate materials table height more accurately
+      function calculateMaterialsTableHeight(materials: Material[]): number {
+        let height = 0;
+        
+        // Title with spacing
+        height += getTextHeight("UTROŠENI MATERIJAL", 12, pageWidth - 2 * margin) + 8;
+        
+        // Table header
+        height += 6;
+        
+        // Table rows - account for text wrapping in material names
+        if (materials && materials.length > 0) {
+          materials.forEach(material => {
+            const nameHeight = getTextHeight(material.name, 9.2, pageWidth - margin - 65);
+            height += Math.max(4, nameHeight + 1);
+          });
+        } else {
+          height += 4; // "Nije uneseno" row
+        }
+        
+        height += 8; // Bottom spacing
         return height;
       }
 
@@ -79,7 +103,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text(
           `RADNI NALOG  Broj: ${workOrder.id}`,
           pageWidth / 2,
-          margin + 25, // Reduced from 32
+          margin + 25,
           { align: "center" }
         );
       }
@@ -118,9 +142,11 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       }
 
       function smartPageBreak(nextBlockHeight: number, headerFnc?: () => void) {
-        if (y + nextBlockHeight > usableHeight) {
+        // Reduced buffer for more accurate page breaks
+        const buffer = 5; // Reduced from default
+        if (y + nextBlockHeight + buffer > usableHeight) {
           pdf.addPage();
-          y = margin + (headerFnc === drawSmallHeader ? 20 : 24); // Reduced header space
+          y = margin + (headerFnc === drawSmallHeader ? 20 : 24);
           pageNumber++;
           headerFnc ? headerFnc() : drawSmallHeader();
         }
@@ -128,7 +154,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       // Start
       drawFirstHeader();
-      y += 35; // Reduced from 46
+      y += 35;
 
       // Client/Customer info section
       const clientInfoHeight = calculateClientInfoHeight();
@@ -140,7 +166,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       if (workOrder.orderForCustomer) {
         pdf.text("PODACI O KORISNIKU", pageWidth / 2 + 2, y);
       }
-      y += 4; // Reduced spacing
+      y += 8;
       pdf.setFontSize(9.3);
 
       let yL = y, yR = y;
@@ -149,7 +175,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       
       pdf.text(`Ime tvrtke: ${workOrder.clientCompanyName}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`Ime tvrtke: ${workOrder.customerCompanyName}`, colR, yR);
-      yL += 4; yR += 4; // Reduced from 5
+      yL += 4; yR += 4;
       pdf.text(`Adresa: ${workOrder.clientCompanyAddress}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`Adresa: ${workOrder.customerCompanyAddress}`, colR, yR);
       yL += 4; yR += 4;
@@ -165,47 +191,47 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       pdf.text(`Email: ${workOrder.clientEmail}`, colL, yL);
       if (workOrder.orderForCustomer) pdf.text(`Email: ${workOrder.customerEmail}`, colR, yR);
 
-      y = Math.max(yL, yR) + 6; // Reduced from 10
+      y = Math.max(yL, yR) + 6;
 
       pdf.setLineWidth(0.35);
       pdf.setDrawColor(120, 120, 120);
       pdf.line(margin, y, pageWidth - margin, y);
-      y += 3; // Reduced from 4
+      y += 3;
 
       pdf.setFontSize(10);
       pdf.setTextColor(60, 60, 60);
 
-      const dateTimeHeight = 13; // Adjusted to match upper line spacing
+      const dateTimeHeight = 13;
       smartPageBreak(dateTimeHeight, drawSmallHeader);
       
       const formattedArrivalTime = formatTimeToHHMM(workOrder.arrivalTime);
       const formattedCompletionTime = formatTimeToHHMM(workOrder.completionTime);
       let datumTekst = `Datum: ${workOrder.date}   |   Vrijeme dolaska: ${formattedArrivalTime}   |   Vrijeme završetka: ${formattedCompletionTime}   |   Obračunsko vrijeme: ${workOrder.calculatedHours}`;
       pdf.text(datumTekst, margin, y);
-      y += 5; // Reduced from 6
+      y += 5;
       pdf.text(
         `Izlazak na teren: ${workOrder.fieldTrip ? "DA" : "NE"}   |   Udaljenost: ${workOrder.distance ? workOrder.distance + " km" : "-"}`,
         margin,
         y
       );
       
-      // Add separator line below date/time section with same spacing as upper line
-      y += 3; // Same spacing as upper line
+      // Add separator line below date/time section
+      y += 3;
       pdf.setLineWidth(0.35);
       pdf.setDrawColor(120, 120, 120);
       pdf.line(margin, y, pageWidth - margin, y);
-      y += 3; // Same spacing as upper line
+      y += 3;
       
       pdf.setTextColor(32, 32, 32);
 
-      y += 5; // Reduced from 11
+      y += 8;
 
       function calculateClientInfoHeight(): number {
-        let height = 12; // Title
-        height += 6 * 4; // 6 lines with reduced spacing
-        height += 6; // Bottom margin
-        height += 3; // Line
-        height += 13; // Date/time section with separator - adjusted
+        let height = 16;
+        height += 6 * 4;
+        height += 6;
+        height += 3;
+        height += 13;
         return height;
       }
 
@@ -215,17 +241,15 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         
         pdf.setFontSize(12);
         pdf.text(title, margin, y);
-        y += 4; // Reduced spacing
+        y += 8;
         pdf.setFontSize(9.2);
         
         if (arr.length > 0 && arr.some(x => x.text.trim())) {
           arr.forEach((item, idx) => {
             if (item.text.trim()) {
-              // Removed automatic numbering - just use the text directly
               const itemText = item.text;
               const lines = pdf.splitTextToSize(itemText, pageWidth - 2 * margin - 5);
               
-              // Check if we need a page break for this item
               const itemHeight = lines.length * 3.5;
               smartPageBreak(itemHeight + 2, drawSmallHeader);
               
@@ -237,7 +261,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           pdf.text("Nije uneseno.", margin, y);
           y += 3.5;
         }
-        y += 4; // Reduced bottom spacing
+        y += 8;
       }
 
       // Mandatory sections - always display
@@ -254,31 +278,28 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         section("KOMENTAR TEHNIČARA", workOrder.technicianComment);
       }
 
-      // Materials section with optimized table (keep numbering here)
-      let matBlockHeight = calculateSectionHeight("UTROŠENI MATERIJAL", [], true);
-      if (workOrder.materials && workOrder.materials.length > 0) {
-        matBlockHeight += workOrder.materials.length * 4;
-      }
+      // Materials section with better height calculation
+      const matBlockHeight = calculateMaterialsTableHeight(workOrder.materials || []);
       
       smartPageBreak(matBlockHeight, drawSmallHeader);
       pdf.setFontSize(12);
       pdf.text("UTROŠENI MATERIJAL", margin, y);
-      y += 4;
+      y += 8;
       pdf.setFontSize(9.2);
       pdf.setFillColor(230, 230, 230);
-      pdf.rect(margin, y - 3, pageWidth - 2 * margin, 5.5, "F"); // Reduced table header height
+      pdf.rect(margin, y - 3, pageWidth - 2 * margin, 5.5, "F");
       pdf.setTextColor(32, 32, 32);
       pdf.text("Rb.", margin + 2, y);
       pdf.text("Naziv materijala", margin + 14, y);
       pdf.text("Količina", pageWidth - margin - 35, y);
       pdf.text("Jedinica", pageWidth - margin - 10, y);
-      y += 5; // Reduced from 6.1
+      y += 5;
       pdf.setTextColor(40, 40, 40);
       
       if (workOrder.materials && workOrder.materials.length > 0) {
         workOrder.materials.forEach((mat, idx) => {
           smartPageBreak(5, drawSmallHeader);
-          pdf.text(`${idx + 1}.`, margin + 2, y); // Keep numbering for materials
+          pdf.text(`${idx + 1}.`, margin + 2, y);
           
           // Handle long material names with text wrapping
           const materialName = mat.name;
@@ -288,16 +309,16 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           
           pdf.text(mat.quantity, pageWidth - margin - 35, y);
           pdf.text(mat.unit, pageWidth - margin - 10, y);
-          y += Math.max(4, nameLines.length * 3.5); // Dynamic height based on text wrapping
+          y += Math.max(4, nameLines.length * 3.5);
         });
       } else {
         pdf.text("Nije uneseno.", margin + 2, y);
         y += 4;
       }
-      y += 8; // Reduced from 13
+      y += 8;
 
       // Signatures section with compression
-      const signatureHeight = 20; // Reduced from 38
+      const signatureHeight = 20;
       smartPageBreak(signatureHeight, drawSmallHeader);
       
       pdf.setFontSize(9.3);
@@ -363,14 +384,13 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         try {
           const compressedSrc = await compressSignature(imgSrc);
           if (compressedSrc) {
-            // Reduced signature dimensions
-            pdf.addImage(compressedSrc, "JPEG", x, y + 2, 35, 12); // Reduced from 40x18
+            pdf.addImage(compressedSrc, "JPEG", x, y + 2, 35, 12);
           }
         } catch (error) {
           console.error('Error adding signature:', error);
         }
         
-        pdf.text(name || "", x, y + 17); // Adjusted position
+        pdf.text(name || "", x, y + 17);
         
         if (meta && metadata) {
           pdf.setFontSize(6.1);

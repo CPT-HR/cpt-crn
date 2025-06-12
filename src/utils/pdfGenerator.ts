@@ -18,8 +18,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 15;
-      // Fixed: Much more space available - footer only needs ~12mm
-      const usableHeight = pageHeight - margin - 12;
+      // Fixed: Increased usable height - footer only needs ~8mm
+      const usableHeight = pageHeight - margin - 8;
       let y = margin;
       let pageNumber = 1;
       let totalPages = 1;
@@ -36,7 +36,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         let height = 0;
         
         // Title height with spacing above and below
-        height += getTextHeight(title, 12, pageWidth - 2 * margin) + 4; // 4mm above + 2mm below title (reduced from 8)
+        height += getTextHeight(title, 12, pageWidth - 2 * margin) + 6; // 4mm above + 2mm below title
         
         if (includeTable) {
           // Table header
@@ -44,7 +44,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           // Table rows - more accurate calculation
           const materialCount = Math.max(1, items.length);
           height += materialCount * 4;
-          height += 8; // Bottom spacing between sections - increased from 4
+          height += 8; // Bottom spacing between sections
         } else {
           // Regular items
           if (items.length > 0 && items.some(x => x.text.trim())) {
@@ -56,7 +56,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           } else {
             height += getTextHeight("Nije uneseno.", 9.2, pageWidth - 2 * margin) + 1;
           }
-          height += 8; // Bottom spacing between sections - increased from 4
+          height += 8; // Bottom spacing between sections
         }
         
         return height;
@@ -67,7 +67,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         let height = 0;
         
         // Title with spacing
-        height += getTextHeight("UTROŠENI MATERIJAL", 12, pageWidth - 2 * margin) + 4; // reduced from 8
+        height += getTextHeight("UTROŠENI MATERIJAL", 12, pageWidth - 2 * margin) + 6;
         
         // Table header
         height += 6;
@@ -82,7 +82,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           height += 4; // "Nije uneseno" row
         }
         
-        height += 8; // Bottom spacing between sections - increased from 4
+        height += 8; // Bottom spacing between sections
         return height;
       }
 
@@ -241,7 +241,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         
         pdf.setFontSize(12);
         pdf.text(title, margin, y);
-        y += 4; // Reduced from 8 to 6
+        y += 6; // Reduced from 8 to 6
         pdf.setFontSize(9.2);
         
         if (arr.length > 0 && arr.some(x => x.text.trim())) {
@@ -261,7 +261,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           pdf.text("Nije uneseno.", margin, y);
           y += 3.5;
         }
-        y += 8; // Bottom spacing between sections - increased from 4
+        y += 8; // Bottom spacing between sections
       }
 
       // Mandatory sections - always display
@@ -284,7 +284,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       smartPageBreak(matBlockHeight, drawSmallHeader);
       pdf.setFontSize(12);
       pdf.text("UTROŠENI MATERIJAL", margin, y);
-      y += 4; // Reduced from 8 to 6
+      y += 6; // Reduced from 8 to 6
       pdf.setFontSize(9.2);
       pdf.setFillColor(230, 230, 230);
       pdf.rect(margin, y - 3, pageWidth - 2 * margin, 5.5, "F");
@@ -315,7 +315,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text("Nije uneseno.", margin + 2, y);
         y += 4;
       }
-      y += 8; // Bottom spacing between sections - increased from 4
+      y += 8; // Bottom spacing between sections
 
       // Signatures section with compression
       const signatureHeight = 20;

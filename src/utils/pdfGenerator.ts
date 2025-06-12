@@ -94,10 +94,10 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       function drawFirstHeader() {
         pdf.setFont("Manrope-Regular", "normal");
         
-        // Add logo on the left side
+        // Add logo on the left side with preserved aspect ratio
         const logoPath = "/Pametna-Tehnologija-logo.png";
-        const logoWidth = 12; // Width in mm
-        const logoHeight = 15; // Height in mm to match company data height (3 lines * 5mm)
+        const logoHeight = 15; // Height to match company data (3 lines * 5mm)
+        const logoWidth = logoHeight * (4/3); // Assuming logo aspect ratio is 4:3, adjust if needed
         const logoX = margin;
         const logoY = margin;
         
@@ -107,8 +107,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           console.warn("Could not load logo:", error);
         }
         
-        // Adjust text position to make room for logo
-        const textStartX = margin + logoWidth + 5; // 5mm spacing after logo
+        // Position company data to the right of logo with proper spacing
+        const textStartX = margin + logoWidth + 8; // 8mm spacing after logo
         
         pdf.setFontSize(9.3);
         pdf.text("Centar pametne tehnologije d.o.o.", textStartX, margin);

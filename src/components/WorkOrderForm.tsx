@@ -311,6 +311,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
 
   // Validation function to check required fields
   const validateRequiredFields = () => {
+    console.log('Validating required fields...');
+    
     const requiredFields = [
       workOrder.clientCompanyName,
       workOrder.clientStreetAddress,
@@ -329,6 +331,13 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     const hasPerformedWork = workOrder.performedWork.some(item => item.text.trim().length > 0);
 
     const allFieldsFilled = requiredFields.every(field => field.trim().length > 0);
+    
+    console.log('Validation results:', { 
+      allFieldsFilled, 
+      hasDescription, 
+      hasPerformedWork,
+      requiredFields: requiredFields.map((field, index) => ({ index, value: field, filled: field.trim().length > 0 }))
+    });
     
     return allFieldsFilled && hasDescription && hasPerformedWork;
   };
@@ -758,6 +767,8 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    console.log('Submit handler called, showValidation before:', showValidation);
+    
     if (!user || !employeeProfile) {
       toast({
         variant: "destructive",
@@ -768,10 +779,15 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     }
 
     // Set validation state FIRST so red borders appear immediately
+    console.log('Setting showValidation to true');
     setShowValidation(true);
+
+    // Small delay to ensure state update is processed
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     // Validate required fields
     if (!validateRequiredFields()) {
+      console.log('Validation failed, showing error');
       toast({
         variant: "destructive",
         title: "Greška",
@@ -781,6 +797,7 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       // Scroll to first error field
       setTimeout(() => {
         const firstErrorField = document.querySelector('.border-red-500');
+        console.log('First error field found:', firstErrorField);
         if (firstErrorField) {
           firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }

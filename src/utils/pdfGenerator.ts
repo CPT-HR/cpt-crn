@@ -93,10 +93,27 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       function drawFirstHeader() {
         pdf.setFont("Manrope-Regular", "normal");
+        
+        // Add logo on the left side
+        const logoPath = "/Pametna-Tehnologija-logo.png";
+        const logoWidth = 12; // Width in mm
+        const logoHeight = 15; // Height in mm to match company data height (3 lines * 5mm)
+        const logoX = margin;
+        const logoY = margin;
+        
+        try {
+          pdf.addImage(logoPath, "PNG", logoX, logoY, logoWidth, logoHeight);
+        } catch (error) {
+          console.warn("Could not load logo:", error);
+        }
+        
+        // Adjust text position to make room for logo
+        const textStartX = margin + logoWidth + 5; // 5mm spacing after logo
+        
         pdf.setFontSize(9.3);
-        pdf.text("Centar pametne tehnologije d.o.o.", margin, margin);
-        pdf.text("Kovači 78c, Velika Mlaka", margin, margin + 5);
-        pdf.text("OIB: 75343882245", margin, margin + 10);
+        pdf.text("Centar pametne tehnologije d.o.o.", textStartX, margin);
+        pdf.text("Kovači 78c, Velika Mlaka", textStartX, margin + 5);
+        pdf.text("OIB: 75343882245", textStartX, margin + 10);
         pdf.text("info@pametnatehnologija.hr", pageWidth - margin - 65, margin);
         pdf.text("+385 1 6525 100", pageWidth - margin - 65, margin + 5);
         pdf.setFontSize(16);

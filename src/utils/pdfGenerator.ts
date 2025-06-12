@@ -18,8 +18,8 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       const pageWidth = 210;
       const pageHeight = 297;
       const margin = 15;
-      const footerMargin = 15;
-      const usableHeight = pageHeight - margin - footerMargin - 5;
+      // Fixed: Much more space available - footer only needs ~12mm
+      const usableHeight = pageHeight - margin - 12;
       let y = margin;
       let pageNumber = 1;
       let totalPages = 1;
@@ -44,7 +44,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           // Table rows - more accurate calculation
           const materialCount = Math.max(1, items.length);
           height += materialCount * 4;
-          height += 8; // Bottom spacing
+          height += 4; // Reduced bottom spacing
         } else {
           // Regular items
           if (items.length > 0 && items.some(x => x.text.trim())) {
@@ -56,7 +56,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           } else {
             height += getTextHeight("Nije uneseno.", 9.2, pageWidth - 2 * margin) + 1;
           }
-          height += 8; // Bottom spacing between sections - increased from 4
+          height += 4; // Reduced bottom spacing for short sections
         }
         
         return height;
@@ -82,7 +82,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           height += 4; // "Nije uneseno" row
         }
         
-        height += 8; // Bottom spacing
+        height += 4; // Reduced bottom spacing
         return height;
       }
 
@@ -126,9 +126,9 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         const line1 = "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr";
         const line2 = "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka";
 
-        const yFooter1 = pageHeight - footerMargin;
-        const yFooter2 = pageHeight - footerMargin + 3.5;
-        const yFooterPage = pageHeight - 5.3;
+        const yFooter1 = pageHeight - 10;
+        const yFooter2 = pageHeight - 6.5;
+        const yFooterPage = pageHeight - 3.5;
 
         pdf.text(line1, pageWidth / 2, yFooter1, { align: "center" });
         pdf.text(line2, pageWidth / 2, yFooter2, { align: "center" });
@@ -143,7 +143,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
 
       function smartPageBreak(nextBlockHeight: number, headerFnc?: () => void) {
         // Reduced buffer for more accurate page breaks
-        const buffer = 5; // Reduced from default
+        const buffer = 2; // Reduced from 5mm
         if (y + nextBlockHeight + buffer > usableHeight) {
           pdf.addPage();
           y = margin + (headerFnc === drawSmallHeader ? 20 : 24);
@@ -261,7 +261,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           pdf.text("Nije uneseno.", margin, y);
           y += 3.5;
         }
-        y += 8;
+        y += 4; // Reduced spacing between sections
       }
 
       // Mandatory sections - always display
@@ -315,7 +315,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text("Nije uneseno.", margin + 2, y);
         y += 4;
       }
-      y += 8;
+      y += 4; // Reduced spacing
 
       // Signatures section with compression
       const signatureHeight = 20;

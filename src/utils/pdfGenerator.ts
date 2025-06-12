@@ -317,9 +317,11 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
       }
       y += 8; // Bottom spacing between sections
 
-      // Signatures section with compression
-      const signatureHeight = 20;
+      // Signatures section with increased spacing
+      const signatureHeight = 25; // Increased from 20 to 25
       smartPageBreak(signatureHeight, drawSmallHeader);
+      
+      y += 3; // Added 3mm spacing above signatures section
       
       pdf.setFontSize(9.3);
       pdf.text("Potpis tehničara:", margin, y);

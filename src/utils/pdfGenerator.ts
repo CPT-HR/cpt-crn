@@ -410,7 +410,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
             metaY += 2.5;
           }
           if (metadata.address) {
-            const addressLines = pdf.splitTextToSize(`Adresa: ${metadata.address}`, 35);
+            const addressLines = pdf.splitTextToSize(`Približna adresa: ${metadata.address}`, 35);
             pdf.text(addressLines, x, metaY);
           }
           pdf.setFontSize(9.3);

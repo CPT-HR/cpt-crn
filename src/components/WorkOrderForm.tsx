@@ -767,14 +767,25 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
       return;
     }
 
+    // Set validation state FIRST so red borders appear immediately
+    setShowValidation(true);
+
     // Validate required fields
     if (!validateRequiredFields()) {
-      setShowValidation(true);
       toast({
         variant: "destructive",
         title: "Greška",
         description: "Molimo ispunite sva obvezna polja označena crvenim borderom",
       });
+      
+      // Scroll to first error field
+      setTimeout(() => {
+        const firstErrorField = document.querySelector('.border-red-500');
+        if (firstErrorField) {
+          firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      
       return;
     }
     

@@ -53,7 +53,7 @@ const Login: React.FC = () => {
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
               <Input 
                 id="email" 
                 type="email" 
@@ -65,7 +65,7 @@ const Login: React.FC = () => {
             </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Lozinka</Label>
+                <Label htmlFor="password">Lozinka <span className="text-red-500">*</span></Label>
               </div>
               <Input 
                 id="password" 

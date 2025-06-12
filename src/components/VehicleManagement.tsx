@@ -254,7 +254,7 @@ const VehicleManagement: React.FC = () => {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="license_plate">Registracija</Label>
+                    <Label htmlFor="license_plate">Registracija <span className="text-red-500">*</span></Label>
                     <Input
                       id="license_plate"
                       value={formData.license_plate}
@@ -338,7 +338,7 @@ const VehicleManagement: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-license_plate">Registracija</Label>
+              <Label htmlFor="edit-license_plate">Registracija <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-license_plate"
                 value={formData.license_plate}

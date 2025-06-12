@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -257,7 +256,7 @@ const LocationManagement: React.FC = () => {
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="name">Naziv</Label>
+                    <Label htmlFor="name">Naziv <span className="text-red-500">*</span></Label>
                     <Input
                       id="name"
                       value={formData.name}
@@ -266,7 +265,7 @@ const LocationManagement: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="street_address">Adresa</Label>
+                    <Label htmlFor="street_address">Adresa <span className="text-red-500">*</span></Label>
                     <Input
                       id="street_address"
                       value={formData.street_address}
@@ -350,7 +349,7 @@ const LocationManagement: React.FC = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label htmlFor="edit-name">Naziv</Label>
+              <Label htmlFor="edit-name">Naziv <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-name"
                 value={formData.name}
@@ -359,7 +358,7 @@ const LocationManagement: React.FC = () => {
               />
             </div>
             <div>
-              <Label htmlFor="edit-street_address">Adresa</Label>
+              <Label htmlFor="edit-street_address">Adresa <span className="text-red-500">*</span></Label>
               <Input
                 id="edit-street_address"
                 value={formData.street_address}

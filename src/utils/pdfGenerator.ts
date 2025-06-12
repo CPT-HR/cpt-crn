@@ -44,7 +44,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           // Table rows - more accurate calculation
           const materialCount = Math.max(1, items.length);
           height += materialCount * 4;
-          height += 4; // Reduced bottom spacing
+          height += 8; // Bottom spacing between sections - increased from 4
         } else {
           // Regular items
           if (items.length > 0 && items.some(x => x.text.trim())) {
@@ -56,7 +56,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           } else {
             height += getTextHeight("Nije uneseno.", 9.2, pageWidth - 2 * margin) + 1;
           }
-          height += 4; // Reduced bottom spacing for short sections
+          height += 8; // Bottom spacing between sections - increased from 4
         }
         
         return height;
@@ -82,7 +82,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           height += 4; // "Nije uneseno" row
         }
         
-        height += 4; // Reduced bottom spacing
+        height += 8; // Bottom spacing between sections - increased from 4
         return height;
       }
 
@@ -261,7 +261,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
           pdf.text("Nije uneseno.", margin, y);
           y += 3.5;
         }
-        y += 4; // Reduced spacing between sections
+        y += 8; // Bottom spacing between sections - increased from 4
       }
 
       // Mandatory sections - always display
@@ -315,7 +315,7 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         pdf.text("Nije uneseno.", margin + 2, y);
         y += 4;
       }
-      y += 4; // Reduced spacing
+      y += 8; // Bottom spacing between sections - increased from 4
 
       // Signatures section with compression
       const signatureHeight = 20;

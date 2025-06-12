@@ -3,7 +3,7 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { DatePicker } from '../DatePicker';
+import { DatePicker } from "@/components/DatePicker";
 
 interface TimeSectionProps {
   date: Date;
@@ -25,45 +25,46 @@ const TimeSection: React.FC<TimeSectionProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Vrijeme izvršavanja radova</CardTitle>
+        <CardTitle className="text-xl">Vrijeme</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="date">Datum <span className="text-red-500">*</span></Label>
+            <Label>Datum</Label>
             <DatePicker
               date={date}
               onDateChange={onDateChange}
+              placeholder="Odaberite datum"
               className="w-full"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="arrivalTime">Vrijeme dolaska <span className="text-red-500">*</span></Label>
+            <Label htmlFor="arrivalTime">Vrijeme dolaska</Label>
             <Input 
               id="arrivalTime"
-              type="time" 
-              value={arrivalTime} 
-              onChange={(e) => onTimeChange('arrivalTime', e.target.value)} 
-              required 
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="completionTime">Vrijeme završetka radova <span className="text-red-500">*</span></Label>
-            <Input 
-              id="completionTime"
-              type="time" 
-              value={completionTime} 
-              onChange={(e) => onTimeChange('completionTime', e.target.value)} 
+              type="time"
+              value={arrivalTime}
+              onChange={(e) => onTimeChange('arrivalTime', e.target.value)}
               required 
             />
           </div>
         </div>
-        
-        <div className="space-y-2">
-          <Label className="text-base font-medium">Ukupno sati rada</Label>
-          <div className="p-3 bg-gray-50 rounded-md">
-            <span className="text-lg font-medium">{calculatedHours}</span>
-            <span className="text-sm text-gray-600 ml-2">(zaokruženo na pola sata)</span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="completionTime">Vrijeme završetka radova</Label>
+            <Input 
+              id="completionTime"
+              type="time"
+              value={completionTime}
+              onChange={(e) => onTimeChange('completionTime', e.target.value)}
+              required 
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Obračunsko vrijeme</Label>
+            <div className="p-2 bg-gray-50 border rounded">
+              {calculatedHours}
+            </div>
           </div>
         </div>
       </CardContent>

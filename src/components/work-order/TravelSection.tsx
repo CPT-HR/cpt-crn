@@ -25,7 +25,7 @@ const TravelSection: React.FC<TravelSectionProps> = ({
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-xl">Terenski rad</CardTitle>
+        <CardTitle className="text-xl">Put</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center space-x-2">
@@ -35,40 +35,35 @@ const TravelSection: React.FC<TravelSectionProps> = ({
             onCheckedChange={onFieldTripChange}
           />
           <Label htmlFor="fieldTrip" className="text-sm font-normal">
-            Terenski rad (rad izvan ureda)
+            Izlazak na teren
           </Label>
         </div>
-
+        
         {fieldTrip && (
           <div className="space-y-2">
-            <Label htmlFor="distance">
-              Prijeđena udaljenost (km) <span className="text-red-500">*</span>
-            </Label>
+            <Label htmlFor="distance">Prijeđena udaljenost (km)</Label>
             <Input 
               id="distance"
               type="number" 
-              step="0.1"
-              value={distance} 
-              onChange={(e) => onDistanceChange(e.target.value)}
-              placeholder="Unesite udaljenost u kilometrima"
+              min="0" 
+              value={distance}
+              onChange={(e) => onDistanceChange(e.target.value)} 
+              placeholder="Unesite broj kilometara"
               required={fieldTrip}
             />
-            
             {companyLocationsCount === 0 && (
-              <p className="text-sm text-yellow-600">
-                ⚠️ Nema lokacija tvrtke u sustavu. Dodajte lokacije u admin panelu za automatsko računanje udaljenosti.
+              <p className="text-sm text-amber-600">
+                Admin treba postaviti lokacije tvrtke u administraciji za automatsko računanje udaljenosti.
               </p>
             )}
-            
-            {companyLocationsCount > 0 && !hasDistanceApiKey && (
-              <p className="text-sm text-yellow-600">
-                ⚠️ Nema API ključa za računanje udaljenosti. Dodajte ga u globalnim postavkama za automatsko računanje.
+            {!hasDistanceApiKey && companyLocationsCount > 0 && (
+              <p className="text-sm text-amber-600">
+                Admin treba postaviti Distance Matrix API ključ u administraciji za automatsko računanje udaljenosti.
               </p>
             )}
-            
             {companyLocationsCount > 0 && hasDistanceApiKey && (
               <p className="text-sm text-green-600">
-                ✅ Udaljenost se automatski računa na temelju adrese klijenta.
+                Udaljenost se automatski računa pomoću distancematrix.ai API-ja.
               </p>
             )}
           </div>

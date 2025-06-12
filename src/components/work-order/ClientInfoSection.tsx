@@ -34,7 +34,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({ data, onChange, c
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="clientCompanyName">Ime tvrtke <span className="text-red-500">*</span></Label>
+            <Label htmlFor="clientCompanyName">Ime tvrtke</Label>
             <Input 
               id="clientCompanyName"
               value={data.clientCompanyName} 
@@ -43,7 +43,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({ data, onChange, c
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="clientOib">OIB <span className="text-red-500">*</span></Label>
+            <Label htmlFor="clientOib">OIB</Label>
             <Input 
               id="clientOib"
               value={data.clientOib} 
@@ -57,7 +57,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({ data, onChange, c
           <Label className="text-base font-medium">Adresa tvrtke</Label>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2 space-y-2">
-              <Label htmlFor="clientStreetAddress">Ulica i broj <span className="text-red-500">*</span></Label>
+              <Label htmlFor="clientStreetAddress">Ulica i broj</Label>
               <Input 
                 id="clientStreetAddress"
                 value={data.clientStreetAddress} 
@@ -67,7 +67,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({ data, onChange, c
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="clientCity">Grad <span className="text-red-500">*</span></Label>
+              <Label htmlFor="clientCity">Grad</Label>
               <Input 
                 id="clientCity"
                 value={data.clientCity} 
@@ -96,7 +96,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({ data, onChange, c
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="clientFirstName">Ime <span className="text-red-500">*</span></Label>
+            <Label htmlFor="clientFirstName">Ime</Label>
             <Input 
               id="clientFirstName"
               value={data.clientFirstName} 
@@ -105,7 +105,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({ data, onChange, c
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="clientLastName">Prezime <span className="text-red-500">*</span></Label>
+            <Label htmlFor="clientLastName">Prezime</Label>
             <Input 
               id="clientLastName"
               value={data.clientLastName} 
@@ -116,7 +116,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({ data, onChange, c
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="clientMobile">Broj mobitela <span className="text-red-500">*</span></Label>
+            <Label htmlFor="clientMobile">Broj mobitela</Label>
             <Input 
               id="clientMobile"
               value={data.clientMobile} 
@@ -125,7 +125,7 @@ const ClientInfoSection: React.FC<ClientInfoSectionProps> = ({ data, onChange, c
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="clientEmail">Email <span className="text-red-500">*</span></Label>
+            <Label htmlFor="clientEmail">Email</Label>
             <Input 
               id="clientEmail"
               type="email" 

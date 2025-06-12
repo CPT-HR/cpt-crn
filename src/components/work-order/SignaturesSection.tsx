@@ -3,8 +3,8 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { SignatureMetadata } from '../SignaturePad';
+import { Separator } from "@/components/ui/separator";
+import type { SignatureMetadata } from '../SignaturePad';
 
 interface SignaturesSectionProps {
   technicianSignature: string;
@@ -32,66 +32,80 @@ const SignaturesSection: React.FC<SignaturesSectionProps> = ({
       <CardHeader>
         <CardTitle className="text-xl">Potpisi</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-4">
-            <Label className="text-base font-medium">Potpis tehničara</Label>
+      <CardContent className="space-y-4">
+        <div>
+          <Label>Potpis tehničara</Label>
+          <div className="mt-2 p-2 border rounded bg-gray-50">
             {technicianSignature ? (
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <img src={technicianSignature} alt="Tehnician signature" className="max-h-24 mx-auto" />
-                <p className="text-center text-sm text-gray-600 mt-2">{technicianName}</p>
+              <div className="flex flex-col items-center">
+                <img 
+                  src={technicianSignature} 
+                  alt="Potpis tehničara" 
+                  className="max-h-20 mx-auto"
+                />
+                <p className="text-sm text-gray-600 mt-2">{technicianName}</p>
               </div>
             ) : (
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500">
-                Potpis tehničara nije dostupan
+              <div className="text-center text-gray-400 py-4">
+                Potpis nije postavljen. Postavite potpis u vašim postavkama.
               </div>
             )}
           </div>
-
-          <div className="space-y-4">
-            <Label className="text-base font-medium">Potpis klijenta</Label>
+        </div>
+        
+        <Separator />
+        
+        <div>
+          <Label>Potpis klijenta</Label>
+          <div className="space-y-2">
             <div className="space-y-2">
-              <Label htmlFor="customerSignerName">Ime i prezime potpisnika <span className="text-red-500">*</span></Label>
-              <Input
+              <Label htmlFor="customerSignerName">Ime i prezime potpisnika</Label>
+              <Input 
                 id="customerSignerName"
                 value={customerSignerName}
                 onChange={(e) => onCustomerSignerNameChange(e.target.value)}
-                placeholder={
-                  orderForCustomer 
-                    ? "Ime i prezime predstavnika korisnika" 
-                    : "Ime i prezime predstavnika naručitelja"
-                }
+                placeholder="Automatski se popunjava na osnovu unesenih podataka"
                 required
               />
+              <p className="text-xs text-gray-500">
+                Ime se automatski popunjava na osnovu podataka {orderForCustomer ? 'korisnika (ili naručitelja ako nema podataka korisnika)' : 'naručitelja'}
+              </p>
             </div>
-            {customerSignature ? (
-              <div className="border rounded-lg p-4 bg-gray-50 cursor-pointer" onClick={onCustomerSignatureClick}>
-                <img src={customerSignature} alt="Customer signature" className="max-h-24 mx-auto" />
-                <p className="text-center text-sm text-gray-600 mt-2">Kliknite za promjenu potpisa</p>
-                {signatureMetadata && (
-                  <div className="text-xs text-gray-500 mt-2 space-y-1">
-                    {signatureMetadata.timestamp && (
-                      <p>Vrijeme: {signatureMetadata.timestamp}</p>
-                    )}
-                    {signatureMetadata.coordinates && (
-                      <p>Koordinate: {signatureMetadata.coordinates.latitude.toFixed(6)}, {signatureMetadata.coordinates.longitude.toFixed(6)}</p>
-                    )}
-                    {signatureMetadata.address && (
-                      <p>Adresa: {signatureMetadata.address}</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Button 
-                type="button" 
-                variant="outline" 
-                className="w-full h-24 border-2 border-dashed" 
-                onClick={onCustomerSignatureClick}
-              >
-                Kliknite za dodavanje potpisa klijenta
-              </Button>
-            )}
+            <div 
+              className="mt-2 p-2 border rounded bg-gray-50 cursor-pointer min-h-[80px] flex items-center justify-center"
+              onClick={onCustomerSignatureClick}
+            >
+              {customerSignature ? (
+                <div className="flex flex-col items-center w-full">
+                  <img 
+                    src={customerSignature} 
+                    alt="Potpis klijenta" 
+                    className="max-h-20 mx-auto" 
+                  />
+                  {signatureMetadata && (
+                    <div className="text-[10px] text-gray-500 mt-2 text-center w-full space-y-1">
+                      <p className="font-medium">
+                        Datum i vrijeme: {signatureMetadata.timestamp}
+                      </p>
+                      {signatureMetadata.coordinates && (
+                        <p className="break-all">
+                          Koordinate: {signatureMetadata.coordinates.latitude.toFixed(6)}, {signatureMetadata.coordinates.longitude.toFixed(6)}
+                        </p>
+                      )}
+                      {signatureMetadata.address && (
+                        <p className="break-words text-center max-w-full">
+                          Lokacija: {signatureMetadata.address}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center text-gray-400">
+                  Kliknite za dodavanje potpisa klijenta
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </CardContent>

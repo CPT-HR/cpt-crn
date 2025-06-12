@@ -93,7 +93,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   const [companyLocations, setCompanyLocations] = useState<any[]>([]);
   const [globalSettings, setGlobalSettings] = useState<any>(null);
   const [useMockData, setUseMockData] = useState(false);
-  const [showValidation, setShowValidation] = useState(false);
   const isEditMode = !!initialData;
   
   // Helper function to parse text fields into WorkItem arrays
@@ -307,39 +306,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
     fieldTrip: true,
     distance: '15',
     customerSignerName: 'Ivo Perić'
-  };
-
-  // Validation function to check required fields
-  const validateRequiredFields = () => {
-    console.log('Validating required fields...');
-    
-    const requiredFields = [
-      workOrder.clientCompanyName,
-      workOrder.clientStreetAddress,
-      workOrder.clientCity,
-      workOrder.clientOib,
-      workOrder.clientFirstName,
-      workOrder.clientLastName,
-      workOrder.clientMobile,
-      workOrder.clientEmail
-    ];
-
-    // Check if description has content
-    const hasDescription = workOrder.description.some(item => item.text.trim().length > 0);
-    
-    // Check if performed work has content
-    const hasPerformedWork = workOrder.performedWork.some(item => item.text.trim().length > 0);
-
-    const allFieldsFilled = requiredFields.every(field => field.trim().length > 0);
-    
-    console.log('Validation results:', { 
-      allFieldsFilled, 
-      hasDescription, 
-      hasPerformedWork,
-      requiredFields: requiredFields.map((field, index) => ({ index, value: field, filled: field.trim().length > 0 }))
-    });
-    
-    return allFieldsFilled && hasDescription && hasPerformedWork;
   };
 
   // Load company locations and global settings
@@ -767,42 +733,12 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    console.log('Submit handler called, showValidation before:', showValidation);
-    
     if (!user || !employeeProfile) {
       toast({
         variant: "destructive",
         title: "Greška",
         description: "Potrebna je prijava i employee profile",
       });
-      return;
-    }
-
-    // Set validation state FIRST so red borders appear immediately
-    console.log('Setting showValidation to true');
-    setShowValidation(true);
-
-    // Small delay to ensure state update is processed
-    await new Promise(resolve => setTimeout(resolve, 50));
-
-    // Validate required fields
-    if (!validateRequiredFields()) {
-      console.log('Validation failed, showing error');
-      toast({
-        variant: "destructive",
-        title: "Greška",
-        description: "Molimo ispunite sva obvezna polja označena crvenim borderom",
-      });
-      
-      // Scroll to first error field
-      setTimeout(() => {
-        const firstErrorField = document.querySelector('.border-red-500');
-        console.log('First error field found:', firstErrorField);
-        if (firstErrorField) {
-          firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-      
       return;
     }
     
@@ -944,7 +880,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
           }}
           onChange={handleClientInfoChange}
           countries={countries}
-          showValidation={showValidation}
         />
 
         {workOrder.orderForCustomer && (
@@ -975,7 +910,6 @@ const WorkOrderForm: React.FC<WorkOrderFormProps> = ({ initialData }) => {
           onWorkItemChange={handleWorkItemChange}
           onAddWorkItem={addWorkItem}
           onRemoveWorkItem={removeWorkItem}
-          showValidation={showValidation}
         />
 
         <MaterialsSection

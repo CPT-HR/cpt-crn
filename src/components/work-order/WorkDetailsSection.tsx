@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
 
 interface WorkItem {
   id: string;
@@ -24,38 +23,14 @@ interface WorkDetailsSectionProps {
   onWorkItemChange: (section: keyof WorkDetailsData, id: string, value: string) => void;
   onAddWorkItem: (section: keyof WorkDetailsData) => void;
   onRemoveWorkItem: (section: keyof WorkDetailsData, id: string) => void;
-  showValidation?: boolean;
 }
 
 const WorkDetailsSection: React.FC<WorkDetailsSectionProps> = ({ 
   data, 
   onWorkItemChange, 
   onAddWorkItem, 
-  onRemoveWorkItem,
-  showValidation = false
+  onRemoveWorkItem 
 }) => {
-  const hasContent = (items: WorkItem[]): boolean => {
-    return items.some(item => item.text.trim().length > 0);
-  };
-
-  const getFieldClassName = (value: string, isRequired: boolean = false, section?: keyof WorkDetailsData) => {
-    console.log('WorkDetailsSection validation check:', { value, isRequired, showValidation, section });
-    
-    const baseClassName = "flex h-10 w-full rounded-md border bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm";
-    
-    // For required sections, check if the entire section has content
-    if (showValidation && isRequired && section) {
-      const sectionHasContent = hasContent(data[section]);
-      console.log('Section content check:', { section, sectionHasContent });
-      if (!sectionHasContent) {
-        console.log('Showing red border for empty required section');
-        return cn(baseClassName, "border-red-500 border-2");
-      }
-    }
-    
-    return cn(baseClassName, "border-input");
-  };
-
   const renderWorkItemsSection = (
     title: string,
     placeholder: string,
@@ -63,7 +38,7 @@ const WorkDetailsSection: React.FC<WorkDetailsSectionProps> = ({
     required: boolean = false
   ) => (
     <div className="space-y-4">
-      <Label className="text-base font-medium">{title}{required && ' *'}</Label>
+      <Label className="text-base font-medium">{title}</Label>
       {data[section].map((item, index) => (
         <div key={item.id} className="grid grid-cols-12 gap-2 items-center">
           <div className="col-span-10 space-y-2">
@@ -72,7 +47,6 @@ const WorkDetailsSection: React.FC<WorkDetailsSectionProps> = ({
               onChange={(e) => onWorkItemChange(section, item.id, e.target.value)} 
               placeholder={placeholder}
               required={required && index === 0}
-              className={getFieldClassName(item.text, required, section)}
             />
           </div>
           <div className="col-span-2">
@@ -113,7 +87,8 @@ const WorkDetailsSection: React.FC<WorkDetailsSectionProps> = ({
         {renderWorkItemsSection(
           'Zatečeno stanje',
           'Opišite zatečeno stanje',
-          'foundCondition'
+          'foundCondition',
+          true
         )}
 
         <Separator />

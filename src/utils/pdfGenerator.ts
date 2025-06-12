@@ -126,9 +126,9 @@ export const generatePDF = async (workOrder: WorkOrder): Promise<void> => {
         const line1 = "Centar pametne tehnologije d.o.o. | Kovači 78c 10010 Velika Mlaka | OIB: 75343882245 | pametnatehnologija.hr";
         const line2 = "Trgovački sud u Zagrebu MBS:081428675 | Direktor: Dario Azinović | Temeljni kapital 20.000 kn uplaćen u cijelosti | HR9224020061101084560 kod Erste&Steiermärkische Bank d.d. Rijeka";
 
-        const yFooter1 = pageHeight - 10;
-        const yFooter2 = pageHeight - 6.5;
-        const yFooterPage = pageHeight - 3.5;
+        const yFooter1 = pageHeight - 13; // Moved up from pageHeight - 10
+        const yFooter2 = pageHeight - 9.5; // Moved up from pageHeight - 6.5
+        const yFooterPage = pageHeight - 6.5; // Moved up from pageHeight - 3.5
 
         pdf.text(line1, pageWidth / 2, yFooter1, { align: "center" });
         pdf.text(line2, pageWidth / 2, yFooter2, { align: "center" });
